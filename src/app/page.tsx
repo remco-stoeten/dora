@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { TitleBar } from '@/components/title-bar'
 import { AppSidebarComplete } from '@/components/app-sidebar-complete'
 import { ResizeHandle } from '@/components/resize-handle'
@@ -48,7 +49,16 @@ export default function Home() {
   const [executing, setExecuting] = useState(false)
   const [lastLoadedSchemaConnectionId, setLastLoadedSchemaConnectionId] = useState<string | null>(null)
 
-  const { width: sidebarWidth, isResizing, startResizing } = useResizable()
+  const { width: sidebarWidth, isResizing, startResizing } = useResizable((finalWidth) => {
+    if (finalWidth < 250) {
+      setIsSidebarCollapsed(true)
+    }
+  }, (currentWidth) => {
+    // Auto-expand if dragging while collapsed
+    if (isSidebarCollapsed && currentWidth > 150) {
+      setIsSidebarCollapsed(false)
+    }
+  })
 
   const sqlEditorRef = useRef<any>(null)
   const sessionSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -450,11 +460,20 @@ export default function Home() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Resizable Sidebar Container */}
-        <div
+        <motion.div
           className="relative flex-shrink-0"
+          initial={false}
+          animate={{
+            width: isSidebarCollapsed ? 80 : sidebarWidth,
+          }}
+          transition={isResizing ? { duration: 0 } : {
+            type: "spring",
+            stiffness: 500,
+            damping: 25,
+            mass: 0.5
+          }}
           style={{
-            width: isSidebarCollapsed ? 'auto' : sidebarWidth,
-            transition: isResizing ? 'none' : 'width 0.2s ease-out'
+            willChange: "width" // Optimize performance
           }}
         >
           <AppSidebarComplete
@@ -489,11 +508,9 @@ export default function Home() {
             onLoadFromHistory={handleLoadFromHistory}
             onSidebarTabChange={setSidebarTabState}
           />
-          {/* Resize Handle - only show when sidebar is expanded */}
-          {!isSidebarCollapsed && (
-            <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
-          )}
-        </div>
+          {/* Resize Handle - always show */}
+          <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
+        </motion.div>
 
         <div className="flex flex-1 flex-col overflow-hidden bg-card">
           <ScriptTabs />
@@ -516,7 +533,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Status Bar */}
               <div className="border-t border-border bg-muted/50 px-4 py-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-4">
@@ -611,20 +627,22 @@ export default function Home() {
         </div>
       </div>
 
-      {showConnectionForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-card p-6 shadow-xl border border-border">
-            <ConnectionForm
-              onSuccess={handleConnectionSubmit}
-              onCancel={() => {
-                setShowConnectionForm(false)
-                setEditingConnection(null)
-              }}
-              editingConnection={editingConnection}
-            />
+      {
+        showConnectionForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-card p-6 shadow-xl border border-border">
+              <ConnectionForm
+                onSuccess={handleConnectionSubmit}
+                onCancel={() => {
+                  setShowConnectionForm(false)
+                  setEditingConnection(null)
+                }}
+                editingConnection={editingConnection}
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }

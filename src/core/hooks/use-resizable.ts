@@ -4,10 +4,13 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'sidebar-width'
 const DEFAULT_WIDTH = 340
-const MIN_WIDTH = 200
+const MIN_WIDTH = 50
 const MAX_WIDTH = 600
 
-export function useResizable() {
+export function useResizable(
+    onResizeEnd?: (width: number) => void,
+    onResize?: (width: number) => void
+) {
     const [width, setWidth] = useState(DEFAULT_WIDTH)
     const [isResizing, setIsResizing] = useState(false)
     const startXRef = useRef(0)
@@ -45,10 +48,12 @@ export function useResizable() {
             const delta = e.clientX - startXRef.current
             const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidthRef.current + delta))
             setWidth(newWidth)
+            onResize?.(newWidth)
         }
 
         const handleMouseUp = () => {
             setIsResizing(false)
+            onResizeEnd?.(width)
         }
 
         document.addEventListener('mousemove', handleMouseMove)
