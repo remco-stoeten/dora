@@ -23,6 +23,8 @@ type Props = {
     description?: string
 }
 
+export type Suggestion = Props
+
 export interface AutocompleteInputProps
     extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'onSelect'> {
     value: string
