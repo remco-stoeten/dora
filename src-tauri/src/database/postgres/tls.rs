@@ -1,5 +1,4 @@
 use std::{
-    io::Cursor,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -8,8 +7,7 @@ use anyhow::ensure;
 use tauri::async_runtime::{spawn, spawn_blocking};
 use tokio::sync::OnceCell;
 
-pub const RDS_CERTIFICATES: &str = include_str!("../../../../certificates/aws-rds-global-bundle.pem");
-pub const AZURE_CERTIFICATES: &str = include_str!("../../../../certificates/azure-baltimore-root.pem");
+// Removed certificate files - using standard trusted certificates only
 
 pub struct Certificates {
     pub certs: Arc<OnceCell<Arc<rustls::RootCertStore>>>,
@@ -58,15 +56,8 @@ impl Certificates {
 async fn load_certificates() -> rustls::RootCertStore {
     let mut cert_store = webpki_certificates();
 
+    // Load native system certificates
     let native_certs_handle = spawn_blocking(rustls_native_certs::load_native_certs);
-
-    if let Err(e) = load_pem_certificates(RDS_CERTIFICATES, &mut cert_store) {
-        eprintln!("Error loading RDS certificates: {}", e);
-    }
-
-    if let Err(e) = load_pem_certificates(AZURE_CERTIFICATES, &mut cert_store) {
-        eprintln!("Error loading Azure certificates: {}", e);
-    }
 
     if let Ok(native_certs) = native_certs_handle.await {
         cert_store.add_parsable_certificates(native_certs.certs);
@@ -75,20 +66,6 @@ async fn load_certificates() -> rustls::RootCertStore {
     }
 
     cert_store
-}
-
-fn load_pem_certificates(
-    pem_data: &str,
-    cert_store: &mut rustls::RootCertStore,
-) -> anyhow::Result<()> {
-    let mut cursor = Cursor::new(pem_data.as_bytes());
-    let certs = rustls_pemfile::certs(&mut cursor);
-
-    for cert in certs {
-        cert_store.add_parsable_certificates(cert);
-    }
-
-    Ok(())
 }
 
 fn webpki_certificates() -> rustls::RootCertStore {

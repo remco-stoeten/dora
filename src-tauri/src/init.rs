@@ -1,4 +1,4 @@
-use tauri::WebviewWindowBuilder;
+use tauri::{WebviewWindowBuilder, Manager, Listener};
 
 #[cfg(target_os = "macos")]
 use tauri::{
@@ -30,7 +30,7 @@ pub fn build_window(app: &tauri::App) -> tauri::Result<()> {
         app,
         "splash",
         tauri::WebviewUrl::App("about:blank".parse().unwrap())
-    )?
+    )
     .title("Dora")
     .inner_size(500.0, 500.0)
     .resizable(false)

@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TitleBar } from '@/components/title-bar'
 import { AppSidebarComplete } from '@/components/app-sidebar-complete'
+import { ResizeHandle } from '@/components/resize-handle'
 import { ScriptTabs } from '@/components/script-tabs'
 import { SqlEditor } from '@/components/sql-editor'
 import { Table } from '@/components/table'
 import { ConnectionForm } from '@/components/connection-form'
-import { useTabs } from '@/lib/tabs-store-complete'
+import { useResizable } from '@/core/hooks'
+import { useTabs } from '@/core/state'
 import {
   getConnections,
   initializeConnections,
@@ -23,9 +25,8 @@ import {
   updateScript,
   deleteScript,
   executeQuery,
-  saveSessionState,
-  getSessionState,
-} from '@/lib/tauri-commands'
+  saveSessionState
+} from '@/core/tauri'
 import type { ConnectionInfo, DatabaseSchema, QueryHistoryEntry, Script, DatabaseInfo } from '@/types/database'
 
 type SidebarTabState = 'connections' | 'items' | 'scripts' | 'history'
@@ -47,18 +48,17 @@ export default function Home() {
   const [executing, setExecuting] = useState(false)
   const [lastLoadedSchemaConnectionId, setLastLoadedSchemaConnectionId] = useState<string | null>(null)
 
+  const { width: sidebarWidth, isResizing, startResizing } = useResizable()
+
   const sqlEditorRef = useRef<any>(null)
   const sessionSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     openScript,
-    switchToTab,
-    closeTab,
     handleEditorContentChange,
     markScriptSaved,
     updateScriptId,
     createNewScript,
-    createScriptFromHistory,
     setScripts: setTabsScripts,
     setSqlEditorRef,
     onSessionSave,
@@ -66,7 +66,6 @@ export default function Home() {
     restoreSession,
     getActiveTab,
     tabs: allTabs,
-    activeTabId,
     scripts: tabsScripts,
     newScripts,
     currentEditorContent,
@@ -75,12 +74,10 @@ export default function Home() {
     setQueryStatus,
   } = useTabs()
 
-  // Sync scripts between local state and tabs store
   useEffect(() => {
     setTabsScripts(scripts)
   }, [scripts, setTabsScripts])
 
-  // Update unsaved changes based on tabs
   useEffect(() => {
     const dirtyScriptIds = new Set(
       allTabs
@@ -90,7 +87,6 @@ export default function Home() {
     setUnsavedChanges(dirtyScriptIds)
   }, [allTabs])
 
-  // Initialize on mount
   useEffect(() => {
     async function init() {
       try {
@@ -98,15 +94,10 @@ export default function Home() {
         await loadConnections()
         await loadScripts()
 
-        // Setup session save callback
         onSessionSave(() => {
-          // Mark that we should save
         })
 
-        // Restore session
         const restored = await restoreSession(null)
-        
-        // If no session restored and no tabs, create default script
         if (!restored && allTabs.length === 0) {
           const existingUntitled = scripts.find((s) => s.name === 'Untitled Script')
           if (existingUntitled) {
@@ -122,7 +113,6 @@ export default function Home() {
 
     init()
 
-    // Auto-save session every 20 seconds
     sessionSaveTimerRef.current = setInterval(() => {
       checkAndSaveSession()
     }, 20000)
@@ -135,7 +125,6 @@ export default function Home() {
     }
   }, [])
 
-  // Load schema when connection changes
   useEffect(() => {
     if (selectedConnection) {
       const connection = connections.find((c) => c.id === selectedConnection)
@@ -151,7 +140,6 @@ export default function Home() {
     }
   }, [selectedConnection, connections])
 
-  // Load query history when connection changes
   useEffect(() => {
     if (selectedConnection) {
       loadQueryHistory()
@@ -160,7 +148,6 @@ export default function Home() {
     }
   }, [selectedConnection])
 
-  // Set SQL editor ref
   useEffect(() => {
     if (sqlEditorRef.current) {
       setSqlEditorRef(sqlEditorRef.current)
@@ -324,7 +311,7 @@ export default function Home() {
   async function handleDeleteScript(script: Script) {
     try {
       const isNewScript = newScripts.has(script.id)
-      
+
       if (!isNewScript) {
         await deleteScript(script.id)
       }
@@ -462,38 +449,51 @@ export default function Home() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <AppSidebarComplete
-          connections={connections}
-          selectedConnection={selectedConnection}
-          establishingConnections={establishingConnections}
-          scripts={scripts}
-          activeScriptId={activeScriptId}
-          unsavedChanges={unsavedChanges}
-          databaseSchema={databaseSchema}
-          loadingSchema={loadingSchema}
-          queryHistory={queryHistory}
-          isSidebarCollapsed={isSidebarCollapsed}
-          sidebarTabState={sidebarTabState}
-          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          onSelectConnection={handleSelectConnection}
-          onConnectToDatabase={handleConnectToDatabase}
-          onShowConnectionForm={() => {
-            setEditingConnection(null)
-            setShowConnectionForm(true)
+        {/* Resizable Sidebar Container */}
+        <div
+          className="relative flex-shrink-0"
+          style={{
+            width: isSidebarCollapsed ? 'auto' : sidebarWidth,
+            transition: isResizing ? 'none' : 'width 0.2s ease-out'
           }}
-          onEditConnection={(conn) => {
-            setEditingConnection(conn)
-            setShowConnectionForm(true)
-          }}
-          onDeleteConnection={handleDeleteConnection}
-          onDisconnectConnection={handleDisconnectConnection}
-          onSelectScript={handleSelectScript}
-          onCreateNewScript={handleCreateNewScript}
-          onDeleteScript={handleDeleteScript}
-          onTableClick={handleTableClick}
-          onLoadFromHistory={handleLoadFromHistory}
-          onSidebarTabChange={setSidebarTabState}
-        />
+        >
+          <AppSidebarComplete
+            connections={connections}
+            selectedConnection={selectedConnection}
+            establishingConnections={establishingConnections}
+            scripts={scripts}
+            activeScriptId={activeScriptId}
+            unsavedChanges={unsavedChanges}
+            databaseSchema={databaseSchema}
+            loadingSchema={loadingSchema}
+            queryHistory={queryHistory}
+            isSidebarCollapsed={isSidebarCollapsed}
+            sidebarTabState={sidebarTabState}
+            onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onSelectConnection={handleSelectConnection}
+            onConnectToDatabase={handleConnectToDatabase}
+            onShowConnectionForm={() => {
+              setEditingConnection(null)
+              setShowConnectionForm(true)
+            }}
+            onEditConnection={(conn) => {
+              setEditingConnection(conn)
+              setShowConnectionForm(true)
+            }}
+            onDeleteConnection={handleDeleteConnection}
+            onDisconnectConnection={handleDisconnectConnection}
+            onSelectScript={handleSelectScript}
+            onCreateNewScript={handleCreateNewScript}
+            onDeleteScript={handleDeleteScript}
+            onTableClick={handleTableClick}
+            onLoadFromHistory={handleLoadFromHistory}
+            onSidebarTabChange={setSidebarTabState}
+          />
+          {/* Resize Handle - only show when sidebar is expanded */}
+          {!isSidebarCollapsed && (
+            <ResizeHandle onMouseDown={startResizing} isResizing={isResizing} />
+          )}
+        </div>
 
         <div className="flex flex-1 flex-col overflow-hidden bg-card">
           <ScriptTabs />
@@ -507,10 +507,10 @@ export default function Home() {
                   schema={
                     databaseSchema
                       ? {
-                          tables: databaseSchema.tables.map((t) => t.name),
-                          columns: databaseSchema.unique_columns,
-                          schemas: databaseSchema.schemas,
-                        }
+                        tables: databaseSchema.tables.map((t) => t.name),
+                        columns: databaseSchema.unique_columns,
+                        schemas: databaseSchema.schemas,
+                      }
                       : undefined
                   }
                 />
