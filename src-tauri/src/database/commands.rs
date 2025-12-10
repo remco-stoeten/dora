@@ -334,7 +334,7 @@ pub async fn test_connection(
                 Ok(_) => Ok(true),
                 Err(e) => {
                     log::error!("Postgres connection test failed: {}", e);
-                    Ok(false)
+                    Err(Error::from(e))
                 }
             }
         }
@@ -342,7 +342,7 @@ pub async fn test_connection(
             Ok(_) => Ok(true),
             Err(e) => {
                 log::error!("SQLite connection test failed: {}", e);
-                Ok(false)
+                Err(Error::from(e))
             }
         },
     }
