@@ -155,6 +155,9 @@ impl Storage {
             }
         };
 
+        let encrypted_data = crate::security::encrypt(connection_data)
+            .context("Failed to encrypt connection data")?;
+
         conn.execute(
             "INSERT OR REPLACE INTO connections 
              (id, name, connection_data, database_type_id, created_at, updated_at, sort_order) 
@@ -163,7 +166,7 @@ impl Storage {
             (
                 &connection.id.to_string(),
                 &connection.name,
-                connection_data,
+                &encrypted_data,
                 db_type_id,
                 now,
                 now,
@@ -187,6 +190,9 @@ impl Storage {
             }
         };
 
+        let encrypted_data = crate::security::encrypt(connection_data)
+            .context("Failed to encrypt connection data")?;
+
         let updated_rows = conn
             .execute(
                 "UPDATE connections 
@@ -195,7 +201,7 @@ impl Storage {
                 (
                     &connection.id.to_string(),
                     &connection.name,
-                    connection_data,
+                    &encrypted_data,
                     db_type_id,
                     now,
                 ),
@@ -212,7 +218,62 @@ impl Storage {
         Ok(())
     }
 
-    // TODO: add `get_connection`
+    pub fn get_connection(&self, connection_id: &Uuid) -> Result<Option<ConnectionInfo>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.id, c.name, c.connection_data, 
+                        COALESCE(dt.name, 'postgres') as db_type
+                 FROM connections c
+                 LEFT JOIN database_types dt ON c.database_type_id = dt.id
+                 WHERE c.id = ?1",
+            )
+            .context("Failed to prepare statement")?;
+
+        let mut rows = stmt
+            .query_map([connection_id.to_string()], |row| {
+                let raw_data: String = row.get(2)?;
+                let db_type: String = row.get(3)?;
+
+                // Try to decrypt, otherwise assume plaintext (lazy migration)
+                let connection_data = match crate::security::decrypt(&raw_data) {
+                    Ok(decrypted) => decrypted,
+                    Err(_) => raw_data, // Fallback to plaintext
+                };
+
+                let database_type = match db_type.as_str() {
+                    "postgres" => crate::database::types::DatabaseInfo::Postgres {
+                        connection_string: connection_data,
+                    },
+                    "sqlite" => crate::database::types::DatabaseInfo::SQLite {
+                        db_path: connection_data,
+                    },
+                    _ => crate::database::types::DatabaseInfo::Postgres {
+                        connection_string: connection_data,
+                    },
+                };
+
+                Ok(ConnectionInfo {
+                    id: {
+                        let id: String = row.get(0)?;
+                        Uuid::parse_str(&id).map_err(|err| {
+                            rusqlite::Error::FromSqlConversionFailure(0, Type::Text, Box::new(err))
+                        })?
+                    },
+                    name: row.get(1)?,
+                    database_type,
+                    connected: false,
+                })
+            })
+            .context("Failed to query connection")?;
+
+        match rows.next() {
+            Some(row) => Ok(Some(row.map_err(|e| anyhow::anyhow!("Failed to process connection row: {}", e))?)),
+            None => Ok(None),
+        }
+    }
+
+
     pub fn get_connections(&self) -> Result<Vec<ConnectionInfo>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn
@@ -227,8 +288,14 @@ impl Storage {
 
         let rows = stmt
             .query_map([], |row| {
-                let connection_data: String = row.get(2)?;
+                let raw_data: String = row.get(2)?;
                 let db_type: String = row.get(3)?;
+
+                // Try to decrypt, otherwise assume plaintext (lazy migration)
+                let connection_data = match crate::security::decrypt(&raw_data) {
+                    Ok(decrypted) => decrypted,
+                    Err(_) => raw_data, // Fallback to plaintext
+                };
 
                 let database_type = match db_type.as_str() {
                     "postgres" => crate::database::types::DatabaseInfo::Postgres {
