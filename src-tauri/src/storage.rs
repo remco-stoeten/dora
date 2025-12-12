@@ -22,6 +22,7 @@ impl Migrator {
             migrations: &[
                 include_str!("../migrations/001.sql"),
                 include_str!("../migrations/002.sql"),
+                include_str!("../migrations/003.sql"),
             ],
         }
     }
@@ -157,6 +158,11 @@ impl Storage {
         })
     }
 
+    /// Get a reference to the underlying connection (locked)
+    pub fn get_connection(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {
+        self.conn.lock()
+            .map_err(|e| crate::Error::Any(anyhow::anyhow!("Failed to lock connection: {}", e)))
+    }
     pub fn save_connection(&self, connection: &ConnectionInfo) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
         let conn = self.conn.lock().unwrap();

@@ -6,10 +6,13 @@ import { AppSidebarComplete } from '@/components/sidebar/app-sidebar-complete'
 import { ResizeHandle } from '@/components/layout/resize-handle'
 import { ScriptTabs } from '@/components/editor/script-tabs'
 import { SqlEditor } from '@/components/editor/sql-editor'
+import { CommandPalette } from '@/components/ui/command-palette'
 import { Table } from '@/components/data/table'
+import { useCommands } from '@/core/hooks/use-commands'
+import { COMMAND_IDS } from '@/core/commands/constants'
 import { ConnectionForm } from '@/components/connections/connection-form'
 import { useResizable } from '@/core/hooks'
-import { useTabs } from '@/core/state'
+import { useTabs, useTheme } from '@/core/state'
 import {
   getConnections,
   initializeConnections,
@@ -264,7 +267,7 @@ export default function Home() {
 
     const firstTable = databaseSchema.tables[0]
     const query = `SELECT * FROM ${firstTable.schema ? `"${firstTable.schema}".` : ''}"${firstTable.name}" LIMIT 100;`
-    
+
     const activeTab = getActiveTab()
     if (activeTab && activeTab.type === 'script') {
       handleEditorContentChange(query)
@@ -471,20 +474,49 @@ export default function Home() {
     }
   }
 
-  useEffect(() => {
-    function handleKeydown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault()
-        handleSaveScript()
-      } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        event.preventDefault()
-        handleRunQuery()
-      }
-    }
+  // Command System Integration
+  const { registerHandler } = useCommands()
 
-    window.addEventListener('keydown', handleKeydown)
-    return () => window.removeEventListener('keydown', handleKeydown)
-  }, [activeScriptId, currentEditorContent, scripts, selectedConnection])
+  // Theme integration
+  const { theme, setTheme } = useTheme()
+
+  // Register command handlers
+  useEffect(() => {
+    const unregisterRun = registerHandler(COMMAND_IDS.QUERIES_RUN, handleRunQuery)
+    const unregisterSave = registerHandler(COMMAND_IDS.QUERIES_SAVE, handleSaveScript)
+
+    const unregisterTheme = registerHandler(COMMAND_IDS.THEME_TOGGLE, () => {
+      setTheme(theme === 'dark' ? 'light' : 'dark')
+    })
+
+    const unregisterNewConn = registerHandler(COMMAND_IDS.CONNECTIONS_NEW, () => {
+      setShowConnectionForm(true)
+      setEditingConnection(null)
+    })
+
+    const unregisterSidebar = registerHandler(COMMAND_IDS.VIEW_SIDEBAR, () => {
+      setIsSidebarCollapsed(prev => !prev)
+    })
+
+    const unregisterNewScript = registerHandler(COMMAND_IDS.SCRIPTS_NEW, handleCreateNewScript)
+
+    return () => {
+      unregisterRun()
+      unregisterSave()
+      unregisterTheme()
+      unregisterNewConn()
+      unregisterSidebar()
+      unregisterNewScript()
+    }
+  }, [registerHandler, handleRunQuery, handleSaveScript, handleCreateNewScript, theme, setTheme])
+  // handleRunQuery and handleSaveScript use state, but are they stable?
+  // They are defined within the component scope, so they change on every render if not memoized.
+  // The implementations in original file are just functions, not wrapped in useCallback.
+  // This means effect runs on every render, re-registering handlers. This is fine but slightly inefficient.
+  // Ideally we should wrap handlers in useCallback or accept that they re-register.
+  // Given `registerHandler` uses a ref for storage, re-registering is just updating a property, very cheap.
+
+  /* Previous keydown listener removed */
 
   const currentConnection = connections.find((c) => c.id === selectedConnection)
   const activeTab = getActiveTab()
