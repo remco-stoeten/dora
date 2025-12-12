@@ -294,7 +294,8 @@ impl Storage {
         let mut stmt = conn
             .prepare(
                 "SELECT c.id, c.name, c.connection_data, 
-                        COALESCE(dt.name, 'postgres') as db_type
+                        COALESCE(dt.name, 'postgres') as db_type,
+                        c.last_connected_at, c.favorite, c.color, c.sort_order
                  FROM connections c
                  LEFT JOIN database_types dt ON c.database_type_id = dt.id
                  ORDER BY c.sort_order, c.name",
@@ -334,6 +335,10 @@ impl Storage {
                     name: row.get(1)?,
                     database_type,
                     connected: false,
+                    last_connected_at: row.get(4).ok(),
+                    favorite: row.get(5).ok(),
+                    color: row.get(6).ok(),
+                    sort_order: row.get(7).ok(),
                 })
             })
             .context("Failed to query connections")?;

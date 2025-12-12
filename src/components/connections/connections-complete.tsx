@@ -1,6 +1,6 @@
 'use client'
 
-import { Cable, Plus, Settings2, Unplug } from 'lucide-react'
+import { Cable, Plus, Settings2, Unplug, Edit, Copy, Trash2, Star, StarOff, Clock, Link } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   ContextMenu,
@@ -55,6 +55,33 @@ export function ConnectionsComplete({
       return <Cable className="h-4 w-4" />
     }
     return <Cable className="h-4 w-4" />
+  }
+
+  function formatLastConnected(timestamp?: number): string {
+    if (!timestamp) return 'Never connected'
+    
+    const now = Date.now()
+    const diff = now - timestamp * 1000 // Convert from seconds to milliseconds
+    
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`
+    
+    return new Date(timestamp * 1000).toLocaleDateString()
+  }
+
+  function getConnectionDetails(conn: ConnectionInfo): string {
+    if ('Postgres' in conn.database_type) {
+      return conn.database_type.Postgres.connection_string
+    } else if ('SQLite' in conn.database_type) {
+      return conn.database_type.SQLite.db_path
+    }
+    return ''
   }
 
   return (
@@ -127,11 +154,40 @@ export function ConnectionsComplete({
                       <div className="truncate font-mono text-xs text-muted-foreground">
                         {getDatabaseDisplay(connection)}
                       </div>
+                      {connection.last_connected_at && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                          <Clock className="h-3 w-3" />
+                          {formatLastConnected(connection.last_connected_at)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Button>
               </ContextMenuTrigger>
-              <ContextMenuContent>
+              <ContextMenuContent className="w-56">
+                {/* Connection Status */}
+                <div className="px-2 py-1.5 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{connection.name}</span>
+                    <div className="flex items-center gap-1">
+                      {connection.connected ? (
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {connection.connected ? 'Connected' : 'Disconnected'}
+                      </span>
+                    </div>
+                  </div>
+                  {connection.last_connected_at && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Last connected: {formatLastConnected(connection.last_connected_at)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Primary Actions */}
                 <ContextMenuItem
                   onClick={() => {
                     if (connection.connected) {
@@ -140,25 +196,81 @@ export function ConnectionsComplete({
                       onConnectToDatabase?.(connection.id)
                     }
                   }}
+                  className="py-2"
                 >
-                  {connection.connected ? 'Disconnect' : 'Connect'}
+                  {connection.connected ? (
+                    <>
+                      <Unplug className="h-4 w-4 mr-2 text-error" />
+                      Disconnect
+                    </>
+                  ) : (
+                    <>
+                      <Cable className="h-4 w-4 mr-2 text-success" />
+                      Connect
+                    </>
+                  )}
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => onEditConnection?.(connection)}>
+
+                <ContextMenuItem 
+                  onClick={() => onEditConnection?.(connection)}
+                  className="py-2"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
                   Edit Connection
                 </ContextMenuItem>
+
+                {/* Favorite Toggle */}
+                <ContextMenuItem className="py-2">
+                  {connection.favorite ? (
+                    <>
+                      <StarOff className="h-4 w-4 mr-2" />
+                      Remove from Favorites
+                    </>
+                  ) : (
+                    <>
+                      <Star className="h-4 w-4 mr-2" />
+                      Add to Favorites
+                    </>
+                  )}
+                </ContextMenuItem>
+
+                <ContextMenuSeparator />
+
+                {/* Copy Actions */}
                 <ContextMenuItem
                   onClick={() => {
                     const str = getDatabaseDisplay(connection)
                     if (str) navigator.clipboard.writeText(str)
                   }}
+                  className="py-2"
                 >
+                  <Copy className="h-4 w-4 mr-2" />
                   Copy Connection String
                 </ContextMenuItem>
-                <ContextMenuSeparator />
+
                 <ContextMenuItem
-                  className="text-error focus:text-error"
-                  onClick={() => onDeleteConnection?.(connection.id)}
+                  onClick={() => {
+                    const details = getConnectionDetails(connection)
+                    if (details) navigator.clipboard.writeText(details)
+                  }}
+                  className="py-2"
                 >
+                  <Link className="h-4 w-4 mr-2" />
+                  Copy Full Details
+                </ContextMenuItem>
+
+                <ContextMenuSeparator />
+
+                {/* Danger Zone */}
+                <ContextMenuItem
+                  className="py-2 text-error focus:text-error"
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete "${connection.name}"? This action cannot be undone.`)) {
+                      onDeleteConnection?.(connection.id)
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete Connection
                 </ContextMenuItem>
               </ContextMenuContent>

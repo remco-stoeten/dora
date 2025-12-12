@@ -168,6 +168,16 @@ export default function Home() {
   }, [selectedConnection, connections])
 
   useEffect(() => {
+    // Auto-preview when schema loads for a connected database
+    if (databaseSchema && selectedConnection) {
+      const connection = connections.find((c) => c.id === selectedConnection)
+      if (connection?.connected && databaseSchema.tables.length > 0) {
+        autoPreviewFirstTable()
+      }
+    }
+  }, [databaseSchema, selectedConnection, connections])
+
+  useEffect(() => {
     if (selectedConnection) {
       loadQueryHistory()
     } else {
@@ -249,6 +259,20 @@ export default function Home() {
     }
   }
 
+  async function autoPreviewFirstTable() {
+    if (!databaseSchema || !databaseSchema.tables.length) return
+
+    const firstTable = databaseSchema.tables[0]
+    const query = `SELECT * FROM ${firstTable.schema ? `"${firstTable.schema}".` : ''}"${firstTable.name}" LIMIT 100;`
+    
+    const activeTab = getActiveTab()
+    if (activeTab && activeTab.type === 'script') {
+      handleEditorContentChange(query)
+      // Auto-execute the preview query
+      setTimeout(() => handleRunQuery(), 500)
+    }
+  }
+
   function handleSelectConnection(connectionId: string) {
     setSelectedConnection(connectionId)
   }
@@ -262,6 +286,8 @@ export default function Home() {
         await loadConnections()
         if (selectedConnection === connectionId) {
           await loadDatabaseSchemaIfNeeded(connectionId)
+          // Auto-preview first table after schema loads
+          await autoPreviewFirstTable()
         }
       }
     } catch (error) {
