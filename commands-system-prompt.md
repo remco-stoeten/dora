@@ -122,5 +122,4 @@ const commands = {
 - TypeScript UI components
 - Integration with existing codebase
 - Documentation for adding new commands
-- Example command definitions for database-palace features</content>
-<parameter name="filePath">commands-system-prompt.md
+- Example command definitions for database-palace features

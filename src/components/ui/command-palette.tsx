@@ -39,7 +39,9 @@ export function CommandPalette() {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowDown') {
                 e.preventDefault()
-                setSelectedIndex(prev => Math.min(prev + 1, filteredCommands.length - 1))
+                if (filteredCommands.length > 0) {
+                    setSelectedIndex(prev => Math.min(prev + 1, filteredCommands.length - 1))
+                }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault()
                 setSelectedIndex(prev => Math.max(prev - 1, 0))

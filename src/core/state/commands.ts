@@ -25,9 +25,10 @@ export const useCommandStore = create<CommandStore>((set, get) => ({
     loadCommands: async () => {
         try {
             const commands = await getAllCommands()
+            console.log('[useCommandStore] Loaded commands:', commands)
             set({ commands })
         } catch (error) {
-            console.error('Failed to load commands:', error)
+            console.error('[useCommandStore] Failed to load commands:', error)
         }
     },
 

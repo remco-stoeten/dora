@@ -104,6 +104,16 @@ impl CommandRegistry {
     
     /// Register a command
     pub fn register(&mut self, command: CommandDefinition) {
+        // If overwriting an existing command, remove its old shortcut mapping first
+        if let Some(existing) = self.commands.get(&command.id) {
+            if let Some(ref old_shortcut) = existing.shortcut {
+                if old_shortcut.enabled {
+                    let old_key = Self::shortcut_key(&old_shortcut.keys);
+                    self.shortcut_index.remove(&old_key);
+                }
+            }
+        }
+        
         // Index the shortcut if present
         if let Some(ref shortcut) = command.shortcut {
             if shortcut.enabled {

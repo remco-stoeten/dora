@@ -19,7 +19,7 @@ export function Table({ columns, data }: TableProps) {
   const pageSize = 100
 
   const sortedData = useMemo(() => {
-    if (!sortColumn || !sortDirection) return data
+    if (sortColumn === null || !sortDirection) return data
 
     return [...data].sort((a, b) => {
       const aValue = a[sortColumn]
@@ -57,7 +57,7 @@ export function Table({ columns, data }: TableProps) {
   // Reset to page 1 when sorting changes
   const handleSort = (columnIndex: number) => {
     setCurrentPage(1)
-    
+
     if (sortColumn === columnIndex) {
       // Toggle direction or reset if already descending
       if (sortDirection === 'asc') {
@@ -104,7 +104,7 @@ export function Table({ columns, data }: TableProps) {
   function exportToCSV() {
     const csvContent = [
       columns.join(','),
-      ...sortedData.map(row => 
+      ...sortedData.map(row =>
         row.map(cell => {
           const value = cell === null ? 'NULL' : String(cell)
           // Escape quotes and wrap in quotes if contains comma or quote
@@ -224,7 +224,7 @@ export function Table({ columns, data }: TableProps) {
               <div className="text-muted-foreground">
                 Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length} results
               </div>
-              
+
               {/* Export Controls */}
               <div className="flex items-center gap-2">
                 <Button
@@ -247,7 +247,7 @@ export function Table({ columns, data }: TableProps) {
                 </Button>
               </div>
             </div>
-            
+
             {totalPages > 1 && (
               <div className="flex items-center gap-2">
                 <Button
@@ -259,7 +259,7 @@ export function Table({ columns, data }: TableProps) {
                   <ChevronLeft className="h-4 w-4" />
                   Previous
                 </Button>
-                
+
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum
@@ -272,7 +272,7 @@ export function Table({ columns, data }: TableProps) {
                     } else {
                       pageNum = currentPage - 2 + i
                     }
-                    
+
                     return (
                       <Button
                         key={pageNum}

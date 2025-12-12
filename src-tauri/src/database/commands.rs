@@ -145,10 +145,17 @@ pub async fn connect_to_database(
             client,
         } => {
             // Strip unsupported channel_binding parameter
-            let cleaned_string = connection_string.split('&')
-                .filter(|param| !param.starts_with("channel_binding="))
-                .collect::<Vec<_>>()
-                .join("&");
+            let cleaned_string = if let Ok(mut url) = url::Url::parse(&*connection_string) {
+                let params: Vec<_> = url.query_pairs()
+                    .filter(|(k, _)| k != "channel_binding")
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect();
+                
+                url.set_query(if params.is_empty() { None } else { Some(&params.join("&")) });
+                url.to_string()
+            } else {
+                connection_string.clone()
+            };
             
             let mut config: tokio_postgres::Config =
                 cleaned_string.parse().with_context(|| {
@@ -333,10 +340,17 @@ pub async fn test_connection(
     match database_info {
         DatabaseInfo::Postgres { connection_string } => {
             // Strip unsupported channel_binding parameter
-            let cleaned_string = connection_string.split('&')
-                .filter(|param| !param.starts_with("channel_binding="))
-                .collect::<Vec<_>>()
-                .join("&");
+            let cleaned_string = if let Ok(mut url) = url::Url::parse(&connection_string) {
+                let params: Vec<_> = url.query_pairs()
+                    .filter(|(k, _)| k != "channel_binding")
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect();
+                
+                url.set_query(if params.is_empty() { None } else { Some(&params.join("&")) });
+                url.to_string()
+            } else {
+                connection_string.clone()
+            };
             
             let config: tokio_postgres::Config = cleaned_string.parse().with_context(|| {
                 format!("Failed to parse connection string: {}", cleaned_string)

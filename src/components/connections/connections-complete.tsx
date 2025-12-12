@@ -59,19 +59,19 @@ export function ConnectionsComplete({
 
   function formatLastConnected(timestamp?: number): string {
     if (!timestamp) return 'Never connected'
-    
+
     const now = Date.now()
     const diff = now - timestamp * 1000 // Convert from seconds to milliseconds
-    
+
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
+
     if (minutes < 1) return 'Just now'
     if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
     if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`
-    
+
     return new Date(timestamp * 1000).toLocaleDateString()
   }
 
@@ -211,7 +211,7 @@ export function ConnectionsComplete({
                   )}
                 </ContextMenuItem>
 
-                <ContextMenuItem 
+                <ContextMenuItem
                   onClick={() => onEditConnection?.(connection)}
                   className="py-2"
                 >
@@ -220,7 +220,7 @@ export function ConnectionsComplete({
                 </ContextMenuItem>
 
                 {/* Favorite Toggle */}
-                <ContextMenuItem className="py-2">
+                <ContextMenuItem className="py-2" disabled>
                   {connection.favorite ? (
                     <>
                       <StarOff className="h-4 w-4 mr-2" />
@@ -238,25 +238,37 @@ export function ConnectionsComplete({
 
                 {/* Copy Actions */}
                 <ContextMenuItem
-                  onClick={() => {
+                  onClick={async () => {
                     const str = getDatabaseDisplay(connection)
-                    if (str) navigator.clipboard.writeText(str)
+                    if (str) {
+                      try {
+                        await navigator.clipboard.writeText(str)
+                      } catch (err) {
+                        console.error('Failed to copy to clipboard', err)
+                      }
+                    }
                   }}
                   className="py-2"
                 >
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy Connection String
+                  Copy Display Address
                 </ContextMenuItem>
 
                 <ContextMenuItem
-                  onClick={() => {
+                  onClick={async () => {
                     const details = getConnectionDetails(connection)
-                    if (details) navigator.clipboard.writeText(details)
+                    if (details) {
+                      try {
+                        await navigator.clipboard.writeText(details)
+                      } catch (err) {
+                        console.error('Failed to copy to clipboard', err)
+                      }
+                    }
                   }}
                   className="py-2"
                 >
                   <Link className="h-4 w-4 mr-2" />
-                  Copy Full Details
+                  Copy Full Connection String
                 </ContextMenuItem>
 
                 <ContextMenuSeparator />

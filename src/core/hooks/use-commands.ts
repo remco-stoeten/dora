@@ -73,12 +73,9 @@ export function useCommands() {
             keys.push(key)
 
             // Normalize for matching: Sort modifiers, then key
-            // This simple normalization should match what the backend sends (Ctrl+P)
-            // NOTE: backend `registry.rs` sorts modifiers then key.
-            // We should probably rely on the same logic or just check match.
 
-            // Simplification: Check against loaded commands
-            // In a real robust app, we might want a trie or map for O(1)
+            // Debug logging
+            console.log('[useCommands] KeyDown:', key, 'Keys:', keys)
 
             const matchedCommand = commands.find(cmd => {
                 if (!cmd.shortcut?.enabled) return false
@@ -86,12 +83,6 @@ export function useCommands() {
                 const cmdKeys = cmd.shortcut.keys
                 if (cmdKeys.length !== keys.length) return false
 
-                // Very basic check: assumes specific order or exact set match
-                // For now, let's just check if every key in definition is present in event
-                // But event adds modifiers in specific order.
-
-                // Let's rely on the assumption that users press keys and we detect them.
-                // We need to match loose equality of sets.
                 const setA = new Set(cmdKeys.map(k => k.toLowerCase().replace('command', 'cmd'))) // normalize
                 const setB = new Set(keys.map(k => k.toLowerCase().replace('meta', 'cmd')))
 
@@ -102,11 +93,10 @@ export function useCommands() {
                 return true
             })
 
+            console.log('[useCommands] Matched:', matchedCommand?.id)
+
             if (matchedCommand) {
                 // If it's an input and the command isn't a "global" navigation command, maybe skip?
-                // But usually Ctrl+P, Ctrl+S, Ctrl+Enter work even in inputs.
-                // Typing commands (like single letters) should be blocked in inputs.
-                // If it has modifiers, usually safe to execute.
                 if (isInput && keys.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     return
                 }
