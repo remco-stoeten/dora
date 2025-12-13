@@ -55,6 +55,10 @@ pub struct ConnectionInfo {
     pub name: String,
     pub connected: bool,
     pub database_type: DatabaseInfo,
+    pub last_connected_at: Option<i64>,
+    pub favorite: Option<bool>,
+    pub color: Option<String>,
+    pub sort_order: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,6 +113,10 @@ impl DatabaseConnection {
                     db_path: db_path.clone(),
                 },
             },
+            last_connected_at: None,
+            favorite: None,
+            color: None,
+            sort_order: None,
         }
     }
 

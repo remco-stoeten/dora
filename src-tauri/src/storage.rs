@@ -22,6 +22,7 @@ impl Migrator {
             migrations: &[
                 include_str!("../migrations/001.sql"),
                 include_str!("../migrations/002.sql"),
+                include_str!("../migrations/003.sql"),
             ],
         }
     }
@@ -157,6 +158,11 @@ impl Storage {
         })
     }
 
+    /// Get a reference to the underlying connection (locked)
+    pub fn get_sqlite_connection(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {
+        self.conn.lock()
+            .map_err(|e| crate::Error::Any(anyhow::anyhow!("Failed to lock connection: {}", e)))
+    }
     pub fn save_connection(&self, connection: &ConnectionInfo) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
         let conn = self.conn.lock().unwrap();
@@ -238,7 +244,8 @@ impl Storage {
         let mut stmt = conn
             .prepare(
                 "SELECT c.id, c.name, c.connection_data, 
-                        COALESCE(dt.name, 'postgres') as db_type
+                        COALESCE(dt.name, 'postgres') as db_type,
+                        c.last_connected_at, c.favorite, c.color, c.sort_order
                  FROM connections c
                  LEFT JOIN database_types dt ON c.database_type_id = dt.id
                  WHERE c.id = ?1",
@@ -278,6 +285,10 @@ impl Storage {
                     name: row.get(1)?,
                     database_type,
                     connected: false,
+                    last_connected_at: row.get(4).ok(),
+                    favorite: row.get(5).ok(),
+                    color: row.get(6).ok(),
+                    sort_order: row.get(7).ok(),
                 })
             })
             .context("Failed to query connection")?;
@@ -294,7 +305,8 @@ impl Storage {
         let mut stmt = conn
             .prepare(
                 "SELECT c.id, c.name, c.connection_data, 
-                        COALESCE(dt.name, 'postgres') as db_type
+                        COALESCE(dt.name, 'postgres') as db_type,
+                        c.last_connected_at, c.favorite, c.color, c.sort_order
                  FROM connections c
                  LEFT JOIN database_types dt ON c.database_type_id = dt.id
                  ORDER BY c.sort_order, c.name",
@@ -334,6 +346,10 @@ impl Storage {
                     name: row.get(1)?,
                     database_type,
                     connected: false,
+                    last_connected_at: row.get(4).ok(),
+                    favorite: row.get(5).ok(),
+                    color: row.get(6).ok(),
+                    sort_order: row.get(7).ok(),
                 })
             })
             .context("Failed to query connections")?;

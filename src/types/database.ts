@@ -30,6 +30,10 @@ export type ConnectionInfo = {
   name: string
   connected: boolean
   database_type: DatabaseInfo
+  last_connected_at?: number
+  favorite?: boolean
+  color?: string
+  sort_order?: number
 }
 
 export type Connection = Entity & {

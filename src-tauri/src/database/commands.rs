@@ -144,9 +144,23 @@ pub async fn connect_to_database(
             connection_string,
             client,
         } => {
+            // Strip unsupported channel_binding parameter
+            let cleaned_string = if let Ok(mut url) = url::Url::parse(&*connection_string) {
+                let params: Vec<_> = url.query_pairs()
+                    .filter(|(k, _)| k != "channel_binding")
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect();
+                
+                let query_string = params.join("&");
+                url.set_query(if params.is_empty() { None } else { Some(&query_string) });
+                url.to_string()
+            } else {
+                connection_string.clone()
+            };
+            
             let mut config: tokio_postgres::Config =
-                connection_string.parse().with_context(|| {
-                    format!("Failed to parse connection string: {}", connection_string)
+                cleaned_string.parse().with_context(|| {
+                    format!("Failed to parse connection string: {}", cleaned_string)
                 })?;
             if config.get_password().is_none() {
                 credentials::get_password(&connection_id)?.map(|pw| config.password(pw));
@@ -326,8 +340,22 @@ pub async fn test_connection(
 ) -> Result<bool, Error> {
     match database_info {
         DatabaseInfo::Postgres { connection_string } => {
-            let config: tokio_postgres::Config = connection_string.parse().with_context(|| {
-                format!("Failed to parse connection string: {}", connection_string)
+            // Strip unsupported channel_binding parameter
+            let cleaned_string = if let Ok(mut url) = url::Url::parse(&connection_string) {
+                let params: Vec<_> = url.query_pairs()
+                    .filter(|(k, _)| k != "channel_binding")
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect();
+                
+                let query_string = params.join("&");
+                url.set_query(if params.is_empty() { None } else { Some(&query_string) });
+                url.to_string()
+            } else {
+                connection_string.clone()
+            };
+            
+            let config: tokio_postgres::Config = cleaned_string.parse().with_context(|| {
+                format!("Failed to parse connection string: {}", cleaned_string)
             })?;
             log::info!("Testing Postgres connection: {config:?}");
             match connect(&config, &certificates).await {

@@ -1,3 +1,4 @@
+mod commands_system;
 mod credentials;
 mod database;
 mod error;
@@ -6,13 +7,14 @@ mod storage;
 mod utils;
 mod window;
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
 use tauri::Manager;
 use uuid::Uuid;
 pub mod security;
 use crate::{
+    commands_system::CommandRegistry,
     database::{
         stmt_manager::StatementManager,
         types::{DatabaseConnection, DatabaseSchema},
@@ -29,6 +31,8 @@ pub struct AppState {
     /// SQLite database for application data
     pub storage: Storage,
     pub stmt_manager: StatementManager,
+    /// Command registry with keyboard shortcuts
+    pub command_registry: RwLock<CommandRegistry>,
 }
 
 impl AppState {
@@ -37,12 +41,19 @@ impl AppState {
         let db_path = data_dir.join("Dora").join("Dora.db");
 
         let storage = Storage::new(db_path)?;
+        
+        // Initialize command registry and load custom shortcuts from database
+        let mut command_registry = CommandRegistry::new();
+        if let Err(e) = commands_system::load_custom_shortcuts(&storage, &mut command_registry) {
+            log::warn!("Failed to load custom shortcuts: {}", e);
+        }
 
         Ok(Self {
             connections: DashMap::new(),
             schemas: DashMap::new(),
             storage,
             stmt_manager: StatementManager::new(),
+            command_registry: RwLock::new(command_registry),
         })
     }
 }
@@ -80,6 +91,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Database commands
             database::commands::test_connection,
             database::commands::add_connection,
             database::commands::update_connection,
@@ -106,11 +118,17 @@ pub fn run() {
             database::commands::get_setting,
             database::commands::set_setting,
             database::commands::get_connection_history,
+            // Window commands
             window::commands::minimize_window,
             window::commands::maximize_window,
             window::commands::close_window,
             window::commands::open_sqlite_db,
             window::commands::save_sqlite_db,
+            // Commands system
+            commands_system::get_all_commands,
+            commands_system::get_command,
+            commands_system::update_command_shortcut,
+            commands_system::get_custom_shortcuts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
