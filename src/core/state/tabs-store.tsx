@@ -29,11 +29,39 @@ export interface ScriptTab extends BaseTab {
   queryStatus?: 'idle' | 'running' | 'completed' | 'error'
 }
 
-interface TableViewTab extends BaseTab {
+type ColumnFilter = {
+  column: string
+  value: string
+  operator: 'contains' | 'equals' | 'starts' | 'ends' | 'gt' | 'lt' | 'gte' | 'lte'
+}
+
+type CellEdit = {
+  rowIndex: number
+  columnIndex: number
+  originalValue: unknown
+  newValue: string
+}
+
+export interface TableViewTab extends BaseTab {
   type: 'table-view'
   tableName: string
   schema: string
   connectionId: string
+  // Table data
+  columns: string[]
+  data: unknown[][]
+  totalRows?: number
+  primaryKeyColumn?: string
+  // UI state
+  loading: boolean
+  error?: string | null
+  filters: ColumnFilter[]
+  sortColumn: number | null
+  sortDirection: 'asc' | 'desc' | null
+  currentPage: number
+  // Editing state
+  pendingChanges: Map<string, CellEdit>
+  dryRunMode: boolean
 }
 
 type TabType = 'script' | 'table-view'
@@ -90,6 +118,12 @@ type TabsContextType = {
   closeAllTabs: () => void
   closeOtherTabs: (tabId: string) => void
   reorderTabs: (fromIndex: number, toIndex: number) => void
+  // Table tab management
+  setTableData: (tabId: string, data: { columns: string[], rows: unknown[][], totalRows?: number, primaryKeyColumn?: string }) => void
+  setTableLoading: (tabId: string, loading: boolean) => void
+  setTableError: (tabId: string, error: string | null) => void
+  updateTablePendingChanges: (tabId: string, changes: Map<string, { rowIndex: number, columnIndex: number, originalValue: unknown, newValue: string }>) => void
+  setTableDirty: (tabId: string, isDirty: boolean) => void
 }
 
 const TabsContext = createContext<TabsContextType | undefined>(undefined)
@@ -353,7 +387,7 @@ export function TabsProvider({ children }: { children: React.ReactNode }) {
     const tableTab: TableViewTab = {
       id: tabId,
       type: 'table-view',
-      title: `${schema}.${tableName}`,
+      title: schema && schema !== 'public' ? `${schema}.${tableName}` : tableName,
       isDirty: false,
       canClose: true,
       canRename: false,
@@ -361,6 +395,21 @@ export function TabsProvider({ children }: { children: React.ReactNode }) {
       tableName,
       schema,
       connectionId,
+      // Table data - initially empty, will be loaded
+      columns: [],
+      data: [],
+      totalRows: undefined,
+      primaryKeyColumn: undefined,
+      // UI state
+      loading: true,
+      error: null,
+      filters: [],
+      sortColumn: null,
+      sortDirection: null,
+      currentPage: 1,
+      // Editing state
+      pendingChanges: new Map(),
+      dryRunMode: true,
     }
 
     setTabs((prev) => [...prev, tableTab])
@@ -616,6 +665,70 @@ export function TabsProvider({ children }: { children: React.ReactNode }) {
     markSessionDirty()
   }, [markSessionDirty])
 
+  // Table tab management functions
+  const setTableData = useCallback((tabId: string, data: { columns: string[], rows: unknown[][], totalRows?: number, primaryKeyColumn?: string }) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id === tabId && tab.type === 'table-view') {
+          return {
+            ...tab,
+            columns: data.columns,
+            data: data.rows,
+            totalRows: data.totalRows,
+            primaryKeyColumn: data.primaryKeyColumn,
+            loading: false,
+            error: null,
+          } as TableViewTab
+        }
+        return tab
+      })
+    )
+  }, [])
+
+  const setTableLoading = useCallback((tabId: string, loading: boolean) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id === tabId && tab.type === 'table-view') {
+          return { ...tab, loading } as TableViewTab
+        }
+        return tab
+      })
+    )
+  }, [])
+
+  const setTableError = useCallback((tabId: string, error: string | null) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id === tabId && tab.type === 'table-view') {
+          return { ...tab, error, loading: false } as TableViewTab
+        }
+        return tab
+      })
+    )
+  }, [])
+
+  const updateTablePendingChanges = useCallback((tabId: string, changes: Map<string, { rowIndex: number, columnIndex: number, originalValue: unknown, newValue: string }>) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id === tabId && tab.type === 'table-view') {
+          return { ...tab, pendingChanges: changes, isDirty: changes.size > 0 } as TableViewTab
+        }
+        return tab
+      })
+    )
+  }, [])
+
+  const setTableDirty = useCallback((tabId: string, isDirty: boolean) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (tab.id === tabId && tab.type === 'table-view') {
+          return { ...tab, isDirty } as TableViewTab
+        }
+        return tab
+      })
+    )
+  }, [])
+
   return (
     <TabsContext.Provider
       value={{
@@ -653,6 +766,12 @@ export function TabsProvider({ children }: { children: React.ReactNode }) {
         closeAllTabs,
         closeOtherTabs,
         reorderTabs,
+        // Table tab management
+        setTableData,
+        setTableLoading,
+        setTableError,
+        updateTablePendingChanges,
+        setTableDirty,
       }}
     >
       {children}

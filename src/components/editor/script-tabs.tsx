@@ -1,7 +1,7 @@
 'use client'
 
 import { useTabs } from '@/core/state'
-import { Plus, X, Circle, Pin, PinOff } from 'lucide-react'
+import { Plus, X, Circle, Pin, PinOff, FileJson2, TableProperties } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState, useRef, useCallback } from 'react'
 import {
@@ -179,6 +179,15 @@ export function ScriptTabs() {
                   >
                     {isPinned && (
                       <Pin className="h-3 w-3 flex-shrink-0 text-blue-500" />
+                    )}
+
+                    {/* Tab type icon */}
+                    {!isPinned && (
+                      tab.type === 'table-view' ? (
+                        <TableProperties className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
+                      ) : (
+                        <FileJson2 className="h-3.5 w-3.5 flex-shrink-0 text-blue-400" />
+                      )
                     )}
 
                     {editingTabId === tab.id ? (
