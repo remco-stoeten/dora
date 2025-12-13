@@ -100,6 +100,64 @@ impl CommandRegistry {
                 "View"
             ).with_shortcut(vec!["Ctrl", "B"])
         );
+
+        // Navigation
+        self.register(
+            CommandDefinition::new(
+                "nav.home",
+                "Go to Home",
+                "Navigate to the home dashboard",
+                "Navigation"
+            )
+        );
+
+        self.register(
+            CommandDefinition::new(
+                "nav.settings",
+                "Open Settings",
+                "Navigate to application settings",
+                "Navigation"
+            )
+        );
+
+        // Application
+        self.register(
+            CommandDefinition::new(
+                "app.reload",
+                "Reload Window",
+                "Reload the application window",
+                "Application"
+            ).with_shortcut(vec!["Ctrl", "R"])
+        );
+
+        // Data
+        self.register(
+            CommandDefinition::new(
+                "data.refresh",
+                "Refresh Data",
+                "Refresh current view data",
+                "Data"
+            ).with_shortcut(vec!["Ctrl", "Shift", "R"])
+        );
+
+        // Tabs
+        self.register(
+            CommandDefinition::new(
+                "tabs.close",
+                "Close Tab",
+                "Close the current tab",
+                "Tabs"
+            ).with_shortcut(vec!["Ctrl", "W"])
+        );
+
+        self.register(
+            CommandDefinition::new(
+                "tabs.next",
+                "Next Tab",
+                "Switch to the next tab",
+                "Tabs"
+            ).with_shortcut(vec!["Ctrl", "Tab"])
+        );
     }
     
     /// Register a command

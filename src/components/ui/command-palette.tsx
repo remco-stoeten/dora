@@ -9,13 +9,23 @@ import { CommandDefinition, ShortcutDefinition } from '@/types/commands'
 import { cn } from '@/core/utilities/cn'
 
 export function CommandPalette() {
-    const { isOpen, setIsOpen, commands, searchQuery, setSearchQuery } = useCommandStore()
+    const { isOpen, setIsOpen, commands, searchQuery, setSearchQuery, usageHistory } = useCommandStore()
     const { executeCommand } = useCommands()
     const [selectedIndex, setSelectedIndex] = useState(0)
 
     // Filter commands based on search
     const filteredCommands = useMemo(() => {
-        if (!searchQuery) return commands.slice(0, 10) // Show top 10 by default
+        // If no search, show recently used first, then others
+        if (!searchQuery) {
+            const withHistory = commands.map(cmd => ({
+                ...cmd,
+                lastUsed: usageHistory[cmd.id]?.lastUsed || 0
+            }))
+
+            return withHistory
+                .sort((a, b) => b.lastUsed - a.lastUsed)
+                .slice(0, 10)
+        }
 
         const lowerQuery = searchQuery.toLowerCase()
         return commands
@@ -24,8 +34,14 @@ export function CommandPalette() {
                 cmd.description.toLowerCase().includes(lowerQuery) ||
                 cmd.category.toLowerCase().includes(lowerQuery)
             )
+            .map(cmd => ({
+                ...cmd,
+                // Simple score: 1 base, + usage boost
+                score: 1 + (usageHistory[cmd.id]?.count || 0) * 0.1
+            }))
+            .sort((a, b) => b.score - a.score)
             .slice(0, 50)
-    }, [commands, searchQuery])
+    }, [commands, searchQuery, usageHistory])
 
     // Reset selection on search change
     useEffect(() => {

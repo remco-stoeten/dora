@@ -18,6 +18,20 @@ export const COMMAND_IDS = {
 
     // View
     VIEW_SIDEBAR: 'view.sidebar',
+
+    // Navigation
+    NAV_HOME: 'nav.home',
+    NAV_SETTINGS: 'nav.settings',
+
+    // Application
+    APP_RELOAD: 'app.reload',
+
+    // Data
+    DATA_REFRESH: 'data.refresh',
+
+    // Tabs
+    TABS_CLOSE: 'tabs.close',
+    TABS_NEXT: 'tabs.next',
 } as const
 
 export type CommandId = typeof COMMAND_IDS[keyof typeof COMMAND_IDS]

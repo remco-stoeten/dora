@@ -5,7 +5,7 @@ import { COMMAND_IDS } from '@/core/commands/constants'
 type CommandHandler = () => void | Promise<void>
 
 export function useCommands() {
-    const { commands, loadCommands, setIsOpen, isOpen } = useCommandStore()
+    const { commands, loadCommands, setIsOpen, isOpen, trackCommandUsage } = useCommandStore()
     const handlersRef = useRef<Record<string, CommandHandler>>({})
 
     // Register a handler for a command
@@ -23,6 +23,7 @@ export function useCommands() {
         // Built-in handlers
         if (commandId === COMMAND_IDS.PALETTE_OPEN) {
             setIsOpen(true)
+            trackCommandUsage(commandId)
             return
         }
 
@@ -30,6 +31,7 @@ export function useCommands() {
         if (handler) {
             try {
                 await handler()
+                trackCommandUsage(commandId)
             } catch (error) {
                 console.error(`Error executing command ${commandId}:`, error)
             }
@@ -41,7 +43,7 @@ export function useCommands() {
         if (commandId !== COMMAND_IDS.PALETTE_OPEN) {
             setIsOpen(false)
         }
-    }, [setIsOpen])
+    }, [setIsOpen, trackCommandUsage])
 
     // Initial load
     useEffect(() => {
