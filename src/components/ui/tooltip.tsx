@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { cn } from '@/core/utilities/cn'
 
-interface TooltipProps {
+interface Props {
   children: React.ReactNode
   content: string
   side?: 'top' | 'bottom' | 'left' | 'right'
@@ -19,7 +19,7 @@ export function Tooltip({
   align = 'center',
   delay = 400,
   className,
-}: TooltipProps) {
+}: Props) {
   const [isVisible, setIsVisible] = React.useState(false)
   const [position, setPosition] = React.useState({ x: 0, y: 0 })
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)

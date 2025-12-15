@@ -1,4 +1,4 @@
-type LogoProps = {
+type Props = {
   className?: string
   size?: 'sm' | 'md' | 'lg'
 }
@@ -9,7 +9,7 @@ const sizeClasses = {
   lg: 'h-10 w-10',
 }
 
-export function Logo({ className = '', size = 'md' }: LogoProps) {
+export function Logo({ className = '', size = 'md' }: Props) {
   return (
     <svg
       className={`fill-current ${sizeClasses[size]} ${className}`}

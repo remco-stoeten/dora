@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/accordion'
 import type { Schema } from '@/types/database'
 
-type SchemaBrowserProps = {
+type Props = {
   schema: Schema | null
   onRefresh?: () => void
   loading?: boolean
 }
 
-export function SchemaBrowser({ schema, onRefresh, loading }: SchemaBrowserProps) {
+export function SchemaBrowser({ schema, onRefresh, loading }: Props) {
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set())
 
   function toggleTable(tableName: string) {

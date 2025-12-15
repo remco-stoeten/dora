@@ -2,13 +2,13 @@
 
 import { cn } from '@/core/utilities/cn'
 
-type ResizeHandleProps = {
+type Props = {
     onMouseDown: (e: React.MouseEvent) => void
     isResizing: boolean
     orientation?: 'vertical' | 'horizontal'
 }
 
-export function ResizeHandle({ onMouseDown, isResizing, orientation = 'vertical' }: ResizeHandleProps) {
+export function ResizeHandle({ onMouseDown, isResizing, orientation = 'vertical' }: Props) {
     return (
         <div
             className={cn(

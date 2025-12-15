@@ -1,5 +1,3 @@
-
-
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { CommandDefinition } from '@/types/commands'

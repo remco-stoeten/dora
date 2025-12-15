@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/context-menu'
 import type { ConnectionInfo } from '@/types/database'
 
-type ConnectionsCompleteProps = {
+type Props = {
   connections: ConnectionInfo[]
   selectedConnection: string | null
   establishingConnections: Set<string>
@@ -21,6 +21,7 @@ type ConnectionsCompleteProps = {
   onEditConnection?: (connection: ConnectionInfo) => void
   onDeleteConnection?: (connectionId: string) => void
   onDisconnectConnection?: (connectionId: string) => void
+  onUpdateConnectionColor?: (connectionId: string, color: number | null) => void
 }
 
 export function ConnectionsComplete({
@@ -33,7 +34,8 @@ export function ConnectionsComplete({
   onEditConnection,
   onDeleteConnection,
   onDisconnectConnection,
-}: ConnectionsCompleteProps) {
+  onUpdateConnectionColor,
+}: Props) {
   const selectedConnectionInfo = connections.find(conn => conn.id === selectedConnection)
 
   function getDatabaseDisplay(conn: ConnectionInfo): string {

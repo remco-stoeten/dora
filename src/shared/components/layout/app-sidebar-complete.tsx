@@ -3,16 +3,14 @@
 import { Cable, Plus, ChevronLeft, ChevronRight, FileJson, TableProperties, History, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConnectionsComplete } from '@/components/connections/connections-complete'
-import { DatabaseSchemaItems } from './database-schema-items'
-import { ScriptsComplete } from './scripts-complete'
-import { QueryHistoryComplete } from './query-history-complete'
-import { ConnectionHistoryPanel } from './connection-history-panel'
 import { Logo } from '@/components/shared/logo'
 import type { ConnectionInfo, Schema, Script, QueryHistoryEntry } from '@/types/database'
+import { ConnectionHistoryPanel } from '@/components/sidebar/connection-history-panel'
+import { DatabaseSchemaItems, ScriptsComplete, QueryHistoryComplete } from '@/domains'
 
 type SidebarTabState = 'connections' | 'items' | 'scripts' | 'history' | 'conn-history'
 
-type AppSidebarProps = {
+type Props = {
   connections: ConnectionInfo[]
   selectedConnection: string | null
   establishingConnections: Set<string>
@@ -66,7 +64,7 @@ export function AppSidebarComplete({
   onTableClick,
   onLoadFromHistory,
   onSidebarTabChange,
-}: AppSidebarProps) {
+}: Props) {
   function switchTab(state: SidebarTabState) {
     onToggleSidebar?.()
     onSidebarTabChange?.(state)

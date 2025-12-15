@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 
 
-type ResizeOptions = {
+type Props = {
     direction?: 'horizontal' | 'vertical'
     storageKey?: string
     defaultSize?: number
@@ -23,7 +23,7 @@ export function useResizable({
     shouldInverse = false,
     onResizeEnd,
     onResize
-}: ResizeOptions = {}) {
+}: Props = {}) {
     const [size, setSize] = useState(defaultSize)
     const [isResizing, setIsResizing] = useState(false)
     const startPosRef = useRef(0)

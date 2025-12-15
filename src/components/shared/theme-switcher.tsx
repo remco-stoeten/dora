@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react'
 import { cn } from '@/core/utilities/cn'
 import { useTheme } from '@/core/state'
 
-type ThemeValue = 'system' | 'light' | 'dark'
+type Props = 'system' | 'light' | 'dark'
 
 function ThemeOption({
     icon,
@@ -16,9 +16,9 @@ function ThemeOption({
     onClick,
 }: {
     icon: JSX.Element
-    value: ThemeValue
+    value: Props
     isActive?: boolean
-    onClick: (value: ThemeValue) => void
+    onClick: (value: Props) => void
 }) {
     return (
         <button
@@ -46,7 +46,7 @@ function ThemeOption({
     )
 }
 
-const THEME_OPTIONS: { icon: JSX.Element; value: ThemeValue }[] = [
+const THEME_OPTIONS: { icon: JSX.Element; value: Props }[] = [
     {
         icon: <MonitorIcon />,
         value: 'system',
@@ -74,7 +74,7 @@ export function ThemeSwitcher() {
         return <div className="flex h-8 w-24" />
     }
 
-    function handleThemeChange(value: ThemeValue) {
+    function handleThemeChange(value: Props) {
         if (value === 'system') {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
             setTheme(prefersDark ? 'dark' : 'light')
@@ -84,7 +84,7 @@ export function ThemeSwitcher() {
     }
 
     // Map the actual theme to display value (system is special - shows based on current)
-    const getActiveValue = (): ThemeValue => {
+    const getActiveValue = (): Props => {
         // For now, just show light/dark as active since we don't track "system" preference
         return theme
     }

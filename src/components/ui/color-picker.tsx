@@ -18,9 +18,7 @@ export const CONNECTION_COLORS = [
   { name: 'None', hue: null },
 ] as const
 
-type ConnectionColor = typeof CONNECTION_COLORS[number]
-
-type ColorPickerProps = {
+type Props   = {
   selectedColor?: number | null
   onColorChange: (color: number | null) => void
   trigger?: React.ReactNode
@@ -32,7 +30,7 @@ export function ConnectionColorPicker({
   onColorChange, 
   trigger,
   className = ""
-}: ColorPickerProps) {
+}: Props) {
   const [isOpen, setIsOpen] = useState(false)
 
   const handleColorSelect = (hue: number | null) => {

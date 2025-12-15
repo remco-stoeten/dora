@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Search, Table2, ArrowRight, Database } from 'lucide-react'
 import type { DatabaseSchema } from '@/types/database'
 
-type DataBrowserViewProps = {
+type Props = {
     schema: DatabaseSchema | null
     connectionId: string | null
     connected: boolean
@@ -16,7 +16,7 @@ export function DataBrowserView({
     connectionId,
     connected,
     onTableSelect,
-}: DataBrowserViewProps) {
+}: Props) {
     const [searchQuery, setSearchQuery] = useState('')
 
     const filteredTables = useMemo(() => {

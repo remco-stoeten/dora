@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useCommandStore } from '@/core/state/commands'
 import { COMMAND_IDS } from '@/core/commands/constants'
 
-type CommandHandler = () => void | Promise<void>
+type Props = () => void | Promise<void>
 
 export function useCommands() {
     const { commands, loadCommands, setIsOpen, isOpen, trackCommandUsage, getHandler, registerHandler } = useCommandStore()

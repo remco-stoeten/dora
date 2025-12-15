@@ -37,7 +37,7 @@ import {
 } from '@/core/tauri'
 import type { ConnectionInfo, DatabaseSchema, QueryHistoryEntry, Script, DatabaseInfo } from '@/types/database'
 
-type SidebarTabState = 'connections' | 'items' | 'scripts' | 'history' | 'conn-history'
+type Props = 'connections' | 'items' | 'scripts' | 'history' | 'conn-history'
 
 export default function Home() {
   const { addToast } = useToast()
@@ -53,7 +53,7 @@ export default function Home() {
   // activeScriptId is now derived from the active tab (see below)
   const [unsavedChanges, setUnsavedChanges] = useState<Set<number>>(new Set())
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [sidebarTabState, setSidebarTabState] = useState<SidebarTabState>('connections')
+  const [sidebarTabState, setSidebarTabState] = useState<Props>('connections')
   const [executing, setExecuting] = useState(false)
   const [lastLoadedSchemaConnectionId, setLastLoadedSchemaConnectionId] = useState<string | null>(null)
 

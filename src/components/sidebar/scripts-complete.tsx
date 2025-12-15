@@ -4,7 +4,7 @@ import { FileJson } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { Script } from '@/types/database'
 
-type ScriptsCompleteProps = {
+type Props = {
   scripts: Script[]
   activeScriptId: number | null
   unsavedChanges: Set<number>
@@ -20,7 +20,7 @@ export function ScriptsComplete({
   onSelectScript,
   onCreateNewScript,
   onDeleteScript,
-}: ScriptsCompleteProps) {
+}: Props) {
   return (
     <div className="scrollable-container h-full space-y-1 overflow-y-auto">
       {scripts.length === 0 ? (

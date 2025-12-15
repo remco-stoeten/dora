@@ -1,6 +1,6 @@
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
+type Props = string | number | boolean | null | Props[] | { [key: string]: Props }
 
-function formatJsonTruncated(value: Json, maxLength: number = 60): string {
+function formatJsonTruncated(value: Props, maxLength: number = 60): string {
   let result = ''
   let length = 0
 
@@ -24,7 +24,7 @@ function formatJsonTruncated(value: Json, maxLength: number = 60): string {
     return false
   }
 
-  function formatValue(val: Json): boolean {
+  function formatValue(val: Props): boolean {
     if (val === null) return addString('null')
     if (val === undefined) return addString('undefined')
     if (typeof val === 'boolean') return addString(val ? 'true' : 'false')
@@ -76,7 +76,7 @@ function formatJsonTruncated(value: Json, maxLength: number = 60): string {
 export class CellFormatter {
   private static numberFormatter = new Intl.NumberFormat()
 
-  static formatCellDisplay(value: Json): string {
+  static formatCellDisplay(value: Props): string {
     if (value === null || value === undefined) return 'NULL'
     if (typeof value === 'number') return this.numberFormatter.format(value)
     if (typeof value === 'boolean') return value ? 'true' : 'false'

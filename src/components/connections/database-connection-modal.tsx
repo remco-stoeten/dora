@@ -30,13 +30,13 @@ import { pickSqliteDbDialog, testConnection } from '@/core/tauri'
 import { cn } from '@/core/utilities/cn'
 import type { ConnectionInfo, DatabaseInfo } from '@/types/database'
 
-type DialogProps = {
+type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }
 
-function Dialog({ open, onOpenChange, children }: DialogProps) {
+function Dialog({ open, onOpenChange, children }: Props) {
   if (!open) return null
 
   return (

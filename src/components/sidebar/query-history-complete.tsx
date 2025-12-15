@@ -3,7 +3,7 @@
 import { History } from 'lucide-react'
 import type { QueryHistoryEntry } from '@/types/database'
 
-type QueryHistoryCompleteProps = {
+type Props = {
   queryHistory: QueryHistoryEntry[]
   onLoadFromHistory?: (historyQuery: string) => void
 }
@@ -11,7 +11,7 @@ type QueryHistoryCompleteProps = {
 export function QueryHistoryComplete({
   queryHistory,
   onLoadFromHistory,
-}: QueryHistoryCompleteProps) {
+}: Props) {
   function formatDuration(durationMs: number | null): string {
     if (durationMs === null) return 'N/A'
     if (durationMs < 1000) return `${durationMs}ms`

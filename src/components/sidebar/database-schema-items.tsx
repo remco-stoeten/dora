@@ -3,7 +3,7 @@
 import { TableProperties, Search, ChevronRight } from 'lucide-react'
 import type { Schema } from '@/types/database'
 
-type DatabaseSchemaItemsProps = {
+type Props = {
   databaseSchema: Schema | null
   loadingSchema: boolean
   selectedConnection: string | null
@@ -15,7 +15,7 @@ export function DatabaseSchemaItems({
   loadingSchema,
   selectedConnection,
   onTableClick,
-}: DatabaseSchemaItemsProps) {
+}: Props) {
   const sortedTables = databaseSchema?.tables?.toSorted((a, b) => a.name.localeCompare(b.name)) || []
 
   if (!selectedConnection) {
