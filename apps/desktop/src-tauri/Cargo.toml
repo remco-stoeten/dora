@@ -1,5 +1,5 @@
 [package]
-name = "app"
+name = "dora"
 version = "0.0.111"
 description = ""
 authors = ["Remco Stoeten"]
