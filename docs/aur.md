@@ -73,8 +73,7 @@ dora-x86_64-unknown-linux-gnu.tar.gz
     ├── dora.desktop
     └── icons/
         ├── 32x32.png
-        ├── 128x128.png
-        └── 256x256.png
+        └── 128x128.png
 ```
 
 If desktop/icons are unavailable, the package still installs the `dora` executable.

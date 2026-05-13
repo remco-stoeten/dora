@@ -1,4 +1,4 @@
-# Maintainer: Dora Maintainers <maintainers@dora.dev>
+# Maintainer: Remco Stoeten <remcostoeten@hotmail.com>
 
 pkgname=dora
 pkgver=0.0.0
@@ -6,9 +6,8 @@ pkgrel=1
 pkgdesc='Dora desktop database client (prebuilt binary release)'
 arch=('x86_64')
 url='https://github.com/remcostoeten/dora'
-license=('MIT')
+license=('GPL3')
 depends=('gtk3' 'webkit2gtk-4.1' 'libayatana-appindicator' 'openssl' 'libsoup3')
-provides=('dora')
 conflicts=('dora-bin')
 source=(
   "${pkgname}-${pkgver}.tar.gz::https://github.com/remcostoeten/dora/releases/download/v${pkgver}/dora-x86_64-unknown-linux-gnu.tar.gz"
@@ -16,12 +15,10 @@ source=(
 sha256sums=('REPLACE_WITH_RELEASE_SHA256')
 
 package() {
-  cd "$srcdir"
+  cd "$srcdir/dora-x86_64-unknown-linux-gnu"
 
-  # Install main executable from release tarball.
   install -Dm755 dora "$pkgdir/usr/bin/dora"
 
-  # Install desktop entry and icons from release assets when available.
   if [[ -f dora.desktop ]]; then
     install -Dm644 dora.desktop "$pkgdir/usr/share/applications/dora.desktop"
   fi
@@ -32,9 +29,5 @@ package() {
 
   if [[ -f icons/128x128.png ]]; then
     install -Dm644 icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/dora.png"
-  fi
-
-  if [[ -f icons/256x256.png ]]; then
-    install -Dm644 icons/256x256.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/dora.png"
   fi
 }

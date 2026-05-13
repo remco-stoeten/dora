@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: master
 
       - name: Resolve release metadata
         id: meta
@@ -45,7 +46,7 @@ jobs:
           SHA256="$(sha256sum dora-x86_64-unknown-linux-gnu.tar.gz | awk '{print $1}')"
           echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
 
-      - name: Update PKGBUILD and .SRCINFO
+      - name: Update PKGBUILD
         run: |
           set -euo pipefail
           VERSION="${{ steps.meta.outputs.version }}"
@@ -55,7 +56,17 @@ jobs:
           sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
           sed -i "s|^sha256sums=.*|sha256sums=('${SHA256}')|" packaging/aur/PKGBUILD
 
-          makepkg --printsrcinfo > packaging/aur/.SRCINFO
+      - name: Generate .SRCINFO (Arch container)
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD/packaging/aur:/pkg" \
+            -w /pkg \
+            archlinux:latest \
+            bash -c 'pacman -Syu --noconfirm --needed base-devel \
+              && useradd -m builder \
+              && chown -R builder:builder /pkg \
+              && su builder -c "makepkg --printsrcinfo" > .SRCINFO'
 
       - name: Commit packaging updates
         run: |
@@ -68,7 +79,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore(aur): update dora to ${{ steps.meta.outputs.version }}"
-          git push
+          git push origin HEAD:master
 
       - name: Publish to AUR
         if: ${{ env.AUR_SSH_PRIVATE_KEY != '' }}
