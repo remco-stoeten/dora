@@ -68,7 +68,9 @@ fi
 if ask "Clone/update local AUR repo checkout at /tmp/${AUR_PKG}?"; then
   need_cmd ssh
   rm -rf "/tmp/${AUR_PKG}"
-  git clone "$AUR_REPO_SSH" "/tmp/${AUR_PKG}"
+  ssh-keyscan aur.archlinux.org >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+  GIT_SSH_COMMAND="ssh -i ${KEY_PATH} -o IdentitiesOnly=yes" \
+    git clone "$AUR_REPO_SSH" "/tmp/${AUR_PKG}"
   cp packaging/aur/PKGBUILD "/tmp/${AUR_PKG}/PKGBUILD"
   cp packaging/aur/.SRCINFO "/tmp/${AUR_PKG}/.SRCINFO"
   say "Prepared /tmp/${AUR_PKG} with current packaging files"

@@ -8,7 +8,6 @@ arch=('x86_64')
 url='https://github.com/remcostoeten/dora'
 license=('GPL3')
 depends=('gtk3' 'webkit2gtk-4.1' 'libayatana-appindicator' 'openssl' 'libsoup3')
-conflicts=('dora-bin')
 source=(
   "${pkgname}-${pkgver}.tar.gz::https://github.com/remcostoeten/dora/releases/download/v${pkgver}/dora-x86_64-unknown-linux-gnu.tar.gz"
 )
