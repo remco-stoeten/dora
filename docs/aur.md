@@ -30,14 +30,16 @@ ssh-keygen -t ed25519 -C "github-actions-aur" -f ./aur_deploy_key
 ```
 
 - Add `aur_deploy_key.pub` to your AUR account keys.
-- Add private key contents (`aur_deploy_key`) to GitHub secret:
+- Add private key contents (`aur_deploy_key`) and the pinned AUR SSH known_hosts entry to GitHub secrets:
   - `AUR_SSH_PRIVATE_KEY`
+  - `AUR_KNOWN_HOSTS`
 
 ## 3) GitHub Actions secrets
 
 Configure repository secrets:
 
 - `AUR_SSH_PRIVATE_KEY`: private key for `aur@aur.archlinux.org`.
+- `AUR_KNOWN_HOSTS`: pinned `aur.archlinux.org` SSH known_hosts entry used by CI.
 
 ## 4) Manual local validation
 

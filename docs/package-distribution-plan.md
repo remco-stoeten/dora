@@ -298,8 +298,8 @@ Use a single primary Arch package name:
 1. Create a `PKGBUILD` for `dora`.
 2. Point `source=()` to the GitHub release tarball.
 3. Add the source archive checksum to `sha256sums=()`.
-4. Build the frontend and Tauri binary during `build()`.
-5. Install the binary, desktop file, icon, and license into the correct paths.
+4. Skip `build()` and package the prebuilt GitHub release archive.
+5. Install the binary, desktop file, icons, and license into the correct paths.
 6. Generate `.SRCINFO`.
 7. Test locally with `makepkg -si`.
 8. Publish to the AUR package repo.

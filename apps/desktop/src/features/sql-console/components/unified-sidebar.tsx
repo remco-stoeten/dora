@@ -50,6 +50,7 @@ export function UnifiedSidebar({
 	const [editingId, setEditingId] = useState<string | null>(null)
 	const [editValue, setEditValue] = useState('')
 	const editInputRef = useRef<HTMLInputElement>(null)
+	const searchTerm = snippetSearch.trim().toLowerCase()
 
 	const toggleFolder = useCallback(function (id: string) {
 		setExpandedFolders(function (prev) {
@@ -76,7 +77,9 @@ export function UnifiedSidebar({
 					editInputRef.current?.focus()
 					editInputRef.current?.select()
 				}, 0)
-				return function () { clearTimeout(t) }
+				return function () {
+					clearTimeout(t)
+				}
 			}
 		},
 		[editingId]
@@ -89,17 +92,38 @@ export function UnifiedSidebar({
 		}
 	}, [autoExpandFolder, onAutoExpandDone])
 
+	const visibleSnippets = useMemo(
+		function () {
+			if (!searchTerm) return snippets
+
+			const byId = new Map(
+				snippets.map(function (snippet) {
+					return [snippet.id, snippet]
+				})
+			)
+			const visibleIds = new Set<string>()
+
+			for (const snippet of snippets) {
+				if (!snippet.name.toLowerCase().includes(searchTerm)) continue
+
+				let current: SqlSnippet | undefined = snippet
+				while (current) {
+					visibleIds.add(current.id)
+					current = current.parentId ? byId.get(current.parentId) : undefined
+				}
+			}
+
+			return snippets.filter(function (snippet) {
+				return visibleIds.has(snippet.id)
+			})
+		},
+		[snippets, searchTerm]
+	)
+
 	const snippetTree = useMemo(
 		function () {
-			const term = snippetSearch.trim().toLowerCase()
-			const matches = term
-				? snippets.filter(function (s) {
-						return s.name.toLowerCase().includes(term)
-					})
-				: snippets
-
 			function buildTree(parentId: string | null): SqlSnippet[] {
-				return matches
+				return visibleSnippets
 					.filter(function (s) {
 						return s.parentId === parentId
 					})
@@ -111,12 +135,12 @@ export function UnifiedSidebar({
 			}
 			return buildTree(null)
 		},
-		[snippets, snippetSearch]
+		[visibleSnippets]
 	)
 
 	function renderSnippetNode(node: SqlSnippet, depth: number) {
-		const isExpanded = expandedFolders[node.id]
-		const children = snippets.filter(function (s) {
+		const isExpanded = expandedFolders[node.id] || Boolean(searchTerm)
+		const children = visibleSnippets.filter(function (s) {
 			return s.parentId === node.id
 		})
 		const isActive = activeSnippetId === node.id

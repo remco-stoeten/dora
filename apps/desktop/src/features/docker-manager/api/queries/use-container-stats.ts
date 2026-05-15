@@ -21,7 +21,7 @@ function parseBytes(str: string): number {
 	if (!match) return 0
 
 	const value = parseFloat(match[1])
-	const unit = match[2].toUpperCase().replace('I', '')
+	const unit = (match[2] || 'B').toUpperCase()
 
 	const multipliers: Record<string, number> = {
 		B: 1,
@@ -35,7 +35,7 @@ function parseBytes(str: string): number {
 		TIB: 1024 * 1024 * 1024 * 1024
 	}
 
-	return value * (multipliers[unit] || 1)
+	return value * (multipliers[unit] ?? 1)
 }
 
 async function fetchContainerStats(containerId: string): Promise<ContainerStats | null> {

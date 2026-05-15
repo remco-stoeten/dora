@@ -40,7 +40,11 @@ export function SqlConsole(props: Props) {
 	)
 }
 
-function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId, getConnectionName }: Props) {
+function SqlConsoleInner({
+	onToggleSidebar: _onToggleSidebar,
+	activeConnectionId,
+	getConnectionName
+}: Props) {
 	const adapter = useAdapter()
 	const isTauri = useIsTauri()
 	const tabStore = useQueryTabs()
@@ -55,12 +59,24 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 	const isExecuting = activeTab.isExecuting
 	const viewMode = activeTab.viewMode
 
-	function setMode(m: 'sql' | 'drizzle') { tabStore.setTabMode(activeTab.id, m) }
-	function setCurrentSqlQuery(v: string) { tabStore.updateTabContent(activeTab.id, 'sqlContent', v) }
-	function setCurrentDrizzleQuery(v: string) { tabStore.updateTabContent(activeTab.id, 'drizzleContent', v) }
-	function setResult(r: SqlQueryResult | null) { tabStore.setTabResult(activeTab.id, r) }
-	function setIsExecuting(v: boolean) { tabStore.setTabExecuting(activeTab.id, v) }
-	function setViewMode(v: ResultViewMode) { tabStore.setTabViewMode(activeTab.id, v) }
+	function setMode(m: 'sql' | 'drizzle') {
+		tabStore.setTabMode(activeTab.id, m)
+	}
+	function setCurrentSqlQuery(v: string) {
+		tabStore.updateTabContent(activeTab.id, 'sqlContent', v)
+	}
+	function setCurrentDrizzleQuery(v: string) {
+		tabStore.updateTabContent(activeTab.id, 'drizzleContent', v)
+	}
+	function setResult(r: SqlQueryResult | null) {
+		tabStore.setTabResult(activeTab.id, r)
+	}
+	function setIsExecuting(v: boolean) {
+		tabStore.setTabExecuting(activeTab.id, v)
+	}
+	function setViewMode(v: ResultViewMode) {
+		tabStore.setTabViewMode(activeTab.id, v)
+	}
 
 	const [snippets, setSnippets] = useState<SqlSnippet[]>([])
 	const [activeSnippetId, setActiveSnippetId] = useState<string | null>('playground')
@@ -261,18 +277,25 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 		[activeConnectionId, refreshSchema]
 	)
 
-	useEffect(function listenForOpenTableInSql() {
-		function onOpenTable(event: Event) {
-			const { tableName } = (event as CustomEvent<{ tableName: string }>).detail
-			setMode('sql')
-			setCurrentSqlQuery(`SELECT * FROM ${tableName} LIMIT 100;`)
-		}
+	useEffect(
+		function listenForOpenTableInSql() {
+			function onOpenTable(event: Event) {
+				const { tableName } = (event as CustomEvent<{ tableName: string }>).detail
+				tabStore.setTabMode(activeTab.id, 'sql')
+				tabStore.updateTabContent(
+					activeTab.id,
+					'sqlContent',
+					`SELECT * FROM ${tableName} LIMIT 100;`
+				)
+			}
 
-		window.addEventListener('dora-open-table-in-sql', onOpenTable as EventListener)
-		return function () {
-			window.removeEventListener('dora-open-table-in-sql', onOpenTable as EventListener)
-		}
-	}, [])
+			window.addEventListener('dora-open-table-in-sql', onOpenTable as EventListener)
+			return function () {
+				window.removeEventListener('dora-open-table-in-sql', onOpenTable as EventListener)
+			}
+		},
+		[activeTab.id, tabStore]
+	)
 
 	const handleExecute = useCallback(
 		async (codeOverride?: string, modeOverride?: 'sql' | 'drizzle') => {
@@ -555,16 +578,19 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 		[result]
 	)
 
-	const toggleRightSidebar = useCallback(function () {
-		if (showRightSidebar) {
-			setShowRightSidebar(false)
-			return
-		}
+	const toggleRightSidebar = useCallback(
+		function () {
+			if (showRightSidebar) {
+				setShowRightSidebar(false)
+				return
+			}
 
-		sbwRef.current = sidebarWidth || 256
-		setSidebarWidth(sbwRef.current)
-		setShowRightSidebar(true)
-	}, [showRightSidebar, sidebarWidth])
+			sbwRef.current = sidebarWidth || 256
+			setSidebarWidth(sbwRef.current)
+			setShowRightSidebar(true)
+		},
+		[showRightSidebar, sidebarWidth]
+	)
 
 	// Unified snippet handling - works for both SQL and Drizzle
 	const handleSnippetSelect = useCallback(
@@ -625,66 +651,22 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 		]
 	)
 
-	const handleSaveSnippet = useCallback(
-		async () => {
-			if (!activeConnectionId) return
-			const currentContent = mode === 'sql' ? currentSqlQuery : currentDrizzleQuery
+	const handleSaveSnippet = useCallback(async () => {
+		if (!activeConnectionId) return
+		const currentContent = mode === 'sql' ? currentSqlQuery : currentDrizzleQuery
 
-			const active = activeSnippetId
-				? snippets.find((s) => s.id === activeSnippetId && !s.isFolder)
-				: null
+		const active = activeSnippetId
+			? snippets.find((s) => s.id === activeSnippetId && !s.isFolder)
+			: null
 
-			if (active) {
-				let folderId: number | null = null
-				if (active.parentId?.startsWith('folder-')) {
-					folderId = parseInt(active.parentId.replace('folder-', ''), 10)
-				}
-				try {
-					await adapter.updateScript(
-						parseInt(active.id),
-						active.name,
-						currentContent,
-						activeConnectionId,
-						null,
-						folderId
-					)
-					await loadSnippets()
-				} catch (error) {
-					console.error('Failed to update snippet:', error)
-				}
-			} else {
-				await handleNewSnippet(null)
-			}
-		},
-		[
-			activeConnectionId,
-			activeSnippetId,
-			snippets,
-			mode,
-			currentSqlQuery,
-			currentDrizzleQuery,
-			adapter,
-			loadSnippets,
-			handleNewSnippet
-		]
-	)
-
-	const handleSaveActiveSnippetFromEditor = useCallback(
-		async () => {
-			if (!activeConnectionId || !activeSnippetId) return
-			const active = snippets.find((s) => s.id === activeSnippetId && !s.isFolder)
-			if (!active) return
-
+		if (active) {
 			let folderId: number | null = null
 			if (active.parentId?.startsWith('folder-')) {
 				folderId = parseInt(active.parentId.replace('folder-', ''), 10)
 			}
-
-			const currentContent = mode === 'sql' ? currentSqlQuery : currentDrizzleQuery
-
 			try {
 				await adapter.updateScript(
-					parseInt(active.id),
+					parseInt(active.id, 10),
 					active.name,
 					currentContent,
 					activeConnectionId,
@@ -695,18 +677,56 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 			} catch (error) {
 				console.error('Failed to update snippet:', error)
 			}
-		},
-		[
-			activeConnectionId,
-			activeSnippetId,
-			adapter,
-			currentDrizzleQuery,
-			currentSqlQuery,
-			loadSnippets,
-			mode,
-			snippets
-		]
-	)
+		} else {
+			await handleNewSnippet(null)
+		}
+	}, [
+		activeConnectionId,
+		activeSnippetId,
+		snippets,
+		mode,
+		currentSqlQuery,
+		currentDrizzleQuery,
+		adapter,
+		loadSnippets,
+		handleNewSnippet
+	])
+
+	const handleSaveActiveSnippetFromEditor = useCallback(async () => {
+		if (!activeConnectionId || !activeSnippetId) return
+		const active = snippets.find((s) => s.id === activeSnippetId && !s.isFolder)
+		if (!active) return
+
+		let folderId: number | null = null
+		if (active.parentId?.startsWith('folder-')) {
+			folderId = parseInt(active.parentId.replace('folder-', ''), 10)
+		}
+
+		const currentContent = mode === 'sql' ? currentSqlQuery : currentDrizzleQuery
+
+		try {
+			await adapter.updateScript(
+				parseInt(active.id, 10),
+				active.name,
+				currentContent,
+				activeConnectionId,
+				null,
+				folderId
+			)
+			await loadSnippets()
+		} catch (error) {
+			console.error('Failed to update snippet:', error)
+		}
+	}, [
+		activeConnectionId,
+		activeSnippetId,
+		adapter,
+		currentDrizzleQuery,
+		currentSqlQuery,
+		loadSnippets,
+		mode,
+		snippets
+	])
 
 	const handleNewFolder = useCallback(
 		async (parentId?: string | null) => {
@@ -753,7 +773,7 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 
 				try {
 					await adapter.updateScript(
-						parseInt(id),
+						parseInt(id, 10),
 						newName,
 						snippet.content,
 						activeConnectionId,
@@ -785,7 +805,7 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 			}
 
 			try {
-				await adapter.deleteScript(parseInt(id))
+				await adapter.deleteScript(parseInt(id, 10))
 				await loadSnippets()
 			} catch (error) {
 				console.error('Failed to delete snippet:', error)
@@ -799,22 +819,34 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 	useActiveScope($, 'sql-console')
 
 	$.bind(sqlShortcuts.runQuery.combo).on(
-		function () { handleExecute() },
+		function () {
+			handleExecute()
+		},
 		{ description: sqlShortcuts.runQuery.description }
 	)
 
 	$.bind(sqlShortcuts.runSelection.combo).on(
-		function () { handleExecute(undefined, mode) },
+		function () {
+			handleExecute(undefined, mode)
+		},
 		{ description: sqlShortcuts.runSelection.description }
 	)
 
 	$.bind(sqlShortcuts.openQueryHistory.combo).on(
-		function () { setShowHistory(function (v) { return !v }) },
+		function () {
+			setShowHistory(function (v) {
+				return !v
+			})
+		},
 		{ description: sqlShortcuts.openQueryHistory.description }
 	)
 
 	$.bind(sqlShortcuts.aiCmdK.combo).on(
-		function () { setShowAiCmdK(function (v) { return !v }) },
+		function () {
+			setShowAiCmdK(function (v) {
+				return !v
+			})
+		},
 		{ description: sqlShortcuts.aiCmdK.description }
 	)
 
@@ -854,7 +886,9 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 
 	// Tab management shortcuts
 	$.bind('ctrl+t').on(
-		function () { tabStore.addTab() },
+		function () {
+			tabStore.addTab()
+		},
 		{ description: 'New query tab' }
 	)
 
@@ -868,19 +902,25 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 	)
 
 	$.bind('ctrl+tab').on(
-		function () { tabStore.nextTab() },
+		function () {
+			tabStore.nextTab()
+		},
 		{ description: 'Next tab' }
 	)
 
 	$.bind('ctrl+shift+tab').on(
-		function () { tabStore.prevTab() },
+		function () {
+			tabStore.prevTab()
+		},
 		{ description: 'Previous tab' }
 	)
 
 	// Alt+1 through Alt+9 to switch tabs
 	;[1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(function (n) {
 		$.bind('alt+' + n).on(
-			function () { tabStore.goToTab(n - 1) },
+			function () {
+				tabStore.goToTab(n - 1)
+			},
 			{ description: 'Switch to tab ' + n }
 		)
 	})
@@ -1029,7 +1069,10 @@ function SqlConsoleInner({ onToggleSidebar: _onToggleSidebar, activeConnectionId
 						document.body.style.cursor = 'col-resize'
 						document.body.style.userSelect = 'none'
 						function onMove(ev: MouseEvent) {
-							sbwRef.current = Math.max(0, Math.min(500, startW - (ev.clientX - startX)))
+							sbwRef.current = Math.max(
+								0,
+								Math.min(500, startW - (ev.clientX - startX))
+							)
 							setSidebarWidth(sbwRef.current)
 						}
 						function onUp() {

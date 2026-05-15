@@ -40,6 +40,7 @@ pub fn get_active_storage_path(state: State<'_, AppState>) -> Result<String> {
 #[specta::specta]
 pub fn switch_storage(name: String, state: State<'_, AppState>) -> Result<()> {
     let mut config = AppConfig::load()?;
+    let previous_active = config.storage.active.clone();
 
     let path_str = config
         .databases
@@ -52,7 +53,18 @@ pub fn switch_storage(name: String, state: State<'_, AppState>) -> Result<()> {
         .clone();
 
     let path = crate::config::expand_tilde(&path_str);
-    state.storage.swap_database(path)?;
+    config.storage.active = name.clone();
+    config.save()?;
+
+    if let Err(error) = state.storage.swap_database(path) {
+        config.storage.active = previous_active;
+        if let Err(restore_error) = config.save() {
+            log::error!(
+                "failed to restore previous storage config after switch error: {restore_error}"
+            );
+        }
+        return Err(error);
+    }
 
     // Reload command registry from the new DB
     let mut registry = state
@@ -60,23 +72,16 @@ pub fn switch_storage(name: String, state: State<'_, AppState>) -> Result<()> {
         .write()
         .map_err(|e| crate::Error::Any(anyhow::anyhow!("lock command_registry: {e}")))?;
     *registry = crate::commands_system::CommandRegistry::new();
-    if let Err(e) =
-        crate::commands_system::load_custom_shortcuts(&state.storage, &mut *registry)
-    {
+    if let Err(e) = crate::commands_system::load_custom_shortcuts(&state.storage, &mut *registry) {
         log::warn!("reload shortcuts after storage switch: {e}");
     }
 
-    config.storage.active = name;
-    config.save()
+    Ok(())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn register_database(
-    name: String,
-    path: String,
-    _state: State<'_, AppState>,
-) -> Result<()> {
+pub fn register_database(name: String, path: String, _state: State<'_, AppState>) -> Result<()> {
     let mut config = AppConfig::load()?;
     if config.databases.iter().any(|db| db.name == name) {
         return Err(crate::Error::Any(anyhow::anyhow!(
@@ -92,11 +97,7 @@ pub fn register_database(
 
 #[tauri::command]
 #[specta::specta]
-pub fn create_database(
-    name: String,
-    path: String,
-    _state: State<'_, AppState>,
-) -> Result<()> {
+pub fn create_database(name: String, path: String, _state: State<'_, AppState>) -> Result<()> {
     let mut config = AppConfig::load()?;
     if config.databases.iter().any(|db| db.name == name) {
         return Err(crate::Error::Any(anyhow::anyhow!(

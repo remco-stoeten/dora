@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+      AUR_KNOWN_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,7 +90,12 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          if [[ -z "${AUR_KNOWN_HOSTS:-}" ]]; then
+            echo "Missing AUR_KNOWN_HOSTS secret with the pinned aur.archlinux.org host key." >&2
+            exit 1
+          fi
+          printf '%s\n' "$AUR_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o IdentitiesOnly=yes"
 
           git clone ssh://aur@aur.archlinux.org/dora.git aur-repo

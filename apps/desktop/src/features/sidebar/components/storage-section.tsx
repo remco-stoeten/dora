@@ -34,7 +34,7 @@ export function StorageSection() {
 		try {
 			const [list, path] = await Promise.all([
 				callCmd<DatabaseInfo[]>('list_databases'),
-				callCmd<string>('get_active_storage_path'),
+				callCmd<string>('get_active_storage_path')
 			])
 			setDbs(list)
 			setActivePath(path)
@@ -93,6 +93,7 @@ export function StorageSection() {
 		setError(null)
 		try {
 			await callCmd('reset_storage')
+			await load()
 			setConfirmReset(false)
 		} catch (e) {
 			setError(String(e))
@@ -134,7 +135,9 @@ export function StorageSection() {
 										</div>
 									</div>
 									{db.active ? (
-										<span className='text-xs text-green-500 shrink-0'>active</span>
+										<span className='text-xs text-green-500 shrink-0'>
+											active
+										</span>
 									) : (
 										<Button
 											variant='ghost'
@@ -158,18 +161,16 @@ export function StorageSection() {
 					</div>
 				)}
 
-				{loading && (
-					<div className='text-xs text-muted-foreground'>Loading…</div>
-				)}
+				{loading && <div className='text-xs text-muted-foreground'>Loading…</div>}
 
-				{error && (
-					<div className='text-xs text-destructive break-all'>{error}</div>
-				)}
+				{error && <div className='text-xs text-destructive break-all'>{error}</div>}
 
 				{showAdd && (
 					<div className='space-y-2 pt-1'>
 						<div className='text-xs font-medium text-sidebar-foreground'>
-							{showAdd === 'create' ? 'Create new database' : 'Register existing database'}
+							{showAdd === 'create'
+								? 'Create new database'
+								: 'Register existing database'}
 						</div>
 						<Input
 							className='h-7 text-xs'
@@ -255,7 +256,9 @@ export function StorageSection() {
 						) : (
 							<Trash2 className='h-3 w-3 mr-1' />
 						)}
-						{confirmReset ? 'Confirm reset — all data will be deleted' : 'Reset database'}
+						{confirmReset
+							? 'Confirm reset — all data will be deleted'
+							: 'Reset database'}
 					</Button>
 					{confirmReset && !resetting && (
 						<Button

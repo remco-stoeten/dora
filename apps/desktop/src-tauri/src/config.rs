@@ -22,36 +22,34 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    fn config_path() -> PathBuf {
+    fn config_dir() -> Result<PathBuf> {
         dirs::config_dir()
-            .expect("no config dir")
-            .join("dora")
-            .join("config.toml")
+            .ok_or_else(|| crate::Error::Any(anyhow::anyhow!("OS config directory is unavailable")))
+            .map(|path| path.join("dora"))
     }
 
-    fn default_db_path() -> PathBuf {
-        dirs::config_dir()
-            .expect("no config dir")
-            .join("dora")
-            .join("sqlite-storage")
-            .join("Dora.db")
+    fn config_path() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("config.toml"))
+    }
+
+    fn default_db_path() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("sqlite-storage").join("Dora.db"))
     }
 
     pub fn load() -> Result<Self> {
-        let path = Self::config_path();
+        let path = Self::config_path()?;
         if !path.exists() {
-            let config = Self::with_default_db(Self::default_db_path());
+            let config = Self::with_default_db(Self::default_db_path()?);
             config.save()?;
             return Ok(config);
         }
         let raw = std::fs::read_to_string(&path)
             .map_err(|e| crate::Error::Any(anyhow::anyhow!("read config: {e}")))?;
-        toml::from_str(&raw)
-            .map_err(|e| crate::Error::Any(anyhow::anyhow!("parse config: {e}")))
+        toml::from_str(&raw).map_err(|e| crate::Error::Any(anyhow::anyhow!("parse config: {e}")))
     }
 
     pub fn save(&self) -> Result<()> {
-        let path = Self::config_path();
+        let path = Self::config_path()?;
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| crate::Error::Any(anyhow::anyhow!("create config dir: {e}")))?;
@@ -77,7 +75,7 @@ impl AppConfig {
     /// Priority: DORA_STORAGE_PATH env var > config active entry > hardcoded default.
     pub fn resolve_active_path(&self) -> Result<PathBuf> {
         if let Ok(env_path) = std::env::var("DORA_STORAGE_PATH") {
-            return Ok(PathBuf::from(env_path));
+            return Ok(expand_tilde(&env_path));
         }
         let entry = self
             .databases

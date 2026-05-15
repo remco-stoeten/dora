@@ -16,7 +16,7 @@ pub type ConnectionCheck = JoinHandle<()>;
 /// PostgreSQL's `require` mode means "encrypt the wire, but do NOT verify the
 /// server certificate". rustls always verifies by default, which causes
 /// handshake failures with some providers (e.g. Supabase's PgBouncer pooler).
-/// TLS signatures are still verified so the encryption itself is intact.
+/// This is encrypt-only TLS and does not protect against on-path attackers.
 #[derive(Debug)]
 struct AcceptAllServerCerts(Arc<rustls::crypto::CryptoProvider>);
 
@@ -61,9 +61,7 @@ impl ServerCertVerifier for AcceptAllServerCerts {
     }
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-        self.0
-            .signature_verification_algorithms
-            .supported_schemes()
+        self.0.signature_verification_algorithms.supported_schemes()
     }
 }
 
@@ -76,25 +74,44 @@ fn no_verify_tls() -> MakeRustlsConnect {
     MakeRustlsConnect::new(config)
 }
 
+fn verified_tls(certificate_store: Arc<rustls::RootCertStore>) -> MakeRustlsConnect {
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(certificate_store)
+        .with_no_client_auth();
+    MakeRustlsConnect::new(config)
+}
+
 pub async fn connect(
     config: &tokio_postgres::Config,
-    _certificates: &Certificates,
+    certificates: &Certificates,
+    verify_tls: bool,
 ) -> Result<(Client, ConnectionCheck), Error> {
     use tokio_postgres::config::SslMode;
 
     let client = match config.get_ssl_mode() {
-        // require / prefer: encrypt but do NOT verify the cert chain (libpq semantics).
-        SslMode::Require | SslMode::Prefer => {
-            let tls = no_verify_tls();
-            let (client, conn) = config
-                .connect(tls)
-                .await
-                .map_err(|e| anyhow::anyhow!("Failed to connect to Postgres: {e} | detail: {e:?}"))?;
+        SslMode::Require if verify_tls => {
+            let certificate_store = certificates.read().await?;
+            let tls = verified_tls(certificate_store);
+            let (client, conn) = config.connect(tls).await.map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to connect to Postgres with verified TLS: {e} | detail: {e:?}"
+                )
+            })?;
             let conn_check =
                 tauri::async_runtime::spawn(check_connection::<MakeRustlsConnect>(conn));
             (client, conn_check)
         }
-        // disable / allow / verify-ca / verify-full (and any future non-exhaustive variants)
+        // require / prefer: encrypt but do NOT verify the cert chain (libpq semantics).
+        SslMode::Require | SslMode::Prefer => {
+            let tls = no_verify_tls();
+            let (client, conn) = config.connect(tls).await.map_err(|e| {
+                anyhow::anyhow!("Failed to connect to Postgres: {e} | detail: {e:?}")
+            })?;
+            let conn_check =
+                tauri::async_runtime::spawn(check_connection::<MakeRustlsConnect>(conn));
+            (client, conn_check)
+        }
+        // Mostly SslMode::Disable/Allow, but the enum is non_exhaustive.
         _other => {
             let (client, conn) = config
                 .connect(NoTls)

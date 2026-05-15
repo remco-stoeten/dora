@@ -86,9 +86,8 @@ impl Storage {
             .context("WAL checkpoint failed")?;
 
         if let Some(parent) = new_path.parent() {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!("create db dir: {}", parent.display())
-            })?;
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create db dir: {}", parent.display()))?;
         }
 
         let mut new_conn = Connection::open(&new_path)
@@ -102,15 +101,14 @@ impl Storage {
         *self
             .active_path
             .lock()
-            .map_err(|e| crate::Error::Any(anyhow::anyhow!("lock active_path: {e}")))? =
-            new_path;
+            .map_err(|e| crate::Error::Any(anyhow::anyhow!("lock active_path: {e}")))? = new_path;
 
         Ok(())
     }
 
     /// Delete all rows from every user table in the active database.
     pub fn reset_all_rows(&self) -> Result<()> {
-        let guard = self.get_sqlite_connection()?;
+        let mut guard = self.get_sqlite_connection()?;
 
         let tables: Vec<String> = {
             let mut stmt = guard
@@ -118,10 +116,10 @@ impl Storage {
                     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_sqlx_migrations'",
                 )
                 .context("query table list")?;
-            let rows: Vec<rusqlite::Result<String>> =
-                stmt.query_map([], |row| row.get(0))
-                    .context("fetch table names")?
-                    .collect();
+            let rows: Vec<rusqlite::Result<String>> = stmt
+                .query_map([], |row| row.get(0))
+                .context("fetch table names")?
+                .collect();
             rows.into_iter().filter_map(|r| r.ok()).collect()
         };
 
@@ -129,16 +127,27 @@ impl Storage {
             .execute_batch("PRAGMA foreign_keys = OFF;")
             .context("disable fk")?;
 
-        for table in &tables {
-            guard
-                .execute_batch(&format!("DELETE FROM \"{table}\";"))
-                .with_context(|| format!("delete from {table}"))?;
-        }
+        let result = (|| -> Result<()> {
+            let tx = guard.transaction().context("start reset transaction")?;
 
-        guard
+            for table in &tables {
+                let escaped_table = table.replace('"', "\"\"");
+                tx.execute(&format!("DELETE FROM \"{escaped_table}\";"), [])
+                    .with_context(|| format!("delete from {table}"))?;
+            }
+
+            tx.commit().context("commit reset transaction")?;
+            Ok(())
+        })();
+
+        let re_enable_result = guard
             .execute_batch("PRAGMA foreign_keys = ON;")
-            .context("re-enable fk")?;
+            .context("re-enable fk");
 
-        Ok(())
+        match (result, re_enable_result) {
+            (Ok(()), Ok(())) => Ok(()),
+            (Err(error), _) => Err(error),
+            (Ok(()), Err(error)) => Err(error.into()),
+        }
     }
 }

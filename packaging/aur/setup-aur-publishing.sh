@@ -18,6 +18,34 @@ say() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 need_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }; }
 ask() { read -r -p "$1 [y/N] " ans; [[ "${ans:-}" =~ ^[Yy]$ ]]; }
 
+ensure_clean_release_branch() {
+  if ! git symbolic-ref -q HEAD >/dev/null; then
+    echo "Refusing to tag from a detached HEAD." >&2
+    exit 1
+  fi
+
+  local branch upstream local_head upstream_head
+  branch="$(git branch --show-current)"
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "Refusing to tag with uncommitted changes." >&2
+    exit 1
+  fi
+
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [[ -z "$upstream" ]]; then
+    echo "Refusing to tag branch without an upstream: $branch" >&2
+    exit 1
+  fi
+
+  git fetch origin "$branch" --tags
+  local_head="$(git rev-parse HEAD)"
+  upstream_head="$(git rev-parse "$upstream")"
+  if [[ "$local_head" != "$upstream_head" ]]; then
+    echo "Refusing to tag because $branch is not synced with $upstream." >&2
+    exit 1
+  fi
+}
+
 need_cmd git
 need_cmd ssh-keygen
 
@@ -65,18 +93,23 @@ else
   say "Skipped secret upload. Add it manually in GitHub repo settings."
 fi
 
-if ask "Clone/update local AUR repo checkout at /tmp/${AUR_PKG}?"; then
+echo
+echo "Set GitHub secret AUR_KNOWN_HOSTS to a pinned aur.archlinux.org SSH known_hosts entry."
+echo "The AUR workflow refuses to publish without it."
+
+if ask "Clone local AUR repo checkout into a new temp directory?"; then
   need_cmd ssh
-  rm -rf "/tmp/${AUR_PKG}"
-  ssh-keyscan aur.archlinux.org >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+  AUR_WORKDIR="$(mktemp -d -t "${AUR_PKG}-aur.XXXXXX")"
+  echo "Using temp checkout: ${AUR_WORKDIR}"
   GIT_SSH_COMMAND="ssh -i ${KEY_PATH} -o IdentitiesOnly=yes" \
-    git clone "$AUR_REPO_SSH" "/tmp/${AUR_PKG}"
-  cp packaging/aur/PKGBUILD "/tmp/${AUR_PKG}/PKGBUILD"
-  cp packaging/aur/.SRCINFO "/tmp/${AUR_PKG}/.SRCINFO"
-  say "Prepared /tmp/${AUR_PKG} with current packaging files"
+    git clone "$AUR_REPO_SSH" "$AUR_WORKDIR"
+  cp packaging/aur/PKGBUILD "$AUR_WORKDIR/PKGBUILD"
+  cp packaging/aur/.SRCINFO "$AUR_WORKDIR/.SRCINFO"
+  say "Prepared ${AUR_WORKDIR} with current packaging files"
 fi
 
 if ask "Create and push a new git tag to trigger release + AUR automation now?"; then
+  ensure_clean_release_branch
   CUR_VER="$(sed -n 's/^pkgver=//p' packaging/aur/PKGBUILD)"
   echo "Current pkgver in PKGBUILD: ${CUR_VER}"
   read -r -p "Enter tag (example v0.0.104): " TAG
