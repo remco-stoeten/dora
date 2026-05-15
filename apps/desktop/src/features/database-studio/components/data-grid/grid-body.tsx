@@ -166,7 +166,7 @@ export function GridBody({
 							>
 								<td
 									className={cn(
-										'px-4 py-1.5 text-center border-b border-r border-sidebar-border sticky left-0 z-20 transition-colors',
+										'w-[30px] min-w-[30px] p-0 text-center align-middle border-b border-l border-r border-sidebar-border sticky left-0 z-20 transition-colors',
 										rowBackgroundClasses,
 										selectedRows.has(rowIndex) && 'bg-sidebar-accent'
 									)}
