@@ -348,6 +348,9 @@ impl<'a> ConnectionService<'a> {
                     cleaned_string.parse().with_context(|| {
                         format!("Failed to parse connection string: {}", cleaned_string)
                     })?;
+                // Disable channel binding: PgBouncer (Supabase) doesn't support
+                // SCRAM-SHA-256-PLUS; tokio_postgres defaults to "prefer" which breaks it.
+                config.channel_binding(tokio_postgres::config::ChannelBinding::Disable);
                 if config.get_password().is_none() {
                     credentials::get_password(&connection_id)?.map(|pw| config.password(pw));
                 }
@@ -684,6 +687,7 @@ impl ConnectionService<'_> {
     #[instrument(skip(database_info, certificates))]
     pub async fn test_connection(
         database_info: DatabaseInfo,
+        connection_id: Option<Uuid>,
         certificates: &Certificates,
     ) -> Result<bool, Error> {
         match database_info {
@@ -745,6 +749,13 @@ impl ConnectionService<'_> {
                     cleaned_string.parse().with_context(|| {
                         format!("Failed to parse connection string: {}", cleaned_string)
                     })?;
+                config.channel_binding(tokio_postgres::config::ChannelBinding::Disable);
+
+                if config.get_password().is_none() {
+                    if let Some(ref id) = connection_id {
+                        credentials::get_password(id)?.map(|pw| config.password(pw));
+                    }
+                }
 
                 if let Some(ref tun) = temp_tunnel {
                     let local_port = tun.local_port;
