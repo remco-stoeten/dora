@@ -37,6 +37,7 @@ import { RowDetailPanel } from './components/row-detail-panel'
 import { SelectionActionBar } from './components/selection-action-bar'
 import { SetNullDialog } from './components/set-null-dialog'
 import { StudioToolbar } from './components/studio-toolbar'
+import { ImportCsvDialog } from './components/import-csv-dialog'
 import { DataSeederDialog } from './data-seeder-dialog'
 import { enrichColumnsWithFKs } from './utils/fk-enrichment'
 import { useLiveMonitor } from '@/core/live-monitor'
@@ -147,6 +148,7 @@ export function DatabaseStudio({
 	const [showBulkEditDialog, setShowBulkEditDialog] = useState(false)
 	const [showSetNullDialog, setShowSetNullDialog] = useState(false)
 	const [showDataSeederDialog, setShowDataSeederDialog] = useState(false)
+	const [showImportDialog, setShowImportDialog] = useState(false)
 	const [isBulkActionLoading, setIsBulkActionLoading] = useState(false)
 	const [isDdlLoading, setIsDdlLoading] = useState(false)
 
@@ -972,6 +974,28 @@ export function DatabaseStudio({
 				variant: 'destructive'
 			})
 		}
+	}
+
+	async function handleImportRows(
+		rows: Record<string, unknown>[]
+	): Promise<{ imported: number; errors: string[] }> {
+		if (!activeConnectionId || !tableId) return { imported: 0, errors: ['No active table'] }
+		let imported = 0
+		const errors: string[] = []
+		for (const row of rows) {
+			try {
+				await insertRow.mutateAsync({
+					connectionId: activeConnectionId,
+					tableName: tableRefName,
+					rowData: row
+				})
+				imported++
+			} catch (err) {
+				errors.push(err instanceof Error ? err.message : String(err))
+			}
+		}
+		if (imported > 0) loadTableData()
+		return { imported, errors }
 	}
 
 	function handleToggleColumn(columnName: string, visible: boolean) {
@@ -1979,6 +2003,7 @@ export function DatabaseStudio({
 				onExportCsv={handleExportCsvAll}
 				onExportSql={handleExportSqlAll}
 				onAddRecord={handleAddRecord}
+				onImportCsv={() => setShowImportDialog(true)}
 				isLoading={isLoading}
 				filters={filters}
 				onFiltersChange={setFilters}
@@ -2338,6 +2363,15 @@ export function DatabaseStudio({
 								setIsBulkActionLoading(false)
 							})
 					}}
+				/>
+			)}
+
+			{tableData && (
+				<ImportCsvDialog
+					open={showImportDialog}
+					onOpenChange={setShowImportDialog}
+					columns={tableData.columns}
+					onImport={handleImportRows}
 				/>
 			)}
 
