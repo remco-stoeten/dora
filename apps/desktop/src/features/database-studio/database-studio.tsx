@@ -5,6 +5,7 @@ import { useAdapter, useDataMutation } from '@/core/data-provider'
 import { tableDataCache, clearTableDataCache } from '@/core/table-cache'
 import { getAdapterError } from '@/core/data-provider/types'
 import { usePendingEdits } from '@/core/pending-edits'
+import { useTabs } from '@/core/tabs'
 import { useSettings } from '@/core/settings'
 import { useNuqsState } from '@/core/url-state/use-nuqs-state'
 import { useEffectiveShortcuts, useShortcut, useActiveScope } from '@/core/shortcuts'
@@ -404,6 +405,18 @@ export function DatabaseStudio({
 	)
 
 	const { trackCellMutation, trackBatchCellMutation } = useUndo({ onUndoComplete: loadTableData })
+
+	const { openTab } = useTabs()
+
+	function handleFKNavigate(referencedTable: string, _referencedColumn: string, _value: unknown) {
+		if (!activeConnectionId) return
+		openTab({
+			connectionId: activeConnectionId,
+			tableId: referencedTable,
+			tableName: referencedTable,
+			label: referencedTable,
+		})
+	}
 
 	const liveMonitor = useLiveMonitor()
 
@@ -2022,6 +2035,7 @@ export function DatabaseStudio({
 							onDraftCancel={handleDraftCancel}
 							pendingEdits={pendingEditsSet}
 							draftInsertIndex={draftInsertIndex}
+							onFKNavigate={handleFKNavigate}
 						/>
 					</div>
 				)}
