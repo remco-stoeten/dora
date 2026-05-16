@@ -14,7 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
 	{
 		version: '0.25.0',
 		date: '2026-05-16',
-		commit: 'feat/v025-features',
+		commit: 'f126475',
 		title: 'Multi-Table Tabs, FK Drill-Down, CSV Import & PgBouncer Fix',
 		description:
 			'Open multiple tables simultaneously with tabs, drill into foreign-key references with a single click, import CSV files with preview and column mapping, and connect to PgBouncer-pooled databases via simple-query mode.',
