@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useReducer, ReactNode } from 'react'
 
 export type Tab = {
   id: string
@@ -23,61 +23,79 @@ const TabsContext = createContext<TabsContextValue | null>(null)
 
 const MAX_TABS = 12
 
-export function TabsProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>([])
-  const [activeTabId, setActiveTabId] = useState<string | null>(null)
+type State = {
+  tabs: Tab[]
+  activeTabId: string | null
+}
 
-  const openTab = useCallback(function (args: OpenTabArgs) {
-    setTabs(function (prev) {
-      const existing = prev.find(
-        (t) => t.connectionId === args.connectionId && t.tableId === args.tableId
+type Action =
+  | { type: 'OPEN_TAB'; args: OpenTabArgs }
+  | { type: 'CLOSE_TAB'; id: string }
+  | { type: 'SET_ACTIVE'; id: string }
+  | { type: 'CLOSE_FOR_CONNECTION'; connectionId: string }
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'OPEN_TAB': {
+      const existing = state.tabs.find(
+        (t) => t.connectionId === action.args.connectionId && t.tableId === action.args.tableId
       )
       if (existing) {
-        setActiveTabId(existing.id)
-        return prev
+        return { ...state, activeTabId: existing.id }
       }
-      const newTab: Tab = { ...args, id: crypto.randomUUID() }
-      const next = prev.length >= MAX_TABS ? prev.slice(1) : prev
-      setActiveTabId(newTab.id)
-      return [...next, newTab]
-    })
-  }, [])
+      const newTab: Tab = { ...action.args, id: crypto.randomUUID() }
+      const tabs = state.tabs.length >= MAX_TABS
+        ? [...state.tabs.slice(1), newTab]
+        : [...state.tabs, newTab]
+      return { tabs, activeTabId: newTab.id }
+    }
+    case 'CLOSE_TAB': {
+      const idx = state.tabs.findIndex((t) => t.id === action.id)
+      if (idx === -1) return state
+      const tabs = state.tabs.filter((t) => t.id !== action.id)
+      let activeTabId = state.activeTabId
+      if (state.activeTabId === action.id) {
+        activeTabId = tabs.length === 0 ? null : tabs[Math.min(idx, tabs.length - 1)].id
+      }
+      return { tabs, activeTabId }
+    }
+    case 'SET_ACTIVE': {
+      return { ...state, activeTabId: action.id }
+    }
+    case 'CLOSE_FOR_CONNECTION': {
+      const tabs = state.tabs.filter((t) => t.connectionId !== action.connectionId)
+      const stillExists = tabs.find((t) => t.id === state.activeTabId)
+      const activeTabId = stillExists ? state.activeTabId : (tabs[tabs.length - 1]?.id ?? null)
+      return { tabs, activeTabId }
+    }
+    default:
+      return state
+  }
+}
 
-  const closeTab = useCallback(function (id: string) {
-    setTabs(function (prev) {
-      const idx = prev.findIndex((t) => t.id === id)
-      if (idx === -1) return prev
-      const next = prev.filter((t) => t.id !== id)
-      setActiveTabId(function (current) {
-        if (current !== id) return current
-        if (next.length === 0) return null
-        const newIdx = Math.min(idx, next.length - 1)
-        return next[newIdx].id
-      })
-      return next
-    })
-  }, [])
+const initialState: State = { tabs: [], activeTabId: null }
 
-  const setActiveTab = useCallback(function (id: string) {
-    setActiveTabId(id)
-  }, [])
+export function TabsProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(reducer, initialState)
 
-  const closeTabsForConnection = useCallback(function (connectionId: string) {
-    setTabs(function (prev) {
-      const next = prev.filter((t) => t.connectionId !== connectionId)
-      setActiveTabId(function (current) {
-        const stillExists = next.find((t) => t.id === current)
-        return stillExists ? current : next[next.length - 1]?.id ?? null
-      })
-      return next
-    })
-  }, [])
-
-  return (
-    <TabsContext.Provider value={{ tabs, activeTabId, openTab, closeTab, setActiveTab, closeTabsForConnection }}>
-      {children}
-    </TabsContext.Provider>
+  const openTab = useCallback((args: OpenTabArgs) => dispatch({ type: 'OPEN_TAB', args }), [])
+  const closeTab = useCallback((id: string) => dispatch({ type: 'CLOSE_TAB', id }), [])
+  const setActiveTab = useCallback((id: string) => dispatch({ type: 'SET_ACTIVE', id }), [])
+  const closeTabsForConnection = useCallback(
+    (connectionId: string) => dispatch({ type: 'CLOSE_FOR_CONNECTION', connectionId }),
+    []
   )
+
+  const value: TabsContextValue = {
+    tabs: state.tabs,
+    activeTabId: state.activeTabId,
+    openTab,
+    closeTab,
+    setActiveTab,
+    closeTabsForConnection,
+  }
+
+  return <TabsContext.Provider value={value}>{children}</TabsContext.Provider>
 }
 
 export function useTabs(): TabsContextValue {

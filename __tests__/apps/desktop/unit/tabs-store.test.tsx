@@ -4,7 +4,7 @@ import React from 'react'
 import { TabsProvider, useTabs } from '@/core/tabs/tabs-store'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  React.createElement(TabsProvider, null, children)
+  <TabsProvider>{children}</TabsProvider>
 )
 
 describe('useTabs', () => {
@@ -30,6 +30,7 @@ describe('useTabs', () => {
       result.current.openTab({ connectionId: 'c1', tableId: 'public.users', tableName: 'users', label: 'users' })
     })
     expect(result.current.tabs).toHaveLength(1)
+    expect(result.current.activeTabId).toBe(result.current.tabs[0].id)
   })
 
   it('closeTab removes tab and activates adjacent', () => {
@@ -56,6 +57,21 @@ describe('useTabs', () => {
     expect(result.current.activeTabId).toBeNull()
   })
 
+  it('closeTab on active tab activates the previous tab', () => {
+    const { result } = renderHook(() => useTabs(), { wrapper })
+    act(() => {
+      result.current.openTab({ connectionId: 'c1', tableId: 'public.users', tableName: 'users', label: 'users' })
+      result.current.openTab({ connectionId: 'c1', tableId: 'public.orders', tableName: 'orders', label: 'orders' })
+    })
+    const firstId = result.current.tabs[0].id
+    const secondId = result.current.tabs[1].id
+    // second tab is currently active (last opened)
+    expect(result.current.activeTabId).toBe(secondId)
+    act(() => { result.current.closeTab(secondId) })
+    expect(result.current.tabs).toHaveLength(1)
+    expect(result.current.activeTabId).toBe(firstId)
+  })
+
   it('caps at 12 tabs, replacing the oldest', () => {
     const { result } = renderHook(() => useTabs(), { wrapper })
     act(() => {
@@ -64,5 +80,6 @@ describe('useTabs', () => {
       }
     })
     expect(result.current.tabs).toHaveLength(12)
+    expect(result.current.tabs[0].label).toBe('t1')
   })
 })
