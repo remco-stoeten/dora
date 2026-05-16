@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { parseCSV } from '../utils/csv-parser'
 import { autoMapColumns, detectTypeMismatch, type ColumnMapping } from '../utils/csv-type-check'
 import type { ColumnDefinition } from '../types'
@@ -30,7 +30,7 @@ export function ImportCsvDialog({ open, onOpenChange, columns, onImport }: Props
 	const [result, setResult] = useState<{ imported: number; errors: string[] } | null>(null)
 	const [skipFirstRow, setSkipFirstRow] = useState(false)
 	const [stopOnError, setStopOnError] = useState(false)
-	const nonPKColumns = columns.filter((c) => !c.primaryKey)
+	const nonPKColumns = useMemo(() => columns.filter((c) => !c.primaryKey), [columns])
 
 	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0]
@@ -56,6 +56,11 @@ export function ImportCsvDialog({ open, onOpenChange, columns, onImport }: Props
 	async function handleImport() {
 		setStep('importing')
 		const rowsToProcess = skipFirstRow ? csvRows.slice(1) : csvRows
+		if (rowsToProcess.length === 0) {
+			setResult({ imported: 0, errors: [] })
+			setStep('done')
+			return
+		}
 		const total = rowsToProcess.length
 		let done = 0
 		const errors: string[] = []
@@ -109,6 +114,7 @@ export function ImportCsvDialog({ open, onOpenChange, columns, onImport }: Props
 		setResult(null)
 		setSkipFirstRow(false)
 		setStopOnError(false)
+		if (fileInputRef.current) fileInputRef.current.value = ''
 		onOpenChange(false)
 	}
 
