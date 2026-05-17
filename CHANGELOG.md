@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.26.0 - Pooler-Safe Postgres, Dedicated Settings & AI Assistant Polish
+
+**Date:** 2026-05-17
+
+**Highlights**
+
+- **First-class Postgres pooler / PgBouncer support**: Connections that look like a pooler (host contains `pooler`/`pgbouncer`, ports 6432/6543, or any of the standard Drizzle/Prisma/PgBouncer query flags — `pgbouncer=true`, `pooler=transaction`, `simple_query=true`, `prepared_statements=false`, `statement_cache_size=0`) are detected automatically and switched to simple-query mode end-to-end — queries, mutations, the live monitor, and snapshot fetches. The connection form gets a "Pooler-compatible mode" checkbox in both URL and field input modes, and Dora-specific options are stripped from the URL before tokio_postgres parses it. PgBouncer's "prepared statement already exists" errors now fall back to simple-query automatically instead of bubbling up. Pooler URLs without an explicit `sslmode` default to `sslmode=require`.
+- **Dedicated Settings view**: Settings moved out of the cramped 360px popover into a full workspace with a left-rail section nav (Editor, Shortcuts, AI Keys, Storage, Safety, Startup, Interface) and card-based sections. Reachable from the bottom-toolbar gear, the navigation sidebar's new Settings entry, and the command palette.
+- **AI assistant — structured SQL responses, dry runs, syntax highlighting, dev-mode mock**:
+  - The JSON shape from `⌘K`-style SQL generation is parsed into a clean layout — explanation paragraph, runnable code block, optional examples, warnings as a bullet list — instead of dumping raw JSON at the user.
+  - Every SQL code block gains a **Dry** button that wraps the statement in `EXPLAIN` so you can preview the plan without running anything destructive.
+  - SQL blocks render with token-level syntax highlighting (keywords, strings, numbers, identifiers, functions, comments) and surface the statement kind, statement count, and line count in the header. Long blocks (>12 lines) collapse with an expand toggle.
+  - In the web/browser build, the chat panel and ⌘K both run against a deterministic mock backend (no Tauri commands needed) so demos and screenshots are reproducible.
+
+**Details**
+
+- **Type-aware cell editing on Postgres**: Editing a cell now sends `UPDATE … SET col = $1::<actual_column_type>` so JSON values that would otherwise fail to implicitly cast to enum / uuid / jsonb / timestamp columns now succeed. The column type is resolved once per edit via `pg_attribute`.
+- **Exact row counts as a fallback**: When the planner's row-count estimate for a Postgres table is zero (common for fresh tables that haven't been analyzed), Dora now issues an exact `COUNT(*)` per table during schema fetch so the sidebar and AI prompt schema block stop showing `~0 rows`.
+- **Live-monitor TLS aligned with the main query path**: The listener honors `sslmode=verify-ca`/`verify-full` instead of always using a verified connector; everything else uses the no-verify connector — matching the convention already used by the query connection.
+- **JSON cell editing UX**: Editing an object-valued cell opens the editor pre-filled with pretty-printed JSON (2-space indent) instead of `[object Object]`.
+- **Tauri binding signatures**: `get_database_schema` drops its unused `force_refresh` argument; `test_connection` accepts an optional connection id so saved credentials are reused when re-testing an existing connection.
+
 ## 0.25.0 - Multi-Table Tabs, FK Drill-Down & CSV Import
 
 **Date:** 2026-05-16
