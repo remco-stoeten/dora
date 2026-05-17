@@ -4,6 +4,12 @@ import { ColumnDefinition } from '../../types'
 import { getCellKey } from './selection'
 import { CellPosition, EditingCell } from './types'
 
+function valueToEditString(value: unknown): string {
+	if (value === null || value === undefined) return ''
+	if (typeof value === 'object') return JSON.stringify(value, null, 2)
+	return String(value)
+}
+
 type UseCellEditingArgs = {
 	columns: ColumnDefinition[]
 	gridRef: React.RefObject<HTMLTableElement>
@@ -47,9 +53,7 @@ export function useCellEditing({
 		currentValue: unknown
 	) {
 		setEditingCell({ rowIndex, columnName })
-		setEditValue(
-			currentValue === null || currentValue === undefined ? '' : String(currentValue)
-		)
+		setEditValue(valueToEditString(currentValue))
 	}, [])
 
 	const handleSaveEdit = useCallback(
@@ -118,12 +122,7 @@ export function useCellEditing({
 			setAnchorCell(newPos)
 			updateCellSelection(new Set([getCellKey(nextRow, nextCol)]))
 			setEditingCell({ rowIndex: nextRow, columnName: columns[nextCol].name })
-			setEditValue(
-				rows[nextRow][columns[nextCol].name] === null ||
-					rows[nextRow][columns[nextCol].name] === undefined
-					? ''
-					: String(rows[nextRow][columns[nextCol].name])
-			)
+			setEditValue(valueToEditString(rows[nextRow][columns[nextCol].name]))
 		},
 		[columns, onCellEdit, rows, setAnchorCell, setFocusedCell, updateCellSelection]
 	)

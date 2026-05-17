@@ -1047,6 +1047,9 @@ export function DatabaseStudio({
 		if (!tableId || !activeConnectionId || !tableData) return
 
 		const row = tableData.rows[rowIndex]
+		const editedColumn = tableData.columns.find(function (c) {
+			return c.name === columnName
+		})
 		const primaryKeyColumn = tableData.columns.find(function (c) {
 			return c.primaryKey
 		})
@@ -1054,6 +1057,10 @@ export function DatabaseStudio({
 			console.error('No primary key found')
 			return
 		}
+
+		const normalizedNewValue = editedColumn
+			? normalizeValueForInsert(editedColumn, newValue)
+			: newValue
 
 		if (isDryEditMode) {
 			// Check if there's already a pending edit to preserve the ORIGINAL value
@@ -1067,13 +1074,13 @@ export function DatabaseStudio({
 				primaryKeyValue: row[primaryKeyColumn.name],
 				columnName,
 				oldValue,
-				newValue
+				newValue: normalizedNewValue
 			})
 
 			setTableData(function (prev) {
 				if (!prev) return prev
 				const newRows = [...prev.rows]
-				newRows[rowIndex] = { ...newRows[rowIndex], [columnName]: newValue }
+				newRows[rowIndex] = { ...newRows[rowIndex], [columnName]: normalizedNewValue }
 				return { ...prev, rows: newRows }
 			})
 		} else {
@@ -1083,7 +1090,7 @@ export function DatabaseStudio({
 			setTableData(function (prev) {
 				if (!prev) return prev
 				const newRows = [...prev.rows]
-				newRows[rowIndex] = { ...newRows[rowIndex], [columnName]: newValue }
+				newRows[rowIndex] = { ...newRows[rowIndex], [columnName]: normalizedNewValue }
 				return { ...prev, rows: newRows }
 			})
 
@@ -1094,7 +1101,7 @@ export function DatabaseStudio({
 					primaryKeyColumn: primaryKeyColumn.name,
 					primaryKeyValue: row[primaryKeyColumn.name],
 					columnName,
-					newValue
+					newValue: normalizedNewValue
 				},
 				{
 					onSuccess: function () {
@@ -1105,7 +1112,7 @@ export function DatabaseStudio({
 							row[primaryKeyColumn.name],
 							columnName,
 							previousValue,
-							newValue
+							normalizedNewValue
 						)
 						loadTableData()
 					},
