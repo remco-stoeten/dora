@@ -264,6 +264,24 @@ pub async fn get_database_schema(client: &Client) -> Result<DatabaseSchema, Erro
         });
     }
 
+    for table in tables_map.values_mut() {
+        if table.row_count_estimate.unwrap_or(0) != 0 {
+            continue;
+        }
+
+        match exact_row_count(client, &table.schema, &table.name).await {
+            Ok(count) => table.row_count_estimate = Some(count),
+            Err(err) => {
+                log::debug!(
+                    "Failed to get exact row count for {}.{}: {}",
+                    table.schema,
+                    table.name,
+                    err
+                );
+            }
+        }
+    }
+
     let tables = tables_map.into_values().collect();
     let schemas = schemas_set.into_iter().map(ToOwned::to_owned).collect();
     let unique_columns = unique_columns_set
@@ -276,4 +294,34 @@ pub async fn get_database_schema(client: &Client) -> Result<DatabaseSchema, Erro
         schemas,
         unique_columns,
     })
+}
+
+async fn exact_row_count(client: &Client, schema: &str, table: &str) -> Result<u64, Error> {
+    let query = format!(
+        "SELECT COUNT(*)::text AS count FROM {}.{}",
+        quote_identifier(schema),
+        quote_identifier(table)
+    );
+
+    let rows = client
+        .simple_query(&query)
+        .await
+        .context("Failed to query exact row count")?;
+
+    for message in rows {
+        if let tokio_postgres::SimpleQueryMessage::Row(row) = message {
+            let count = row
+                .try_get("count")?
+                .unwrap_or("0")
+                .parse::<u64>()
+                .context("Failed to parse exact row count")?;
+            return Ok(count);
+        }
+    }
+
+    Ok(0)
+}
+
+fn quote_identifier(identifier: &str) -> String {
+    format!("\"{}\"", identifier.replace('"', "\"\""))
 }
