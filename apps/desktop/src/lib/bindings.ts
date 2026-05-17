@@ -472,9 +472,9 @@ async executeBatch(connectionId: string, statements: string[]) : Promise<Result<
     else return { status: "error", error: e  as any };
 }
 },
-async getDatabaseSchema(connectionId: string, forceRefresh: boolean | null) : Promise<Result<DatabaseSchema, { kind: string; detail: string }>> {
+async getDatabaseSchema(connectionId: string) : Promise<Result<DatabaseSchema, { kind: string; detail: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_database_schema", { connectionId, forceRefresh }) };
+    return { status: "ok", data: await TAURI_INVOKE("get_database_schema", { connectionId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
