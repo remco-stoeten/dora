@@ -12,6 +12,7 @@ import type { SavedQuery } from '@/lib/bindings'
 
 import { CodeEditor } from '../../features/drizzle-runner/components/code-editor'
 import { DEFAULT_QUERY } from '../../features/drizzle-runner/data'
+import { drizzleQueryToSql } from '../../features/drizzle-runner/utils/drizzle-query'
 import { AiCmdK } from './components/ai-cmd-k'
 import { ConsoleToolbar } from './components/console-toolbar'
 import { QueryTabBar } from './components/query-tab-bar'
@@ -386,7 +387,8 @@ function SqlConsoleInner({
 						throw new Error('No connection selected')
 					}
 
-					const res = await adapter.executeQuery(activeConnectionId, queryToRun)
+					const sqlToRun = drizzleQueryToSql(queryToRun)
+					const res = await adapter.executeQuery(activeConnectionId, sqlToRun)
 
 					if (res.ok) {
 						setResult({
@@ -395,7 +397,7 @@ function SqlConsoleInner({
 							rowCount: res.data.rowCount,
 							executionTime: res.data.executionTime || 0,
 							error: res.data.error,
-							queryType: 'SELECT',
+							queryType: getQueryType(sqlToRun),
 							columnDefinitions: res.data.columnDefinitions,
 							sourceTable: extractMutationSourceTable(queryToRun)
 						})

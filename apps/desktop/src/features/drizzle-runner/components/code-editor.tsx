@@ -2,7 +2,7 @@ import Editor, { OnMount } from '@monaco-editor/react'
 import type * as Monaco from 'monaco-editor'
 import { initVimMode } from 'monaco-vim'
 import type { VimAdapterInstance } from 'monaco-vim'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type MutableRefObject } from 'react'
 import { useSetting } from '@/core/settings'
 import { loadTheme, isBuiltinTheme, MonacoTheme } from '@/core/settings/editor-themes'
 import { SchemaColumn, SchemaTable } from '../types'
@@ -43,6 +43,16 @@ type Suggestion = Monaco.languages.CompletionItem
 type SuggestList = Monaco.languages.CompletionList
 type TextRange = Monaco.IRange
 type TypeKind = 'number' | 'string' | 'boolean' | 'date' | 'unknown'
+
+const DRIZZLE_MODEL_URI = 'file:///dora-drizzle-query.ts'
+const DRIZZLE_TYPES_URI = 'file:///dora-drizzle-schema.d.ts'
+const IGNORED_DRIZZLE_DIAGNOSTICS = [
+	2307, // Cannot find module
+	2688, // Cannot find type definition file
+	2792, // Cannot find module with current moduleResolution
+	6053, // File not found
+	7016 // Missing declaration file for module
+]
 
 function getTypeKind(columnType: string): TypeKind {
 	if (/int|serial|decimal|double|float|numeric|real/.test(columnType)) {
@@ -137,6 +147,26 @@ function buildSuggestions(range: TextRange, suggestions: Suggestion[]): SuggestL
 	return { suggestions: suggestions, incomplete: false }
 }
 
+function isDrizzleModel(model: Monaco.editor.ITextModel): boolean {
+	return model.uri.toString() === DRIZZLE_MODEL_URI
+}
+
+function replaceDrizzleTypes(
+	monaco: MonacoApi,
+	drizzleTypesRef: MutableRefObject<Monaco.IDisposable | null>,
+	tables: SchemaTable[]
+): void {
+	if (drizzleTypesRef.current) {
+		drizzleTypesRef.current.dispose()
+		drizzleTypesRef.current = null
+	}
+
+	drizzleTypesRef.current = monaco.languages.typescript.typescriptDefaults.addExtraLib(
+		generateDrizzleTypes(tables),
+		DRIZZLE_TYPES_URI
+	)
+}
+
 export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, tables }: Props) {
 	const [showDemo, setShowDemo] = useState(false)
 	const [editorFontSize] = useSetting('editorFontSize')
@@ -149,8 +179,17 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 	const loadedThemesRef = useRef<Set<string>>(new Set())
 	const decorRef = useRef<string[]>([])
 	const completionProviderRef = useRef<Monaco.IDisposable | null>(null)
+	const drizzleTypesRef = useRef<Monaco.IDisposable | null>(null)
+	const tablesRef = useRef<SchemaTable[]>(tables)
 	const onExecuteRef = useRef(onExecute)
 	const onSaveRef = useRef(onSave)
+
+	useEffect(
+		function syncTables() {
+			tablesRef.current = tables
+		},
+		[tables]
+	)
 
 	useEffect(
 		function syncOnExecute() {
@@ -259,8 +298,21 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 				completionProviderRef.current.dispose()
 				completionProviderRef.current = null
 			}
+			if (drizzleTypesRef.current) {
+				drizzleTypesRef.current.dispose()
+				drizzleTypesRef.current = null
+			}
 		}
 	}, [])
+
+	useEffect(
+		function syncDrizzleTypes() {
+			if (!monacoRef.current) return
+
+			replaceDrizzleTypes(monacoRef.current, drizzleTypesRef, tables)
+		},
+		[tables]
+	)
 
 	useEffect(
 		function detectTypos() {
@@ -333,24 +385,29 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 		monaco.editor.setTheme(editorTheme)
 
 		monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-			target: monaco.languages.typescript.ScriptTarget.ES2016,
+			target: monaco.languages.typescript.ScriptTarget.ES2020,
 			allowNonTsExtensions: true,
+			allowSyntheticDefaultImports: true,
+			esModuleInterop: true,
 			moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-			module: monaco.languages.typescript.ModuleKind.CommonJS,
+			module: monaco.languages.typescript.ModuleKind.ESNext,
 			noEmit: true,
-			strict: false,
+			strict: true,
 			noImplicitAny: false,
+			noUnusedLocals: false,
+			noUnusedParameters: false,
+			skipLibCheck: true,
 			typeRoots: []
 		})
 
 		monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-			noSemanticValidation: true,
-			noSyntaxValidation: true
+			noSemanticValidation: false,
+			noSyntaxValidation: false,
+			noSuggestionDiagnostics: true,
+			diagnosticCodesToIgnore: IGNORED_DRIZZLE_DIAGNOSTICS
 		})
 
-		const drizzleTypes = generateDrizzleTypes(tables)
-		const libUri = 'file:///drizzle.d.ts'
-		monaco.languages.typescript.typescriptDefaults.addExtraLib(drizzleTypes, libUri)
+		replaceDrizzleTypes(monaco, drizzleTypesRef, tablesRef.current)
 
 		const model = editor.getModel()
 		if (model) {
@@ -366,7 +423,10 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 			{
 				triggerCharacters: ['.', '(', ',', ' '],
 				exclusive: true,
-				provideCompletionItems: function (model, position): SuggestList {
+				provideCompletionItems: function (model, position): SuggestList | undefined {
+					if (!isDrizzleModel(model)) return undefined
+
+					const currentTables = tablesRef.current
 					const textUntilPosition = model.getValueInRange({
 						startLineNumber: position.lineNumber,
 						startColumn: 1,
@@ -455,7 +515,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					if (isInsideSelectParens(textUntilPosition)) {
 						return buildSuggestions(
 							range,
-							tables.map(function (table, index) {
+							currentTables.map(function (table, index) {
 								return {
 									label: table.name,
 									kind: monaco.languages.CompletionItemKind.Variable,
@@ -482,7 +542,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					) {
 						return buildSuggestions(
 							range,
-							tables.map(function (table, index) {
+							currentTables.map(function (table, index) {
 								return {
 									label: table.name,
 									kind: monaco.languages.CompletionItemKind.Variable,
@@ -505,7 +565,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					if (isInsideFromParens(textUntilPosition)) {
 						return buildSuggestions(
 							range,
-							tables.map(function (table, index) {
+							currentTables.map(function (table, index) {
 								return {
 									label: table.name,
 									kind: monaco.languages.CompletionItemKind.Variable,
@@ -528,7 +588,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					if (isInsideJoinParens(textUntilPosition)) {
 						return buildSuggestions(
 							range,
-							tables.map(function (table, index) {
+							currentTables.map(function (table, index) {
 								return {
 									label: table.name,
 									kind: monaco.languages.CompletionItemKind.Variable,
@@ -553,7 +613,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 							/\b(?:db|tx)\.insert\(\s*([a-zA-Z_][\w]*)\s*\)/
 						)
 						if (tableMatch) {
-							const table = getTable(tables, tableMatch[1])
+							const table = getTable(currentTables, tableMatch[1])
 							if (table) {
 								return buildSuggestions(range, [
 									{
@@ -576,7 +636,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 							/\b(?:db|tx)\.update\(\s*([a-zA-Z_][\w]*)\s*\)/
 						)
 						if (tableMatch) {
-							const table = getTable(tables, tableMatch[1])
+							const table = getTable(currentTables, tableMatch[1])
 							if (table) {
 								return buildSuggestions(range, [
 									{
@@ -714,7 +774,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 						]
 
 						if (fromMatch) {
-							const table = getTable(tables, fromMatch[1])
+							const table = getTable(currentTables, fromMatch[1])
 							if (table) {
 								const tableSuggestions: Suggestion[] = table.columns.map(
 									function (column, index) {
@@ -742,8 +802,8 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 					const joinMatch = getJoinMatch(textUntilPosition)
 					if (joinMatch) {
-						const leftTable = getTable(tables, joinMatch[1])
-						const rightTable = getTable(tables, joinMatch[2])
+						const leftTable = getTable(currentTables, joinMatch[1])
+						const rightTable = getTable(currentTables, joinMatch[2])
 						if (leftTable && rightTable) {
 							const joinSnippet = getJoinSnippet(leftTable, rightTable)
 							if (joinSnippet) {
@@ -768,7 +828,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					)
 					if (helperMatch) {
 						const suggestions: Suggestion[] = []
-						tables.forEach(function (table) {
+						currentTables.forEach(function (table) {
 							table.columns.forEach(function (column, index) {
 								suggestions.push({
 									label: `${table.name}.${column.name}`,
@@ -792,7 +852,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 					const valueMatch = getValueMatch(textUntilPosition)
 					if (valueMatch) {
-						const table = getTable(tables, valueMatch[2])
+						const table = getTable(currentTables, valueMatch[2])
 						if (table) {
 							const column = getColumn(table, valueMatch[3])
 							if (column) {
@@ -877,7 +937,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 					const columnMatch = getColumnMatch(textUntilPosition)
 					if (columnMatch) {
-						const table = getTable(tables, columnMatch[1])
+						const table = getTable(currentTables, columnMatch[1])
 						if (table) {
 							const column = getColumn(table, columnMatch[2])
 							if (column) {
@@ -1006,7 +1066,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 					const tableMatch = getTableMatch(textUntilPosition)
 					if (tableMatch) {
-						const table = getTable(tables, tableMatch[1])
+						const table = getTable(currentTables, tableMatch[1])
 						if (table) {
 							return buildSuggestions(
 								range,
@@ -1687,7 +1747,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 					]
 
 					// Add table names
-					tables.forEach(function (table, index) {
+					currentTables.forEach(function (table, index) {
 						defaultSuggestions.push({
 							label: table.name,
 							kind: monaco.languages.CompletionItemKind.Variable,
@@ -1700,7 +1760,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 					const word = model.getWordUntilPosition(position)
 					if (word.word && word.word.length >= 2) {
-						const tableNames = getFuzzyTableNames(tables)
+						const tableNames = getFuzzyTableNames(currentTables)
 						const isExactMatch = tableNames.some(function (name) {
 							return name.toLowerCase() === word.word.toLowerCase()
 						})
@@ -1860,7 +1920,8 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
 
 			<Editor
 				height={enableVimMode ? 'calc(100% - 24px)' : '100%'}
-				defaultLanguage='typescript'
+				language='typescript'
+				path={DRIZZLE_MODEL_URI}
 				value={value}
 				onChange={function (newValue) {
 					onChange(newValue || '')

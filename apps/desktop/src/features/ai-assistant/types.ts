@@ -15,3 +15,19 @@ export type ChatThread = {
 	connectionId: string | null
 	messages: ChatMessage[]
 }
+
+export type AiAssistantColumnContext = {
+	name: string
+	dataType: string
+	nullable?: boolean
+	primaryKey?: boolean
+	foreignKey?: string
+}
+
+export type AiAssistantContext = {
+	activeView?: string
+	activeConnectionId?: string | null
+	selectedTableId?: string | null
+	selectedTableName?: string | null
+	selectedTableColumns?: AiAssistantColumnContext[]
+}
