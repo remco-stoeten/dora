@@ -62,15 +62,15 @@ jobs:
           fi
 
           DEB_URL=""
-          for attempt in {1..24}; do
+          for attempt in {1..60}; do
             DEB_URL="$(gh api repos/${{ github.repository }}/releases/tags/${TAG} \
               --jq '.assets[] | select(.name | endswith("_amd64.deb")) | .browser_download_url' \
               | head -1)"
             if [[ -n "$DEB_URL" ]]; then
               break
             fi
-            echo "Waiting for _amd64.deb asset on ${TAG} (${attempt}/24)..."
-            sleep 10
+            echo "Waiting for _amd64.deb asset on ${TAG} (${attempt}/60)..."
+            sleep 30
           done
 
           if [[ -z "$DEB_URL" ]]; then

@@ -62,7 +62,7 @@ jobs:
 
           ARM_URL=""
           INTEL_URL=""
-          for attempt in {1..24}; do
+          for attempt in {1..60}; do
             ARM_URL="$(gh api repos/${{ github.repository }}/releases/tags/${TAG} \
               --jq '.assets[] | select(.name | endswith("_aarch64.dmg")) | .browser_download_url' \
               | head -1)"
@@ -72,8 +72,8 @@ jobs:
             if [[ -n "$ARM_URL" && -n "$INTEL_URL" ]]; then
               break
             fi
-            echo "Waiting for both DMG assets on ${TAG} (${attempt}/24)..."
-            sleep 10
+            echo "Waiting for both DMG assets on ${TAG} (${attempt}/60)..."
+            sleep 30
           done
 
           if [[ -z "$ARM_URL" || -z "$INTEL_URL" ]]; then
