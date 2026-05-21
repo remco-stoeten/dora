@@ -11,7 +11,7 @@ export function useContainerLogs(
 	containerId: string | null,
 	options: UseContainerLogsOptions = {}
 ) {
-	const { tail = 100, enabled = true } = options
+	const { tail, enabled = true } = options
 	const [logs, setLogs] = useState<string>('')
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
