@@ -34,9 +34,42 @@ describe('drizzleQueryToSql', function () {
 		)
 	})
 
-	it('rejects unsupported chains instead of sending JavaScript to the SQL backend', function () {
+	it('rejects .where() chains with a specific message', function () {
 		expect(function () {
 			drizzleQueryToSql('db.select().from(messages).where(eq(messages.id, 1))')
+		}).toThrow('Queries with .where() are not auto-translated')
+	})
+
+	it('rejects .orderBy() chains with a specific message', function () {
+		expect(function () {
+			drizzleQueryToSql('db.select().from(messages).orderBy(messages.createdAt)')
+		}).toThrow('Queries with .orderBy() are not auto-translated')
+	})
+
+	it('accepts tx.execute(sql) patterns', function () {
+		expect(drizzleQueryToSql("tx.execute(sql`SELECT * FROM users`)")).toBe(
+			'SELECT * FROM users'
+		)
+	})
+
+	it('accepts tx.select().from(table).limit(n) patterns', function () {
+		expect(drizzleQueryToSql('tx.select().from(users).limit(10)')).toBe(
+			'SELECT * FROM users LIMIT 10'
+		)
+	})
+
+	it('accepts .offset(n) in addition to .limit(n)', function () {
+		expect(drizzleQueryToSql('db.select().from(users).limit(10).offset(5)')).toBe(
+			'SELECT * FROM users LIMIT 10 OFFSET 5'
+		)
+		expect(drizzleQueryToSql('db.select().from(users).offset(5)')).toBe(
+			'SELECT * FROM users OFFSET 5'
+		)
+	})
+
+	it('rejects unsupported chains instead of sending JavaScript to the SQL backend', function () {
+		expect(function () {
+			drizzleQueryToSql('db.select().from(messages).groupBy(messages.id)')
 		}).toThrow('Unsupported Drizzle query')
 	})
 })
