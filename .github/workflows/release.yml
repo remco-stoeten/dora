@@ -356,3 +356,15 @@ jobs:
             --title "Dora ${VERSION}" \
             --notes-file /tmp/release-notes.md \
             --draft=false
+
+  publish-aur:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch AUR publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run aur.yml --ref master -f tag="${{ github.ref_name }}"
