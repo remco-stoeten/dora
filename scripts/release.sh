@@ -28,7 +28,7 @@ NEXT_TAG="$(git-cliff --bumped-version --bump "$BUMP" 2>/dev/null)"
 echo "━━ Release: $NEXT_TAG ━━"
 echo
 
-git-cliff -o CHANGELOG.md --tag "$NEXT_TAG" 2>/dev/null
+git-cliff -o CHANGELOG.md --tag "$NEXT_TAG"
 echo "Updated CHANGELOG.md"
 echo
 
@@ -39,7 +39,8 @@ git tag "$NEXT_TAG"
 echo "Created tag $NEXT_TAG"
 echo
 
-git push origin master --follow-tags
+git push origin master
+git push origin "$NEXT_TAG"
 echo "Pushed master and tag"
 echo
 
