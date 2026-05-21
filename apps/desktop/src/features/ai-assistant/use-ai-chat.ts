@@ -6,11 +6,12 @@ import type { AiStreamEvent } from '@/lib/bindings'
 import { buildChatPrompt } from './build-prompt'
 import { buildMockChatResponse, streamMockText } from './mock-ai'
 import { buildThreadKey, useAiAssistantStore } from './store'
-import type { ChatMessage } from './types'
+import type { AiAssistantContext, ChatMessage } from './types'
 
 type SendArgs = {
 	prompt: string
 	activeConnectionId: string | null
+	context?: AiAssistantContext
 }
 
 type UseAiChatResult = {
@@ -61,7 +62,7 @@ export function useAiChat(connectionId: string | null): UseAiChatResult {
 	}, [])
 
 	const send = useCallback(
-		async function send({ prompt, activeConnectionId }: SendArgs) {
+		async function send({ prompt, activeConnectionId, context }: SendArgs) {
 			const text = prompt.trim()
 			if (!text || isStreaming) return
 
@@ -93,7 +94,10 @@ export function useAiChat(connectionId: string | null): UseAiChatResult {
 				return m.id !== assistantId
 			})
 
-			const packed = buildChatPrompt(currentMessages)
+			const packed = buildChatPrompt(currentMessages, {
+				...context,
+				activeConnectionId
+			})
 			const requestId = newId()
 			abortRef.current.requestId = requestId
 			setIsStreaming(true)

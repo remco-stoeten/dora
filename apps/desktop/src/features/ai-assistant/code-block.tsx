@@ -20,6 +20,9 @@ import {
 	type SqlTokenKind
 } from './sql-code-utils'
 
+const QUERY_POLL_INTERVAL_MS = 100
+const QUERY_POLL_ATTEMPTS = 50
+
 type Props = {
 	language: string | undefined
 	code: string
@@ -50,6 +53,17 @@ function formatError(error: unknown): string {
 		return String((error as { detail?: unknown }).detail ?? 'Query failed')
 	}
 	return 'Query failed'
+}
+
+function delay(ms: number): Promise<void> {
+	return new Promise(function (resolve) {
+		setTimeout(resolve, ms)
+	})
+}
+
+function getFirstPageRowCount(firstPage: unknown): number {
+	if (!Array.isArray(firstPage)) return 0
+	return firstPage.length
 }
 
 export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }: Props) {
@@ -115,22 +129,43 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 					setRunState({ kind: 'error', mode, message: 'No query was started.' })
 					return
 				}
-				const fetched = await commands.fetchQuery(lastId)
+				let info
+				for (let attempt = 0; attempt < QUERY_POLL_ATTEMPTS; attempt += 1) {
+					const fetched = await commands.fetchQuery(lastId)
+					if (fetched.status === 'error') {
+						setRunState({
+							kind: 'error',
+							mode,
+							message: formatError(fetched.error)
+						})
+						return
+					}
+
+					info = fetched.data
+					if (info.status === 'Completed' || info.status === 'Error') {
+						break
+					}
+
+					await delay(QUERY_POLL_INTERVAL_MS)
+				}
+
 				const elapsed = Math.round(performance.now() - started)
-				if (fetched.status === 'error') {
-					setRunState({
-						kind: 'error',
-						mode,
-						message: formatError(fetched.error)
-					})
+				if (!info) {
+					setRunState({ kind: 'error', mode, message: 'Query timed out.' })
 					return
 				}
-				const info = fetched.data
-				if (info?.error) {
+				if (info.error) {
 					setRunState({ kind: 'error', mode, message: info.error })
 					return
 				}
-				const rowCount = info?.affected_rows ?? 0
+				if (info.status !== 'Completed') {
+					setRunState({ kind: 'error', mode, message: 'Query timed out.' })
+					return
+				}
+				const firstPageRowCount = getFirstPageRowCount(info.first_page)
+				const rowCount = info.returns_values
+					? Math.max(info.affected_rows ?? 0, firstPageRowCount)
+					: (info.affected_rows ?? 0)
 				setRunState({ kind: 'success', mode, rowCount, durationMs: elapsed })
 			} catch (e) {
 				setRunState({
