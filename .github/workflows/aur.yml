@@ -73,6 +73,7 @@ jobs:
 
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" packaging/aur/PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
+          sed -i 's|releases/download/v[0-9][^/]*/dora-x86_64-unknown-linux-gnu.tar.gz|releases/download/v${pkgver}/dora-x86_64-unknown-linux-gnu.tar.gz|' packaging/aur/PKGBUILD
           sed -i "s|^sha256sums=.*|sha256sums=('${SHA256}')|" packaging/aur/PKGBUILD
 
       - name: Generate .SRCINFO (Arch container)
