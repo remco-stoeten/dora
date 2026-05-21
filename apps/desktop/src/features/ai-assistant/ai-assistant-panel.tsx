@@ -5,17 +5,28 @@ import { commands } from '@/lib/bindings'
 import type { DatabaseSchema, GroqStatus } from '@/lib/bindings'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/utils/cn'
+import { getTableRefId } from '@/shared/utils/table-ref'
 import { MessageBubble } from './message-bubble'
 import { useAiAssistantStore } from './store'
 import { buildDynamicSuggestions, getQuickActions } from './suggestions'
+import type { AiAssistantContext } from './types'
 import { useAiChat } from './use-ai-chat'
 
 type Props = {
 	activeConnectionId: string | null
+	activeView?: string
+	selectedTableId?: string | null
+	selectedTableName?: string | null
 	onEditorInsert?: (sql: string) => void
 }
 
-export function AiAssistantPanel({ activeConnectionId, onEditorInsert }: Props) {
+export function AiAssistantPanel({
+	activeConnectionId,
+	activeView,
+	selectedTableId,
+	selectedTableName,
+	onEditorInsert
+}: Props) {
 	const adapter = useAdapter()
 	const isTauri = useIsTauri()
 	const open = useAiAssistantStore(function (s) {
@@ -102,14 +113,46 @@ export function AiAssistantPanel({ activeConnectionId, onEditorInsert }: Props) 
 		[schema]
 	)
 
+	const assistantContext = useMemo<AiAssistantContext>(
+		function () {
+			const selectedTable = schema?.tables.find(function (table) {
+				const tableId = getTableRefId(table)
+				return (
+					tableId === selectedTableId ||
+					table.name === selectedTableName ||
+					table.name === selectedTableId
+				)
+			})
+
+			return {
+				activeView,
+				activeConnectionId,
+				selectedTableId: selectedTableId || null,
+				selectedTableName: selectedTable?.name ?? selectedTableName ?? null,
+				selectedTableColumns: selectedTable?.columns.map(function (column) {
+					return {
+						name: column.name,
+						dataType: column.data_type,
+						nullable: column.is_nullable,
+						primaryKey: column.is_primary_key,
+						foreignKey: column.foreign_key
+							? `${column.foreign_key.referenced_schema ? `${column.foreign_key.referenced_schema}.` : ''}${column.foreign_key.referenced_table}.${column.foreign_key.referenced_column}`
+							: undefined
+					}
+				})
+			}
+		},
+		[activeView, activeConnectionId, selectedTableId, selectedTableName, schema]
+	)
+
 	const handleSend = useCallback(
 		async function handleSend() {
 			if (!input.trim() || isStreaming) return
 			const text = input
 			setInput('')
-			await send({ prompt: text, activeConnectionId })
+			await send({ prompt: text, activeConnectionId, context: assistantContext })
 		},
-		[input, isStreaming, send, activeConnectionId]
+		[input, isStreaming, send, activeConnectionId, assistantContext]
 	)
 
 	const handleKeyDown = useCallback(
@@ -159,6 +202,18 @@ export function AiAssistantPanel({ activeConnectionId, onEditorInsert }: Props) 
 				>
 					{keyLabel}
 				</span>
+				{activeView && (
+					<span
+						className='rounded bg-sidebar-accent px-1.5 py-0.5 text-[10px] text-muted-foreground'
+						title={
+							selectedTableName
+								? `Context: ${activeView}, ${selectedTableName}`
+								: `Context: ${activeView}`
+						}
+					>
+						{selectedTableName ? selectedTableName : activeView}
+					</span>
+				)}
 				<div className='ml-auto flex items-center gap-1'>
 					{messages.length > 0 && (
 						<Button
