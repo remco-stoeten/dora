@@ -1,195 +1,187 @@
-import { SchemaTable } from '../types'
+import { SchemaColumn, SchemaTable } from '../types'
 
 /**
- * Generates comprehensive, STRICT TypeScript type definitions for Monaco Editor.
- * This enables true "Pro" LSP support with type checking for Drizzle ORM.
+ * Generates ambient TypeScript declarations for the Monaco editor.
+ *
+ * The declarations intentionally model the parts of Drizzle users tend to type
+ * in the runner rather than trying to mirror Drizzle's full internal type graph.
  */
 export function generateDrizzleTypes(tables: SchemaTable[]): string {
-	const tableDefs = tables
-		.map(function (table) {
-			const columns = table.columns
-				.map(function (col) {
-					let tsType = 'unknown'
-					if (/int|serial|decimal|double|float|numeric|real/.test(col.type)) {
-						tsType = 'number'
-					} else if (/char|text|uuid|json|enum/.test(col.type)) {
-						tsType = 'string'
-					} else if (/bool/.test(col.type)) {
-						tsType = 'boolean'
-					} else if (/timestamp|date|time/.test(col.type)) {
-						tsType = 'Date'
-					}
-					return `    /** ${col.type} */\n    ${col.name}: Column<${tsType}>;`
-				})
-				.join('\n')
-
-			const modelColumns = table.columns
-				.map(function (col) {
-					let tsType = 'unknown'
-					if (/int|serial|decimal|double|float|numeric|real/.test(col.type)) {
-						tsType = 'number'
-					} else if (/char|text|uuid|json|enum/.test(col.type)) {
-						tsType = 'string'
-					} else if (/bool/.test(col.type)) {
-						tsType = 'boolean'
-					} else if (/timestamp|date|time/.test(col.type)) {
-						tsType = 'Date'
-					}
-					if (col.nullable) {
-						tsType = `${tsType} | null`
-					}
-					return `    ${col.name}: ${tsType};`
-				})
-				.join('\n')
-
-			return `
-/** Table definition for ${table.name} usage in query builder */
-interface ${capitalize(table.name)}Schema {
-${columns}
-}
-
-/** Row model for ${table.name} */
-interface ${capitalize(table.name)}Model {
-${modelColumns}
-}
-
-/** The table object for '${table.name}' */
-declare const ${table.name}: Table<'${table.name}', ${capitalize(table.name)}Schema>;
-`
+	const tableEntries = tables.map(function (table, index) {
+		return createTableEntry(table, index)
+	})
+	const tableDefs = tableEntries
+		.map(function (entry) {
+			return entry.definition
+		})
+		.join('\n\n')
+	const globalTableDecls = tableEntries
+		.filter(function (entry) {
+			return entry.globalIdentifier !== null
+		})
+		.map(function (entry) {
+			return `declare const ${entry.globalIdentifier}: ${entry.tableTypeName};`
+		})
+		.join('\n')
+	const schemaProperties = tableEntries
+		.map(function (entry) {
+			return `    ${propertyKey(entry.table.name)}: ${entry.tableTypeName};`
+		})
+		.join('\n')
+	const moduleSchemaProperties = tableEntries
+		.map(function (entry) {
+			return `        ${propertyKey(entry.table.name)}: ${entry.tableTypeName};`
+		})
+		.join('\n')
+	const queryProperties = tableEntries
+		.map(function (entry) {
+			return `    ${propertyKey(entry.table.name)}: RelationalQuery<${entry.rowTypeName}, ${entry.columnsTypeName}>;`
+		})
+		.join('\n')
+	const moduleExports = tableEntries
+		.map(function (entry) {
+			return `    export const ${entry.exportIdentifier}: ${entry.tableTypeName};`
 		})
 		.join('\n')
 
 	return `
 /**
- * DRIZZLE ORM STRICT TYPE DEFINITIONS
+ * DRIZZLE ORM VIRTUAL TYPE DEFINITIONS
  * Generated for Monaco Editor
  */
 
-/** A column reference in a query (e.g. users.id) */
-interface Column<T> {
-    _brand: 'Column';
-    _type: T;
+type DrizzleValue = string | number | boolean | Date | bigint | Uint8Array | null;
+
+interface Column<TData, TName extends string = string> {
+    readonly _brand: 'Column';
+    readonly name: TName;
+    readonly dataType: TData;
+    readonly _type: TData;
 }
 
-/** A SQL expression or condition */
-interface SQL<T = unknown> {
-    _brand: 'SQL';
-    _type: T;
+type AnyColumn = Column<unknown, string>;
+
+interface SQL<TData = unknown> {
+    readonly _brand: 'SQL';
+    readonly _type: TData;
 }
 
-/** A table definition definition used in .from() */
-interface Table<TName extends string, TSchema> {
-    _brand: 'Table';
-    _: {
-        name: TName;
-        schema: TSchema;
+type SelectedValue<T> = T extends Column<infer TValue, string>
+    ? TValue
+    : T extends SQL<infer TValue>
+      ? TValue
+      : T extends Table<string, unknown, infer TRow>
+        ? TRow
+        : never;
+
+type SelectedFields<TSelection> = {
+    [K in keyof TSelection]: SelectedValue<TSelection[K]>;
+};
+
+type InferModelFromColumns<TColumns> = {
+    [K in keyof TColumns]: TColumns[K] extends Column<infer TValue, string> ? TValue : never;
+};
+
+type InferInsertModel<TColumns> = {
+    [K in keyof TColumns]?: TColumns[K] extends Column<infer TValue, string> ? TValue : never;
+};
+
+type Table<TName extends string, TColumns, TRow> = TColumns & {
+    readonly _brand: 'Table';
+    readonly _: {
+        readonly name: TName;
+        readonly columns: TColumns;
+        readonly inferSelect: TRow;
+        readonly inferInsert: InferInsertModel<TColumns>;
     };
-}
+};
 
-type AnyTable = Table<string, unknown>;
+type AnyTable = Table<string, unknown, unknown>;
 
 ${tableDefs}
 
-interface QueryBuilder<TResult> {
-    /** 
-     * Filter results with a WHERE clause.
-     * Use helper functions like eq(), gt(), and(), etc.
-     */
-    where(condition: SQL<boolean> | undefined): QueryBuilder<TResult>;
-    
-    /** Order results by specific columns */
-    orderBy(...columns: (Column<unknown> | SQL<unknown>)[]): QueryBuilder<TResult>;
-    
-    /** Group results by columns */
-    groupBy(...columns: Column<unknown>[]): QueryBuilder<TResult>;
-    
-    /** Limit the number of returned rows */
-    limit(limit: number): QueryBuilder<TResult>;
-    
-    /** Offset the returned rows */
-    offset(offset: number): QueryBuilder<TResult>;
-    
-    /** 
-     * Left join another table.
-     * @param table The table to join
-     * @param condition The ON condition (e.g. eq(users.id, posts.userId))
-     */
-    leftJoin<TR extends AnyTable>(table: TR, condition: SQL<boolean>): QueryBuilder<TResult>;
-    
-    innerJoin<TR extends AnyTable>(table: TR, condition: SQL<boolean>): QueryBuilder<TResult>;
-    
-    rightJoin<TR extends AnyTable>(table: TR, condition: SQL<boolean>): QueryBuilder<TResult>;
-    
-    fullJoin<TR extends AnyTable>(table: TR, condition: SQL<boolean>): QueryBuilder<TResult>;
+${globalTableDecls}
 
-    /** Execute the query and get the results */
-    execute(): Promise<TResult[]>;
-    
-    /** Get generated SQL */
-}
-
-interface DB {
-    /**
-     * Start a SELECT query.
-     * Chain .from(table) to select from a table.
-     */
-    select(): SelectBuilder;
-    
-    /**
-     * Start a SELECT query for specific fields.
-     */
-    select<TSelection extends Record<string, Column<unknown> | SQL<unknown>>>(
-        fields: TSelection
-    ): SelectBuilder<TSelection>;
-
-    /** Start an INSERT query */
-    insert<TName extends string, TSchema>(table: Table<TName, TSchema>): InsertBuilder<TSchema>;
-    
-    /** Start an UPDATE query */
-    update<TName extends string, TSchema>(table: Table<TName, TSchema>): UpdateBuilder<TSchema>;
-    
-    /** Start a DELETE query */
-    delete<TName extends string, TSchema>(table: Table<TName, TSchema>): DeleteBuilder;
-
-    /** Run queries in a transaction */
-    transaction<T>(handler: (tx: Transaction) => Promise<T>): Promise<T>;
-
-    /** Batch multiple queries */
-    batch(queries: SQL<unknown>[]): Promise<unknown[]>;
-}
-
-interface Transaction extends Omit<DB, 'transaction'> {}
-
-interface SelectBuilder<TSelection = unknown> {
-    /**
-     * Specify the table to select from.
-     * This infers the result type based on the table model.
-     */
-    from<TName extends string, TSchema>(
-        table: Table<TName, TSchema>
-    ): QueryBuilder<InferModelFromSchema<TSchema>>;
-}
-
-type InferModelFromSchema<TSchema> = {
-    [K in keyof TSchema]: TSchema[K] extends Column<infer T> ? T : never;
+declare const schema: {
+${schemaProperties}
 };
 
+interface QueryObject {
+${queryProperties}
+}
 
-interface InsertBuilder<TSchema> {
-    /** Provide values to insert */
-    values(values: InferInsertModel<TSchema> | InferInsertModel<TSchema>[]): {
-        returning(): Promise<InferModelFromSchema<TSchema>[]>;
+interface QueryOperators {
+    eq: typeof eq;
+    ne: typeof ne;
+    gt: typeof gt;
+    lt: typeof lt;
+    gte: typeof gte;
+    lte: typeof lte;
+    like: typeof like;
+    ilike: typeof ilike;
+    inArray: typeof inArray;
+    notInArray: typeof notInArray;
+    isNull: typeof isNull;
+    isNotNull: typeof isNotNull;
+    and: typeof and;
+    or: typeof or;
+    not: typeof not;
+    asc: typeof asc;
+    desc: typeof desc;
+}
+
+interface QueryFindManyOptions<TRow, TColumns> {
+    where?: SQL<boolean> | ((table: TColumns, operators: QueryOperators) => SQL<boolean> | undefined);
+    orderBy?: SQL<unknown> | SQL<unknown>[] | ((table: TColumns, operators: QueryOperators) => SQL<unknown> | SQL<unknown>[]);
+    columns?: Partial<Record<keyof TRow, boolean>>;
+    extras?: Record<string, SQL<unknown>>;
+    with?: Record<string, unknown>;
+    limit?: number;
+    offset?: number;
+}
+
+type QueryFindFirstOptions<TRow, TColumns> = Omit<QueryFindManyOptions<TRow, TColumns>, 'limit'>;
+
+interface RelationalQuery<TRow, TColumns> {
+    findMany(options?: QueryFindManyOptions<TRow, TColumns>): Promise<TRow[]>;
+    findFirst(options?: QueryFindFirstOptions<TRow, TColumns>): Promise<TRow | undefined>;
+}
+
+interface QueryBuilder<TResult> {
+    where(condition: SQL<boolean> | undefined): QueryBuilder<TResult>;
+    orderBy(...columns: (AnyColumn | SQL<unknown>)[]): QueryBuilder<TResult>;
+    groupBy(...columns: AnyColumn[]): QueryBuilder<TResult>;
+    limit(limit: number): QueryBuilder<TResult>;
+    offset(offset: number): QueryBuilder<TResult>;
+    leftJoin<TRight extends AnyTable>(table: TRight, condition: SQL<boolean>): QueryBuilder<TResult>;
+    innerJoin<TRight extends AnyTable>(table: TRight, condition: SQL<boolean>): QueryBuilder<TResult>;
+    rightJoin<TRight extends AnyTable>(table: TRight, condition: SQL<boolean>): QueryBuilder<TResult>;
+    fullJoin<TRight extends AnyTable>(table: TRight, condition: SQL<boolean>): QueryBuilder<TResult>;
+    execute(): Promise<TResult[]>;
+    getSQL(): SQL<TResult[]>;
+}
+
+interface SelectBuilder<TSelection = undefined> {
+    from<TTable extends Table<string, unknown, unknown>>(
+        table: TTable
+    ): QueryBuilder<TSelection extends undefined ? TTable['_']['inferSelect'] : SelectedFields<TSelection>>;
+}
+
+interface InsertBuilder<TColumns> {
+    values(values: InferInsertModel<TColumns> | InferInsertModel<TColumns>[]): {
+        returning(): Promise<InferModelFromColumns<TColumns>[]>;
         execute(): Promise<void>;
     };
 }
 
-interface UpdateBuilder<TSchema> {
-    /** Provide new values */
-    set(values: Partial<InferInsertModel<TSchema>>): {
+interface UpdateBuilder<TColumns> {
+    set(values: Partial<InferInsertModel<TColumns>>): {
         where(condition: SQL<boolean>): {
-             returning(): Promise<InferModelFromSchema<TSchema>[]>;
-             execute(): Promise<void>;
+            returning(): Promise<InferModelFromColumns<TColumns>[]>;
+            execute(): Promise<void>;
         };
+        returning(): Promise<InferModelFromColumns<TColumns>[]>;
+        execute(): Promise<void>;
     };
 }
 
@@ -198,73 +190,219 @@ interface DeleteBuilder {
         returning(): Promise<unknown[]>;
         execute(): Promise<void>;
     };
+    returning(): Promise<unknown[]>;
+    execute(): Promise<void>;
 }
 
-type InferInsertModel<TSchema> = {
-    [K in keyof TSchema]?: TSchema[K] extends Column<infer T> ? T : never;
-};
+interface DB {
+    query: QueryObject;
+    select(): SelectBuilder;
+    select<TSelection extends Record<string, AnyColumn | SQL<unknown> | AnyTable>>(fields: TSelection): SelectBuilder<TSelection>;
+    insert<TTable extends Table<string, unknown, unknown>>(table: TTable): InsertBuilder<TTable['_']['columns']>;
+    update<TTable extends Table<string, unknown, unknown>>(table: TTable): UpdateBuilder<TTable['_']['columns']>;
+    delete<TTable extends Table<string, unknown, unknown>>(table: TTable): DeleteBuilder;
+    execute<TResult = unknown>(query: SQL<TResult> | string): Promise<TResult[]>;
+    transaction<T>(handler: (tx: Transaction) => Promise<T>): Promise<T>;
+    batch<T extends readonly unknown[]>(queries: T): Promise<{ [K in keyof T]: unknown }>;
+}
+
+interface Transaction extends Omit<DB, 'transaction'> {}
 
 declare const db: DB;
 
-
-/** Checks if column equals value */
 declare function eq<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column does not equal value */
 declare function ne<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column is greater than value */
 declare function gt<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column is less than value */
 declare function lt<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column is greater or equal */
 declare function gte<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column is less or equal */
 declare function lte<T>(column: Column<T>, value: T): SQL<boolean>;
-
-/** Checks if column is in array of values */
 declare function inArray<T>(column: Column<T>, values: T[]): SQL<boolean>;
-
-/** Checks if column is NOT in array */
 declare function notInArray<T>(column: Column<T>, values: T[]): SQL<boolean>;
-
-/** Checks if column is NULL */
-declare function isNull(column: Column<unknown>): SQL<boolean>;
-
-/** Checks if column is NOT NULL */
-declare function isNotNull(column: Column<unknown>): SQL<boolean>;
-
-/** 
- * Fuzzy match. 
- * Note: Only works on string columns.
- */
+declare function isNull(column: AnyColumn): SQL<boolean>;
+declare function isNotNull(column: AnyColumn): SQL<boolean>;
 declare function like(column: Column<string>, pattern: string): SQL<boolean>;
 declare function ilike(column: Column<string>, pattern: string): SQL<boolean>;
-
-/** Combine conditions */
 declare function and(...conditions: (SQL<boolean> | undefined)[]): SQL<boolean>;
 declare function or(...conditions: (SQL<boolean> | undefined)[]): SQL<boolean>;
 declare function not(condition: SQL<boolean>): SQL<boolean>;
-
-/** Sorting */
-declare function asc(column: Column<unknown>): SQL<unknown>;
-declare function desc(column: Column<unknown>): SQL<unknown>;
-
-/** Aggregates */
+declare function asc(column: AnyColumn): SQL<unknown>;
+declare function desc(column: AnyColumn): SQL<unknown>;
 declare function count(): SQL<number>;
-declare function count(column: Column<unknown>): SQL<number>;
+declare function count(column: AnyColumn): SQL<number>;
 declare function sum(column: Column<number>): SQL<number>;
 declare function avg(column: Column<number>): SQL<number>;
 declare function min<T>(column: Column<T>): SQL<T>;
 declare function max<T>(column: Column<T>): SQL<T>;
-
-/** Parameter helper */
+declare function sql<T = unknown>(strings: TemplateStringsArray, ...params: unknown[]): SQL<T>;
 declare function param<T>(value?: T): T;
 
+declare module 'drizzle-orm' {
+    export interface SQL<TData = unknown> {
+        readonly _brand: 'SQL';
+        readonly _type: TData;
+    }
+    export function eq<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function ne<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function gt<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function lt<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function gte<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function lte<T>(column: Column<T>, value: T): SQL<boolean>;
+    export function inArray<T>(column: Column<T>, values: T[]): SQL<boolean>;
+    export function notInArray<T>(column: Column<T>, values: T[]): SQL<boolean>;
+    export function isNull(column: AnyColumn): SQL<boolean>;
+    export function isNotNull(column: AnyColumn): SQL<boolean>;
+    export function like(column: Column<string>, pattern: string): SQL<boolean>;
+    export function ilike(column: Column<string>, pattern: string): SQL<boolean>;
+    export function and(...conditions: (SQL<boolean> | undefined)[]): SQL<boolean>;
+    export function or(...conditions: (SQL<boolean> | undefined)[]): SQL<boolean>;
+    export function not(condition: SQL<boolean>): SQL<boolean>;
+    export function asc(column: AnyColumn): SQL<unknown>;
+    export function desc(column: AnyColumn): SQL<unknown>;
+    export function count(): SQL<number>;
+    export function count(column: AnyColumn): SQL<number>;
+    export function sum(column: Column<number>): SQL<number>;
+    export function avg(column: Column<number>): SQL<number>;
+    export function min<T>(column: Column<T>): SQL<T>;
+    export function max<T>(column: Column<T>): SQL<T>;
+    export function sql<T = unknown>(strings: TemplateStringsArray, ...params: unknown[]): SQL<T>;
+    export function param<T>(value?: T): T;
+}
+
+declare module 'schema' {
+${moduleExports}
+    export const schema: {
+${moduleSchemaProperties}
+    };
+}
+
+declare module '@/db/schema' {
+${moduleExports}
+    export const schema: {
+${moduleSchemaProperties}
+    };
+}
 `
+}
+
+function createTableEntry(table: SchemaTable, index: number) {
+	const typeBase = toTypeIdentifier(table.name) || `Table${index + 1}`
+	const columnsTypeName = `${typeBase}Columns`
+	const rowTypeName = `${typeBase}Row`
+	const insertTypeName = `${typeBase}Insert`
+	const tableTypeName = `${typeBase}Table`
+	const globalIdentifier = isIdentifier(table.name) ? table.name : null
+	const exportIdentifier = globalIdentifier || toIdentifier(lastNameSegment(table.name)) || `table${index + 1}`
+	const columnDefs = table.columns
+		.map(function (column) {
+			return `    ${propertyKey(column.name)}: Column<${columnTsType(column)}, '${escapeTypeString(column.name)}'>;`
+		})
+		.join('\n')
+	const rowDefs = table.columns
+		.map(function (column) {
+			return `    ${propertyKey(column.name)}: ${columnTsType(column)};`
+		})
+		.join('\n')
+	const definition = `/** Columns for ${table.name}. */
+interface ${columnsTypeName} {
+${columnDefs}
+}
+
+/** Select row model for ${table.name}. */
+interface ${rowTypeName} {
+${rowDefs}
+}
+
+/** Insert model for ${table.name}. */
+type ${insertTypeName} = InferInsertModel<${columnsTypeName}>;
+
+/** Table object for ${table.name}. */
+type ${tableTypeName} = Table<'${escapeTypeString(table.name)}', ${columnsTypeName}, ${rowTypeName}>;`
+
+	return {
+		columnsTypeName,
+		definition,
+		exportIdentifier,
+		globalIdentifier,
+		insertTypeName,
+		rowTypeName,
+		table,
+		tableTypeName
+	}
+}
+
+function columnTsType(column: SchemaColumn): string {
+	let tsType = baseColumnTsType(column.type)
+	if (column.nullable) {
+		tsType = `${tsType} | null`
+	}
+	return tsType
+}
+
+function baseColumnTsType(type: string): string {
+	const normalized = type.toLowerCase()
+	if (/\b(bigint|bigserial|int8)\b/.test(normalized)) {
+		return 'bigint'
+	}
+	if (/\b(smallint|integer|int|int2|int4|serial|smallserial|float|float4|float8|double|decimal|numeric|real|money)\b/.test(normalized)) {
+		return 'number'
+	}
+	if (/\b(boolean|bool)\b/.test(normalized)) {
+		return 'boolean'
+	}
+	if (/\b(timestamp|timestamptz|date|datetime|time)\b/.test(normalized)) {
+		return 'Date'
+	}
+	if (/\b(json|jsonb)\b/.test(normalized)) {
+		return 'unknown'
+	}
+	if (/\b(bytea|blob|binary|varbinary)\b/.test(normalized)) {
+		return 'Uint8Array'
+	}
+	if (/\b(char|varchar|text|uuid|enum|inet|cidr|macaddr|xml)\b/.test(normalized)) {
+		return 'string'
+	}
+	return 'DrizzleValue'
+}
+
+function toTypeIdentifier(value: string): string {
+	const parts = value.split(/[^A-Za-z0-9]+/).filter(Boolean)
+	const identifier = parts
+		.map(function (part) {
+			const safe = toIdentifier(part)
+			if (!safe) return ''
+			return capitalize(safe)
+		})
+		.join('')
+	return isIdentifier(identifier) ? identifier : ''
+}
+
+function toIdentifier(value: string): string {
+	const identifier = value.replace(/[^A-Za-z0-9_$]/g, '_')
+	if (!identifier) return ''
+	if (/^[0-9]/.test(identifier)) {
+		return `_${identifier}`
+	}
+	return isIdentifier(identifier) ? identifier : ''
+}
+
+function lastNameSegment(value: string): string {
+	const parts = value.split('.').filter(Boolean)
+	return parts[parts.length - 1] || value
+}
+
+function propertyKey(value: string): string {
+	if (isIdentifier(value)) {
+		return value
+	}
+	return `'${escapeTypeString(value)}'`
+}
+
+function isIdentifier(value: string): boolean {
+	return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)
+}
+
+function escapeTypeString(value: string): string {
+	return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 }
 
 function capitalize(s: string): string {

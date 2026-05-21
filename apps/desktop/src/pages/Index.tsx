@@ -681,7 +681,12 @@ function IndexInner() {
               </AlertDialogContent>
             </AlertDialog>
             <AiAssistantToggle />
-            <AiAssistantPanel activeConnectionId={activeConnectionId || null} />
+            <AiAssistantPanel
+              activeConnectionId={activeConnectionId || null}
+              activeView={activeNavId}
+              selectedTableId={selectedTableId || null}
+              selectedTableName={selectedTableName || null}
+            />
           </div>
         </div>
       </SidebarProvider>

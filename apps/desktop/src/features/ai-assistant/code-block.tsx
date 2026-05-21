@@ -20,11 +20,24 @@ import {
 	type SqlTokenKind
 } from './sql-code-utils'
 
+const DEFAULT_QUERY_POLL_INTERVAL_MS = 100
+const DEFAULT_QUERY_POLL_ATTEMPTS = 50
+
+const QUERY_POLL_INTERVAL_MS =
+	Number.parseInt(import.meta.env.VITE_AI_QUERY_POLL_INTERVAL_MS ?? '', 10) ||
+	DEFAULT_QUERY_POLL_INTERVAL_MS
+
+const QUERY_POLL_ATTEMPTS =
+	Number.parseInt(import.meta.env.VITE_AI_QUERY_POLL_ATTEMPTS ?? '', 10) ||
+	DEFAULT_QUERY_POLL_ATTEMPTS
+
 type Props = {
 	language: string | undefined
 	code: string
 	activeConnectionId: string | null
 	onEditorInsert?: (sql: string) => void
+	queryPollIntervalMs?: number
+	queryPollAttempts?: number
 }
 
 type RunState =
@@ -52,7 +65,25 @@ function formatError(error: unknown): string {
 	return 'Query failed'
 }
 
-export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }: Props) {
+function delay(ms: number): Promise<void> {
+	return new Promise(function (resolve) {
+		setTimeout(resolve, ms)
+	})
+}
+
+function getFirstPageRowCount(firstPage: unknown): number {
+	if (!Array.isArray(firstPage)) return 0
+	return firstPage.length
+}
+
+export function CodeBlock({
+	language,
+	code,
+	activeConnectionId,
+	onEditorInsert,
+	queryPollIntervalMs,
+	queryPollAttempts
+}: Props) {
 	const [copied, setCopied] = useState(false)
 	const [runState, setRunState] = useState<RunState>({ kind: 'idle' })
 	const [expanded, setExpanded] = useState(false)
@@ -99,6 +130,8 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 			if (!activeConnectionId || runState.kind === 'running') return
 			setRunState({ kind: 'running', mode })
 			const started = performance.now()
+			const pollInterval = queryPollIntervalMs ?? QUERY_POLL_INTERVAL_MS
+			const pollAttempts = queryPollAttempts ?? QUERY_POLL_ATTEMPTS
 			try {
 				const start = await commands.startQuery(activeConnectionId, sql)
 				if (start.status === 'error') {
@@ -115,22 +148,50 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 					setRunState({ kind: 'error', mode, message: 'No query was started.' })
 					return
 				}
-				const fetched = await commands.fetchQuery(lastId)
+				let info
+				let lastStatus: string | undefined
+				for (let attempt = 0; attempt < pollAttempts; attempt += 1) {
+					const fetched = await commands.fetchQuery(lastId)
+					if (fetched.status === 'error') {
+						setRunState({
+							kind: 'error',
+							mode,
+							message: formatError(fetched.error)
+						})
+						return
+					}
+
+					info = fetched.data
+					lastStatus = info.status
+					if (info.status === 'Completed' || info.status === 'Error') {
+						break
+					}
+
+					await delay(pollInterval)
+				}
+
 				const elapsed = Math.round(performance.now() - started)
-				if (fetched.status === 'error') {
-					setRunState({
-						kind: 'error',
-						mode,
-						message: formatError(fetched.error)
-					})
+				if (!info) {
+					setRunState({ kind: 'error', mode, message: 'Query timed out.' })
 					return
 				}
-				const info = fetched.data
-				if (info?.error) {
+				if (info.error) {
 					setRunState({ kind: 'error', mode, message: info.error })
 					return
 				}
-				const rowCount = info?.affected_rows ?? 0
+				if (info.status !== 'Completed') {
+					const totalMs = pollInterval * pollAttempts
+					setRunState({
+						kind: 'error',
+						mode,
+						message: `Query polling reached the client timeout limit (~${totalMs}ms). Last known status: ${lastStatus ?? 'unknown'}. The query may still be executing.`
+					})
+					return
+				}
+				const firstPageRowCount = getFirstPageRowCount(info.first_page)
+				const rowCount = info.returns_values
+					? Math.max(info.affected_rows ?? 0, firstPageRowCount)
+					: (info.affected_rows ?? 0)
 				setRunState({ kind: 'success', mode, rowCount, durationMs: elapsed })
 			} catch (e) {
 				setRunState({
@@ -140,7 +201,7 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 				})
 			}
 		},
-		[activeConnectionId, runState.kind]
+		[activeConnectionId, queryPollIntervalMs, queryPollAttempts, runState.kind]
 	)
 
 	const handleRun = useCallback(

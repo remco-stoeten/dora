@@ -10,6 +10,7 @@ import { ResultsPanel } from './components/results-panel'
 import { SchemaViewer } from './components/schema-viewer'
 import { DEFAULT_QUERY } from './data'
 import { QueryResult, SchemaTable } from './types'
+import { drizzleQueryToSql } from './utils/drizzle-query'
 
 type Props = {
 	connectionId?: string
@@ -67,9 +68,10 @@ export function DrizzleRunner({ connectionId, onToggleSidebar }: Props) {
 			setResult(null)
 
 			try {
+				const sqlToRun = drizzleQueryToSql(codeToRun || queryCode)
 				const queryResult = await adapter.executeQuery(
 					activeConnectionId,
-					codeToRun || queryCode
+					sqlToRun
 				)
 				if (queryResult.ok) {
 					setResult(queryResult.data)
