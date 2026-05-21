@@ -20,14 +20,24 @@ import {
 	type SqlTokenKind
 } from './sql-code-utils'
 
-const QUERY_POLL_INTERVAL_MS = 100
-const QUERY_POLL_ATTEMPTS = 50
+const DEFAULT_QUERY_POLL_INTERVAL_MS = 100
+const DEFAULT_QUERY_POLL_ATTEMPTS = 50
+
+const QUERY_POLL_INTERVAL_MS =
+	Number.parseInt(import.meta.env.VITE_AI_QUERY_POLL_INTERVAL_MS ?? '', 10) ||
+	DEFAULT_QUERY_POLL_INTERVAL_MS
+
+const QUERY_POLL_ATTEMPTS =
+	Number.parseInt(import.meta.env.VITE_AI_QUERY_POLL_ATTEMPTS ?? '', 10) ||
+	DEFAULT_QUERY_POLL_ATTEMPTS
 
 type Props = {
 	language: string | undefined
 	code: string
 	activeConnectionId: string | null
 	onEditorInsert?: (sql: string) => void
+	queryPollIntervalMs?: number
+	queryPollAttempts?: number
 }
 
 type RunState =
@@ -66,7 +76,14 @@ function getFirstPageRowCount(firstPage: unknown): number {
 	return firstPage.length
 }
 
-export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }: Props) {
+export function CodeBlock({
+	language,
+	code,
+	activeConnectionId,
+	onEditorInsert,
+	queryPollIntervalMs,
+	queryPollAttempts
+}: Props) {
 	const [copied, setCopied] = useState(false)
 	const [runState, setRunState] = useState<RunState>({ kind: 'idle' })
 	const [expanded, setExpanded] = useState(false)
@@ -113,6 +130,8 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 			if (!activeConnectionId || runState.kind === 'running') return
 			setRunState({ kind: 'running', mode })
 			const started = performance.now()
+			const pollInterval = queryPollIntervalMs ?? QUERY_POLL_INTERVAL_MS
+			const pollAttempts = queryPollAttempts ?? QUERY_POLL_ATTEMPTS
 			try {
 				const start = await commands.startQuery(activeConnectionId, sql)
 				if (start.status === 'error') {
@@ -130,7 +149,8 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 					return
 				}
 				let info
-				for (let attempt = 0; attempt < QUERY_POLL_ATTEMPTS; attempt += 1) {
+				let lastStatus: string | undefined
+				for (let attempt = 0; attempt < pollAttempts; attempt += 1) {
 					const fetched = await commands.fetchQuery(lastId)
 					if (fetched.status === 'error') {
 						setRunState({
@@ -142,11 +162,12 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 					}
 
 					info = fetched.data
+					lastStatus = info.status
 					if (info.status === 'Completed' || info.status === 'Error') {
 						break
 					}
 
-					await delay(QUERY_POLL_INTERVAL_MS)
+					await delay(pollInterval)
 				}
 
 				const elapsed = Math.round(performance.now() - started)
@@ -159,7 +180,12 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 					return
 				}
 				if (info.status !== 'Completed') {
-					setRunState({ kind: 'error', mode, message: 'Query timed out.' })
+					const totalMs = pollInterval * pollAttempts
+					setRunState({
+						kind: 'error',
+						mode,
+						message: `Query polling reached the client timeout limit (~${totalMs}ms). Last known status: ${lastStatus ?? 'unknown'}. The query may still be executing.`
+					})
 					return
 				}
 				const firstPageRowCount = getFirstPageRowCount(info.first_page)
@@ -175,7 +201,7 @@ export function CodeBlock({ language, code, activeConnectionId, onEditorInsert }
 				})
 			}
 		},
-		[activeConnectionId, runState.kind]
+		[activeConnectionId, queryPollIntervalMs, queryPollAttempts, runState.kind]
 	)
 
 	const handleRun = useCallback(
