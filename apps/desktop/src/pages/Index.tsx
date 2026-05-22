@@ -45,16 +45,6 @@ const SchemaVisualizer = lazy(function () {
 import { DatabaseSidebar } from "@/features/sidebar/database-sidebar";
 import { SettingsView } from "@/features/sidebar/components/settings-panel";
 import { WindowControls } from "@/components/window-controls";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
 import { ErrorBoundary } from "@/shared/ui/error-boundary";
 import { mapConnectionError } from "@/shared/utils/error-messages";
 import { EmptyState } from "@/shared/ui/empty-state";
@@ -100,10 +90,6 @@ function IndexInner() {
     Connection | undefined
   >(undefined);
 
-  // Delete confirmation dialog state
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [connectionToDelete, setConnectionToDelete] =
-    useState<Connection | null>(null);
   const startupConnectionMode =
     settings.startupConnectionMode ??
     (settings.restoreLastConnection ? "auto" : "empty");
@@ -361,27 +347,18 @@ function IndexInner() {
     }
   }
 
-  function handleDeleteConnection(connectionId: string) {
+  async function handleDeleteConnection(connectionId: string) {
     const connection = connections.find(function (c) {
       return c.id === connectionId;
     });
-    if (connection) {
-      setConnectionToDelete(connection);
-      setDeleteDialogOpen(true);
-    }
-  }
-
-  async function confirmDeleteConnection() {
-    if (!connectionToDelete) return;
+    if (!connection) return;
     try {
-      await removeConnection.mutateAsync(connectionToDelete.id);
-      if (activeConnectionId === connectionToDelete.id) {
+      await removeConnection.mutateAsync(connection.id);
+      if (activeConnectionId === connection.id) {
         setActiveConnectionId("");
       }
-      closeTabsForConnection(connectionToDelete.id);
-      setDeleteDialogOpen(false);
-      setConnectionToDelete(null);
-      toast({ title: "Connection Deleted", description: `"${connectionToDelete.name}" has been removed.` });
+      closeTabsForConnection(connection.id);
+      toast({ title: "Connection Deleted", description: `"${connection.name}" has been removed.` });
     } catch (error) {
       toast({
         title: "Failed to Delete Connection",
@@ -656,30 +633,6 @@ function IndexInner() {
               onSelectTable={handleTableSelect}
             />
 
-            <AlertDialog
-              open={deleteDialogOpen}
-              onOpenChange={setDeleteDialogOpen}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Connection</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{connectionToDelete?.name}
-                    "? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel
-                    onClick={function () { return setConnectionToDelete(null); }}
-                  >
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction onClick={confirmDeleteConnection}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
             <AiAssistantToggle />
             <AiAssistantPanel
               activeConnectionId={activeConnectionId || null}

@@ -110,7 +110,7 @@ export function AiKeysSection() {
 					return (
 						<div
 							key={k.id}
-							className='flex items-center gap-2 rounded-md border border-sidebar-border bg-background px-2 py-1.5'
+							className='flex items-center gap-2 rounded-sm border border-sidebar-border bg-background px-2 py-1.5'
 						>
 							<button
 								type='button'
@@ -162,7 +162,7 @@ export function AiKeysSection() {
 						<Plus className='h-3 w-3 mr-1' /> Add Groq key
 					</Button>
 				) : (
-					<div className='space-y-2 rounded-md border border-sidebar-border bg-background p-2'>
+					<div className='space-y-2 rounded-sm border border-sidebar-border bg-background p-2'>
 						<Input
 							value={label}
 							onChange={(e) => setLabel(e.target.value)}

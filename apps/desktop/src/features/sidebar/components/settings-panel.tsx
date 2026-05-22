@@ -87,18 +87,12 @@ function SettingsNavButton({
 			type='button'
 			onClick={onClick}
 			className={cn(
-				'group flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+				'group flex w-full items-start border-l-2 px-3 py-2 text-left transition-colors',
 				active
-					? 'border-primary/30 bg-primary/10 text-sidebar-foreground shadow-sm'
-					: 'border-transparent text-muted-foreground hover:border-sidebar-border hover:bg-sidebar-accent/40 hover:text-sidebar-foreground'
+					? 'border-sidebar-primary bg-sidebar-accent/60 text-sidebar-foreground'
+					: 'border-transparent text-muted-foreground hover:border-sidebar-border hover:bg-sidebar-accent/35 hover:text-sidebar-foreground'
 			)}
 		>
-			<span
-				className={cn(
-					'mt-1 h-2.5 w-2.5 shrink-0 rounded-full transition-colors',
-					active ? 'bg-primary' : 'bg-sidebar-border group-hover:bg-primary/60'
-				)}
-			/>
 			<span className='min-w-0'>
 				<span className='block text-sm font-medium'>{section.title}</span>
 				<span className='mt-0.5 block text-[11px] leading-tight text-muted-foreground'>
@@ -126,11 +120,15 @@ function SectionCard({
 		<section
 			id={id}
 			ref={sectionRef}
-			className='scroll-mt-6 rounded-2xl border border-sidebar-border bg-sidebar/35 p-4 shadow-sm'
+			className='scroll-mt-0 border-b border-sidebar-border px-5 py-4 last:border-b-0'
 		>
-			<div className='mb-4'>
-				<h2 className='text-sm font-semibold text-sidebar-foreground'>{title}</h2>
-				<p className='mt-1 text-xs leading-relaxed text-muted-foreground'>{description}</p>
+			<div className='mb-4 flex items-start justify-between gap-4'>
+				<div>
+					<h2 className='text-sm font-semibold text-sidebar-foreground'>{title}</h2>
+					<p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
+						{description}
+					</p>
+				</div>
 			</div>
 			{children}
 		</section>
@@ -164,15 +162,15 @@ export function SettingsView() {
 
 	return (
 		<div className='flex h-full min-h-0 overflow-hidden bg-background'>
-			<aside className='flex w-[280px] max-w-[36vw] shrink-0 flex-col border-r border-sidebar-border bg-sidebar'>
-				<div className='border-b border-sidebar-border px-4 py-3'>
+			<aside className='flex w-[244px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar'>
+				<div className='flex h-16 flex-col justify-center border-b border-sidebar-border px-3'>
 					<div className='text-sm font-semibold text-sidebar-foreground'>Settings</div>
-					<div className='mt-1 text-xs text-muted-foreground'>
-						{sectionCount} sections organized like the table sidebar
+					<div className='mt-0.5 text-xs text-muted-foreground'>
+						{sectionCount} sections
 					</div>
 				</div>
-				<div className='min-h-0 flex-1 overflow-y-auto p-2'>
-					<div className='space-y-1.5'>
+				<div className='min-h-0 flex-1 overflow-y-auto py-2'>
+					<div>
 						{SETTINGS_SECTIONS.map(function (section) {
 							return (
 								<SettingsNavButton
@@ -190,19 +188,18 @@ export function SettingsView() {
 			</aside>
 
 			<main className='flex min-w-0 flex-1 flex-col min-h-0'>
-				<div className='border-b border-border bg-sidebar/20 px-6 py-4'>
+				<div className='flex h-16 flex-col justify-center border-b border-border bg-sidebar/20 px-5'>
 					<h1 className='text-base font-semibold text-sidebar-foreground'>
 						Application settings
 					</h1>
-					<p className='mt-1 text-sm text-muted-foreground'>
-						Manage editor behavior, shortcuts, AI keys, storage, and UI preferences
-						without fighting a popover.
+					<p className='mt-0.5 text-xs text-muted-foreground'>
+						Editor behavior, shortcuts, AI keys, storage, and interface preferences
 					</p>
 				</div>
 
 				<div className='min-h-0 flex-1 overflow-hidden'>
-					<div className='h-full overflow-y-auto px-6 py-5'>
-						<div className='space-y-5'>
+					<div className='h-full overflow-y-auto'>
+						<div>
 							<SectionCard
 								id='editor'
 								title='Editor'
@@ -302,7 +299,7 @@ export function SettingsView() {
 														return (
 															<div
 																key={name}
-																className='flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent/30'
+																className='flex items-center justify-between gap-4 rounded-sm px-2 py-1.5 transition-colors hover:bg-sidebar-accent/30'
 															>
 																<div className='min-w-0 flex-1'>
 																	<div className='truncate text-sm text-sidebar-foreground'>

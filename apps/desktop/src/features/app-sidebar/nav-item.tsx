@@ -24,7 +24,8 @@ const navItemVariants = cva(
 			state: {
 				default:
 					'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-				active: 'bg-sidebar-primary text-sidebar-primary-foreground',
+				active:
+					'bg-sidebar-accent/80 text-sidebar-accent-foreground ring-1 ring-sidebar-border/70 shadow-sm',
 				disabled: 'cursor-not-allowed opacity-40'
 			}
 		},

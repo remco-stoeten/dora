@@ -38,21 +38,19 @@ function SidebarContent({ activeNavId, onNavSelect }: ContentProps) {
 			onClick: () => onNavSelect?.('schema-visualizer')
 		},
 		{
-			id: 'settings',
-			label: 'Settings',
-			icon: Settings,
-			onClick: () => onNavSelect?.('settings')
-		}
-	]
-
-	const secondaryNavItems: NavItem[] = [
-		{
 			id: 'docker',
 			label: 'Docker Manager',
 			icon: Container,
 			onClick: () => onNavSelect?.('docker')
 		}
 	]
+
+	const settingsNavItem: NavItem = {
+		id: 'settings',
+		label: 'Settings',
+		icon: Settings,
+		onClick: () => onNavSelect?.('settings')
+	}
 
 	const handleKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
 		const nav = navRef.current
@@ -148,34 +146,14 @@ function SidebarContent({ activeNavId, onNavSelect }: ContentProps) {
 					))}
 				</div>
 
-				{/* Separator */}
-				<div
-					className='my-2 mx-2 h-px bg-sidebar-border'
-					role='separator'
-					aria-orientation='horizontal'
-				/>
-
-				<div role='group' aria-label='Tools' className='mx-auto flex flex-col gap-1'>
-					{secondaryNavItems.map((item) => (
-						<SidebarNavItem
-							key={item.id}
-							item={item}
-							isActive={activeNavId === item.id}
-							variant={variant}
-						/>
-					))}
+				<div role='group' aria-label='Settings' className='mx-auto mt-auto flex flex-col gap-1'>
+					<SidebarNavItem
+						item={settingsNavItem}
+						isActive={activeNavId === settingsNavItem.id}
+						variant={variant}
+					/>
 				</div>
 			</nav>
-
-			{/* Footer */}
-			<div
-				className={cn(
-					'flex flex-col items-center justify-center gap-1 py-2',
-					!isFloating && 'border-t border-sidebar-border'
-				)}
-				role='group'
-				aria-label='Sidebar controls'
-			/>
 		</aside>
 	)
 }

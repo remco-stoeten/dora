@@ -110,7 +110,7 @@ export function StorageSection() {
 				{activePath && (
 					<div className='space-y-1'>
 						<div className='text-xs text-muted-foreground'>Active path</div>
-						<div className='text-xs font-mono text-sidebar-foreground bg-sidebar-accent/30 rounded px-2 py-1 break-all'>
+						<div className='rounded-sm bg-sidebar-accent/30 px-2 py-1 font-mono text-xs text-sidebar-foreground break-all'>
 							{activePath}
 						</div>
 					</div>
@@ -123,7 +123,7 @@ export function StorageSection() {
 							return (
 								<div
 									key={db.name}
-									className='flex items-center gap-2 py-1 px-1 rounded hover:bg-sidebar-accent/30'
+									className='flex items-center gap-2 rounded-sm px-1 py-1 hover:bg-sidebar-accent/30'
 								>
 									<Database className='h-3 w-3 shrink-0 text-muted-foreground' />
 									<div className='flex-1 min-w-0'>

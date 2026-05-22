@@ -12,21 +12,30 @@ export function enrichColumnsWithFKs(
 	)
 	if (!tableInfo) return columns
 
-	const fkMap = new Map<string, ForeignKeyRef>()
+	const schemaColMap = new Map<string, (typeof tableInfo.columns)[number]>()
 	for (const col of tableInfo.columns) {
-		if (col.foreign_key) {
-			fkMap.set(col.name, {
-				referencedTable: col.foreign_key.referenced_table,
-				referencedColumn: col.foreign_key.referenced_column,
-				referencedSchema: col.foreign_key.referenced_schema || undefined,
-			})
-		}
+		schemaColMap.set(col.name, col)
 	}
 
-	if (fkMap.size === 0) return columns
-
 	return columns.map((col) => {
-		const fk = fkMap.get(col.name)
-		return fk ? { ...col, foreignKey: fk } : col
+		const schemaCol = schemaColMap.get(col.name)
+		if (!schemaCol) return col
+
+		const fk: ForeignKeyRef | undefined = schemaCol.foreign_key
+			? {
+					referencedTable: schemaCol.foreign_key.referenced_table,
+					referencedColumn: schemaCol.foreign_key.referenced_column,
+					referencedSchema: schemaCol.foreign_key.referenced_schema || undefined,
+				}
+			: col.foreignKey
+
+		return {
+			...col,
+			type: col.type && col.type !== 'unknown' ? col.type : schemaCol.data_type,
+			nullable:
+				typeof schemaCol.is_nullable === 'boolean' ? schemaCol.is_nullable : col.nullable,
+			primaryKey: schemaCol.is_primary_key ?? col.primaryKey,
+			foreignKey: fk,
+		}
 	})
 }

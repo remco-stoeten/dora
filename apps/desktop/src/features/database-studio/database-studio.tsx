@@ -1055,6 +1055,11 @@ export function DatabaseStudio({
 		})
 		if (!primaryKeyColumn) {
 			console.error('No primary key found')
+			toast({
+				title: 'Cannot edit cell',
+				description: `Table "${displayTableName ?? tableRefName}" has no primary key, so edits cannot be saved safely.`,
+				variant: 'destructive'
+			})
 			return
 		}
 

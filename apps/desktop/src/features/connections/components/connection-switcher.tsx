@@ -3,16 +3,15 @@ import {
 	Plus,
 	Settings,
 	Database,
-	Check,
-	MoreHorizontal,
 	Eye,
 	Pencil,
 	Trash2,
 	AlertCircle,
-	Search
+	Search,
+	Check,
+	X
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Button } from '@/shared/ui/button'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -90,8 +89,33 @@ export function ConnectionSwitcher({
 	onDeleteConnection
 }: Props) {
 	const [searchQuery, setSearchQuery] = useState('')
+	const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+	const confirmDeleteRef = useRef<HTMLButtonElement>(null)
 	const activeConnection = connections.find((c) => c.id === activeConnectionId)
 	const status = activeConnection?.status || 'idle'
+
+	useEffect(
+		function autoCancelPendingDelete() {
+			if (!pendingDeleteId) return
+			const handle = window.setTimeout(function () {
+				setPendingDeleteId(null)
+			}, 4000)
+			return function () {
+				window.clearTimeout(handle)
+			}
+		},
+		[pendingDeleteId]
+	)
+
+	useEffect(
+		function focusConfirmOnArm() {
+			if (pendingDeleteId && confirmDeleteRef.current) {
+				confirmDeleteRef.current.focus()
+			}
+		},
+		[pendingDeleteId]
+	)
+
 	const filteredConnections = useMemo(
 		function getFilteredConnections() {
 			const query = searchQuery.trim().toLowerCase()
@@ -107,230 +131,392 @@ export function ConnectionSwitcher({
 		[connections, searchQuery]
 	)
 
+	function armDelete(id: string) {
+		setPendingDeleteId(id)
+	}
+
+	function cancelDelete() {
+		setPendingDeleteId(null)
+	}
+
+	function confirmDelete(id: string) {
+		setPendingDeleteId(null)
+		onDeleteConnection?.(id)
+	}
+
 	return (
-		<DropdownMenu>
+		<DropdownMenu
+			onOpenChange={function handleMenuOpenChange(open) {
+				if (!open) setPendingDeleteId(null)
+			}}
+		>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant='ghost'
-					size='lg'
-					className='w-full justify-between px-3 py-6 hover:bg-sidebar-accent text-sidebar-foreground group'
+				<button
+					type='button'
+					className={cn(
+						'group/trigger relative w-full rounded-lg px-2 py-2 text-left',
+						'flex items-center gap-3',
+						'text-sidebar-foreground',
+						'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
+						'hover:bg-sidebar-accent',
+						'data-[state=open]:bg-sidebar-accent',
+						'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
+					)}
 				>
-					<div className='flex items-center gap-3 text-left'>
-						<div
+					<div
+						className={cn(
+							'flex h-9 w-9 items-center justify-center rounded-md shrink-0',
+							'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
+							status === 'error'
+								? 'bg-destructive/10 text-destructive'
+								: 'bg-primary/10 text-primary group-hover/trigger:bg-primary/15'
+						)}
+					>
+						{status === 'error' ? (
+							<AlertCircle className='h-4 w-4' />
+						) : activeConnection ? (
+							<DatabaseTypeIcon type={activeConnection.type} className='h-4 w-4' />
+						) : (
+							<Database className='h-4 w-4' />
+						)}
+					</div>
+					<div className='grid flex-1 min-w-0 text-left text-sm leading-tight'>
+						<span
 							className={cn(
-								'flex h-8 w-8 items-center justify-center rounded-lg transition-colors shrink-0',
-								status === 'error'
-									? 'bg-destructive/10 text-destructive'
-									: 'bg-primary/10 text-primary group-hover:bg-primary/20'
+								'truncate font-semibold',
+								status === 'error' ? 'text-destructive' : 'text-foreground'
 							)}
 						>
-							{status === 'error' ? (
-								<AlertCircle className='h-4 w-4' />
-							) : activeConnection ? (
-								<DatabaseTypeIcon
-									type={activeConnection.type}
-									className='h-4 w-4'
-								/>
-							) : (
-								<Database className='h-4 w-4' />
-							)}
-						</div>
-						<div className='grid flex-1 text-left text-sm leading-tight'>
-							<span
-								className={cn(
-									'truncate font-semibold',
-									status === 'error' ? 'text-destructive' : 'text-foreground'
-								)}
-							>
-								{activeConnection?.name || 'Select Database'}
-							</span>
-							<span className='truncate text-xs text-muted-foreground'>
-								{activeConnection
-									? status === 'error'
-										? 'Connection failed'
-										: `${formatDatabaseType(activeConnection.type)} • ${activeConnection.host || 'Local'}`
-									: 'No connection'}
-							</span>
-						</div>
+							{activeConnection?.name || 'Select Database'}
+						</span>
+						<span className='truncate text-xs text-muted-foreground'>
+							{activeConnection
+								? status === 'error'
+									? 'Connection failed'
+									: `${formatDatabaseType(activeConnection.type)} • ${activeConnection.host || 'Local'}`
+								: 'No connection'}
+						</span>
 					</div>
-					<ChevronsUpDown className='ml-auto h-4 w-4 shrink-0 opacity-50 text-muted-foreground group-hover:text-foreground transition-colors' />
-				</Button>
+					<ChevronsUpDown
+						className={cn(
+							'ml-auto h-4 w-4 shrink-0 text-muted-foreground',
+							'transition-[color,transform] duration-200 ease-[var(--ease-out)]',
+							'group-hover/trigger:text-foreground',
+							'group-data-[state=open]/trigger:text-foreground group-data-[state=open]/trigger:rotate-180'
+						)}
+					/>
+				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
-				className='w-[240px] min-w-[240px]'
+				className='w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] p-1'
 				align='start'
 				side='bottom'
-				sideOffset={4}
+				sideOffset={6}
+				style={{
+					transitionTimingFunction: 'var(--ease-out)'
+				}}
 			>
-				<DropdownMenuLabel className='sticky top-0 z-10 bg-popover text-xs text-muted-foreground uppercase tracking-wider font-medium'>
-					Databases
-				</DropdownMenuLabel>
-
-				<div className='px-2 pb-2 space-y-2 border-b border-border/60'>
-					<div className='text-[11px] text-muted-foreground'>
-						{connections.length} saved connection{connections.length === 1 ? '' : 's'}
-						{searchQuery.trim() &&
-							` • ${filteredConnections.length} match${filteredConnections.length === 1 ? '' : 'es'}`}
+				<div className='px-2 pt-1.5 pb-2 space-y-2'>
+					<div className='flex items-center justify-between'>
+						<DropdownMenuLabel className='p-0 text-[10px] uppercase tracking-wider font-medium text-muted-foreground'>
+							Databases
+						</DropdownMenuLabel>
+						<span className='text-[10px] tabular-nums text-muted-foreground/70'>
+							{searchQuery.trim()
+								? `${filteredConnections.length}/${connections.length}`
+								: connections.length}
+						</span>
 					</div>
 					<div className='relative'>
-						<Search className='pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground' />
+						<Search className='pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70' />
 						<Input
 							value={searchQuery}
-							onChange={function (e) {
+							onChange={function handleSearchChange(e) {
 								setSearchQuery(e.target.value)
 							}}
 							placeholder='Search connections...'
-							className='h-8 pl-8 text-xs'
+							className='h-7 pl-7 text-xs'
 						/>
 					</div>
 				</div>
 
-				<div className='max-h-[360px] overflow-y-auto pr-1'>
+				<div className='max-h-[320px] overflow-y-auto px-1'>
 					{filteredConnections.length > 0 ? (
-						filteredConnections.map((connection) => (
-							<ContextMenu key={connection.id}>
-								<ContextMenuTrigger asChild>
-									<DropdownMenuItem
-										onClick={function () {
-											onConnectionSelect(connection.id)
-										}}
-										className='gap-2 p-2 cursor-pointer group'
-									>
-										<div className='flex items-center gap-2 w-full'>
+						filteredConnections.map(function renderConnection(connection, index) {
+							const isActive = connection.id === activeConnectionId
+							const isPendingDelete = pendingDeleteId === connection.id
+							return (
+								<ContextMenu key={connection.id}>
+									<ContextMenuTrigger asChild>
+										<DropdownMenuItem
+											onClick={function handleConnectionClick(e) {
+												if (isPendingDelete) {
+													e.preventDefault()
+													cancelDelete()
+													return
+												}
+												onConnectionSelect(connection.id)
+											}}
+											onKeyDown={function handleRowKeyDown(e) {
+												if (isPendingDelete && e.key === 'Escape') {
+													e.preventDefault()
+													e.stopPropagation()
+													cancelDelete()
+												}
+											}}
+											className={cn(
+												'group/row relative gap-2.5 p-2 cursor-pointer overflow-hidden',
+												'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
+												'data-[highlighted]:bg-sidebar-accent',
+												'animate-in fade-in-0 slide-in-from-top-1',
+												isActive && 'bg-sidebar-accent/40',
+												isPendingDelete && 'bg-destructive/5'
+											)}
+											style={{
+												animationDuration: '180ms',
+												animationDelay: `${Math.min(index * 25, 200)}ms`,
+												animationTimingFunction: 'var(--ease-out)',
+												animationFillMode: 'backwards'
+											}}
+										>
+											<span
+												aria-hidden
+												className={cn(
+													'pointer-events-none absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full',
+													'origin-left transition-[transform,background-color] duration-200 ease-[var(--ease-out)]',
+													isPendingDelete
+														? 'scale-x-100 bg-destructive'
+														: isActive
+															? 'scale-x-100 bg-primary'
+															: 'scale-x-0 bg-primary'
+												)}
+											/>
 											<div
 												className={cn(
-													'flex h-6 w-6 items-center justify-center rounded-md border border-border bg-background',
-													connection.status === 'error' &&
-														'border-destructive/50 bg-destructive/5'
+													'flex h-7 w-7 items-center justify-center rounded-md border shrink-0',
+													'transition-[border-color,background-color] duration-150 ease-[var(--ease-out)]',
+													connection.status === 'error'
+														? 'border-destructive/40 bg-destructive/5'
+														: isActive
+															? 'border-primary/30 bg-primary/5'
+															: 'border-border bg-background'
 												)}
 											>
 												{connection.status === 'error' ? (
-													<AlertCircle className='h-3 w-3 text-destructive' />
+													<AlertCircle className='h-3.5 w-3.5 text-destructive' />
 												) : (
 													<DatabaseTypeIcon
 														type={connection.type}
-														className='h-3 w-3 text-muted-foreground'
+														className='h-3.5 w-3.5 text-muted-foreground'
 													/>
 												)}
 											</div>
 											<div className='flex-1 min-w-0'>
-												<div className='truncate text-sm'>
+												<div
+													className={cn(
+														'truncate text-sm',
+														isActive
+															? 'font-medium text-foreground'
+															: 'text-foreground/90'
+													)}
+												>
 													{connection.name}
 												</div>
-												<div className='truncate text-[10px] text-muted-foreground'>
-													Created {formatQuickDate(connection.createdAt)}
-												</div>
-												<div className='truncate text-[10px] text-muted-foreground'>
-													Last used{' '}
-													{formatQuickDate(connection.lastConnectedAt)}
+												<div className='truncate text-[10px] text-muted-foreground/80'>
+													{isPendingDelete
+														? 'Delete this connection?'
+														: `${formatDatabaseType(connection.type)} • ${formatQuickDate(connection.lastConnectedAt)}`}
 												</div>
 											</div>
-											<div className='ml-auto flex items-center gap-1'>
-												{connection.id === activeConnectionId && (
-													<Check className='h-4 w-4 text-primary' />
-												)}
-												{onEditConnection && (
-													<Button
-														variant='ghost'
-														size='icon'
-														className='h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-foreground'
-														onPointerDown={function (e) {
-															e.preventDefault()
-															e.stopPropagation()
+											<div className='relative ml-auto flex items-center'>
+												{isPendingDelete ? (
+													<div
+														className='flex items-center gap-1 animate-in fade-in-0 slide-in-from-right-1'
+														style={{
+															animationDuration: '160ms',
+															animationTimingFunction: 'var(--ease-out)'
 														}}
-														onClick={function (e) {
-															e.preventDefault()
-															e.stopPropagation()
-															onEditConnection(connection.id)
-														}}
-														title={`Edit ${connection.name}`}
-														aria-label={`Edit ${connection.name}`}
 													>
-														<Pencil className='h-3.5 w-3.5' />
-													</Button>
-												)}
-												{onDeleteConnection && (
-													<Button
-														variant='ghost'
-														size='icon'
-														className='h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-muted-foreground hover:text-destructive'
-														onPointerDown={function (e) {
-															e.preventDefault()
-															e.stopPropagation()
+														<button
+															type='button'
+															className={cn(
+																'flex h-6 w-6 items-center justify-center rounded-sm',
+																'text-muted-foreground hover:text-foreground hover:bg-background/60',
+																'transition-[color,background-color] duration-150 ease-[var(--ease-out)]',
+																'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
+															)}
+															onPointerDown={function (e) {
+																e.preventDefault()
+																e.stopPropagation()
+															}}
+															onClick={function (e) {
+																e.preventDefault()
+																e.stopPropagation()
+																cancelDelete()
+															}}
+															title='Cancel'
+															aria-label='Cancel delete'
+														>
+															<X className='h-3 w-3' />
+														</button>
+														<button
+															ref={confirmDeleteRef}
+															type='button'
+															className={cn(
+																'flex h-6 items-center gap-1 rounded-sm px-1.5 text-[11px] font-medium',
+																'bg-destructive/15 text-destructive',
+																'hover:bg-destructive/25',
+																'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
+																'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-destructive/50'
+															)}
+															onPointerDown={function (e) {
+																e.preventDefault()
+																e.stopPropagation()
+															}}
+															onClick={function (e) {
+																e.preventDefault()
+																e.stopPropagation()
+																confirmDelete(connection.id)
+															}}
+															title={`Confirm delete ${connection.name}`}
+															aria-label={`Confirm delete ${connection.name}`}
+														>
+															<Check className='h-3 w-3' />
+															Delete
+														</button>
+													</div>
+												) : (
+													<div
+														className='flex items-center animate-in fade-in-0'
+														style={{
+															animationDuration: '160ms',
+															animationTimingFunction: 'var(--ease-out)'
 														}}
-														onClick={function (e) {
-															e.preventDefault()
-															e.stopPropagation()
-															onDeleteConnection(connection.id)
-														}}
-														title={`Delete ${connection.name}`}
-														aria-label={`Delete ${connection.name}`}
 													>
-														<Trash2 className='h-3.5 w-3.5' />
-													</Button>
+														{onEditConnection && (
+															<button
+																type='button'
+																className={cn(
+																	'flex h-6 w-6 items-center justify-center rounded-sm',
+																	'text-muted-foreground',
+																	'opacity-0 -translate-x-1 pointer-events-none',
+																	'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
+																	'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
+																	'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
+																	'hover:text-foreground hover:bg-background/60',
+																	'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
+																)}
+																onPointerDown={function (e) {
+																	e.preventDefault()
+																	e.stopPropagation()
+																}}
+																onClick={function (e) {
+																	e.preventDefault()
+																	e.stopPropagation()
+																	onEditConnection(connection.id)
+																}}
+																title={`Edit ${connection.name}`}
+																aria-label={`Edit ${connection.name}`}
+															>
+																<Pencil className='h-3 w-3' />
+															</button>
+														)}
+														{onDeleteConnection && (
+															<button
+																type='button'
+																className={cn(
+																	'flex h-6 w-6 items-center justify-center rounded-sm',
+																	'text-muted-foreground',
+																	'opacity-0 -translate-x-1 pointer-events-none',
+																	'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
+																	'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
+																	'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
+																	'hover:text-destructive hover:bg-background/60',
+																	'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-destructive/40'
+																)}
+																onPointerDown={function (e) {
+																	e.preventDefault()
+																	e.stopPropagation()
+																}}
+																onClick={function (e) {
+																	e.preventDefault()
+																	e.stopPropagation()
+																	armDelete(connection.id)
+																}}
+																title={`Delete ${connection.name}`}
+																aria-label={`Delete ${connection.name}`}
+															>
+																<Trash2 className='h-3 w-3' />
+															</button>
+														)}
+													</div>
 												)}
-												<MoreHorizontal className='h-3.5 w-3.5 text-muted-foreground/60 opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none' />
 											</div>
-										</div>
-									</DropdownMenuItem>
-								</ContextMenuTrigger>
-								<ContextMenuContent className='w-48'>
-									<ContextMenuItem
-										onSelect={() => onViewConnection?.(connection.id)}
-										className='gap-2 cursor-pointer'
-									>
-										<Eye className='h-4 w-4' />
-										View Details
-									</ContextMenuItem>
-									<ContextMenuItem
-										onSelect={() => onEditConnection?.(connection.id)}
-										className='gap-2 cursor-pointer'
-									>
-										<Pencil className='h-4 w-4' />
-										Edit Connection
-									</ContextMenuItem>
-									<ContextMenuSeparator />
-									<ContextMenuItem
-										onSelect={(event) => {
-											event.preventDefault()
-											onDeleteConnection?.(connection.id)
-										}}
-										className='gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer'
-									>
-										<Trash2 className='h-4 w-4' />
-										Delete Connection
-									</ContextMenuItem>
-								</ContextMenuContent>
-							</ContextMenu>
-						))
+										</DropdownMenuItem>
+									</ContextMenuTrigger>
+									<ContextMenuContent className='w-48'>
+										<ContextMenuItem
+											onSelect={function viewConnection() {
+												onViewConnection?.(connection.id)
+											}}
+											className='gap-2 cursor-pointer'
+										>
+											<Eye className='h-4 w-4' />
+											View Details
+										</ContextMenuItem>
+										<ContextMenuItem
+											onSelect={function editConnection() {
+												onEditConnection?.(connection.id)
+											}}
+											className='gap-2 cursor-pointer'
+										>
+											<Pencil className='h-4 w-4' />
+											Edit Connection
+										</ContextMenuItem>
+										<ContextMenuSeparator />
+										<ContextMenuItem
+											onSelect={function deleteConnection(event) {
+												event.preventDefault()
+												armDelete(connection.id)
+											}}
+											className='gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer'
+										>
+											<Trash2 className='h-4 w-4' />
+											Delete Connection
+										</ContextMenuItem>
+									</ContextMenuContent>
+								</ContextMenu>
+							)
+						})
 					) : (
-						<div className='px-2 py-3 text-xs text-center text-muted-foreground border border-dashed rounded-md m-1'>
+						<div className='px-2 py-6 text-xs text-center text-muted-foreground'>
 							{connections.length > 0
 								? 'No matching connections'
 								: 'No connections found'}
 						</div>
 					)}
 				</div>
-				{filteredConnections.length > 6 && (
-					<div className='px-2 pb-2 text-[10px] text-muted-foreground'>
-						Scroll to view more connections
-					</div>
-				)}
 
 				<DropdownMenuSeparator />
 
-				<DropdownMenuItem onClick={onAddConnection} className='gap-2 p-2'>
-					<div className='flex h-6 w-6 items-center justify-center rounded-md border border-border bg-background'>
-						<Plus className='h-3 w-3 text-muted-foreground' />
+				<DropdownMenuItem
+					onClick={onAddConnection}
+					className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
+				>
+					<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
+						<Plus className='h-3.5 w-3.5 text-muted-foreground' />
 					</div>
-					<div className='font-medium text-muted-foreground'>Add connection</div>
+					<span className='text-sm text-muted-foreground'>Add connection</span>
 				</DropdownMenuItem>
 
-				<DropdownMenuItem onClick={onManageConnections} className='gap-2 p-2'>
-					<div className='flex h-6 w-6 items-center justify-center rounded-md border border-border bg-background'>
-						<Settings className='h-3 w-3 text-muted-foreground' />
+				<DropdownMenuItem
+					onClick={onManageConnections}
+					className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
+				>
+					<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
+						<Settings className='h-3.5 w-3.5 text-muted-foreground' />
 					</div>
-					<div className='font-medium text-muted-foreground'>Manage connections</div>
+					<span className='text-sm text-muted-foreground'>Manage connections</span>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
