@@ -33,7 +33,7 @@ editor, and local Docker PostgreSQL tooling.
 - PostgreSQL, MySQL, SQLite, LibSQL / Turso
 - Structured fields or full connection strings
 - Open SQLite files via native file picker
-- SSL/TLS and SSH tunneling (PostgreSQL)
+- SSL/TLS and SSH tunneling (PostgreSQL and MySQL)
 - Restore last connection on startup
 
 ### Local PostgreSQL with Docker
@@ -178,7 +178,7 @@ chmod +x "Dora_${VERSION}_amd64.AppImage"
 | Database | Status | Notes |
 |----------|--------|-------|
 | PostgreSQL | ✅ Supported | Full desktop path, SSH tunneling, live change monitoring via LISTEN/NOTIFY |
-| MySQL | ✅ Supported | Connection pooling, schema introspection, live change monitoring via polling |
+| MySQL | ✅ Supported | Connection pooling, SSH tunneling, schema introspection, live change monitoring via polling |
 | SQLite | ✅ Supported | Native desktop workflow with file picker |
 | LibSQL / Turso | ✅ Supported | Local and remote flows |
 

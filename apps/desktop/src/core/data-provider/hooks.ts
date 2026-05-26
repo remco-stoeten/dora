@@ -47,13 +47,8 @@ export function useConnectionMutations() {
 		mutationFn: async (params: {
 			name: string
 			databaseType: DatabaseInfo
-			sshConfig: JsonValue | null
 		}) => {
-			const res = await adapter.addConnection(
-				params.name,
-				params.databaseType,
-				params.sshConfig
-			)
+			const res = await adapter.addConnection(params.name, params.databaseType)
 			if (!res.ok) throw new Error(getAdapterError(res))
 			return res.data
 		},
@@ -67,14 +62,8 @@ export function useConnectionMutations() {
 			id: string
 			name: string
 			databaseType: DatabaseInfo
-			sshConfig: JsonValue | null
 		}) => {
-			const res = await adapter.updateConnection(
-				params.id,
-				params.name,
-				params.databaseType,
-				params.sshConfig
-			)
+			const res = await adapter.updateConnection(params.id, params.name, params.databaseType)
 			if (!res.ok) throw new Error(getAdapterError(res))
 			return res.data
 		},

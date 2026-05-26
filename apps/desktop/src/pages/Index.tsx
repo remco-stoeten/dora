@@ -318,7 +318,6 @@ function IndexInner() {
       const newConnection = await addConnection.mutateAsync({
         name: connection.name,
         databaseType: dbInfo,
-        sshConfig: null, // TODO: handle SSH
       });
       setIsConnectionDialogOpen(false);
       setActiveConnectionId(newConnection.id);
@@ -341,7 +340,6 @@ function IndexInner() {
         id: editingConnection.id,
         name: connection.name,
         databaseType: dbInfo,
-        sshConfig: null, // TODO: handle SSH
       });
       setIsConnectionDialogOpen(false);
       setEditingConnection(undefined);

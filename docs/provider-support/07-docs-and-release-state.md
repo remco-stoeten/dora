@@ -28,7 +28,7 @@ Safe write scope:
 
 ## Done When
 
-- product docs match reality
+- product docs match reality, including MySQL SSH tunneling support
 - agent handoff docs reflect current implementation state
 
 ## Validation

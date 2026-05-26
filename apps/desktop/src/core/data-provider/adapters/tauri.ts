@@ -83,8 +83,7 @@ export function createTauriAdapter(): DataAdapter {
 
 		async addConnection(
 			name: string,
-			databaseType: DatabaseInfo,
-			sshConfig: JsonValue | null
+			databaseType: DatabaseInfo
 		): Promise<AdapterResult<Connection>> {
 			const result = await commands.addConnection(name, databaseType, null)
 			if (result.status === 'ok') {
@@ -96,8 +95,7 @@ export function createTauriAdapter(): DataAdapter {
 		async updateConnection(
 			id: string,
 			name: string,
-			databaseType: DatabaseInfo,
-			sshConfig: JsonValue | null
+			databaseType: DatabaseInfo
 		): Promise<AdapterResult<Connection>> {
 			const result = await commands.updateConnection(id, name, databaseType, null)
 			if (result.status === 'ok') {

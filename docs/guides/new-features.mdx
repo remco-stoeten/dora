@@ -11,11 +11,11 @@ This guide explains how to interface with the new backend features: SSH Tunnelin
 
 ## 1. SSH Tunneling
 
-Securely connect to Postgres databases via a jump host.
+Securely connect to Postgres or MySQL databases via a jump host.
 
 ### Data Structure
 
-When creating a connection via `add_connection`, the `DatabaseInfo` object now supports an optional `ssh_config`.
+When creating a connection via `add_connection`, the `DatabaseInfo` object supports an optional `ssh_config` for Postgres and MySQL.
 
 **JSON Structure:**
 
@@ -38,7 +38,7 @@ When creating a connection via `add_connection`, the `DatabaseInfo` object now s
 
 1.  **Form Input**: Provide fields for SSH Host, Port, User, Auth Method (Key/Password).
 2.  **Construction**: If SSH fields are filled, construct the `SshConfig` object.
-3.  **Submission**: Pass this structure to the `add_connection` or `test_connection` command.
+3.  **Submission**: Pass this structure to the `add_connection`, `update_connection`, or `test_connection` command.
 
 The backend handles establishing the tunnel implicitly.
 

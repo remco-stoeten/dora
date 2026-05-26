@@ -217,8 +217,7 @@ export function createMockAdapter(): DataAdapter {
 
 		async addConnection(
 			name: string,
-			databaseType: DatabaseInfo,
-			sshConfig: JsonValue | null
+			databaseType: DatabaseInfo
 		): Promise<AdapterResult<Connection>> {
 			await randomDelay()
 			const newConn: ConnectionInfo = {
@@ -242,8 +241,7 @@ export function createMockAdapter(): DataAdapter {
 		async updateConnection(
 			id: string,
 			name: string,
-			databaseType: DatabaseInfo,
-			sshConfig: JsonValue | null
+			databaseType: DatabaseInfo
 		): Promise<AdapterResult<Connection>> {
 			await randomDelay()
 			const idx = store.connections.findIndex(function (c) {

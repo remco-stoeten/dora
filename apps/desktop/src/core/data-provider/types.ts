@@ -43,14 +43,12 @@ export type DataAdapter = {
 	getConnections(): Promise<AdapterResult<Connection[]>>
 	addConnection(
 		name: string,
-		databaseType: DatabaseInfo,
-		sshConfig: JsonValue | null
+		databaseType: DatabaseInfo
 	): Promise<AdapterResult<Connection>>
 	updateConnection(
 		id: string,
 		name: string,
-		databaseType: DatabaseInfo,
-		sshConfig: JsonValue | null
+		databaseType: DatabaseInfo
 	): Promise<AdapterResult<Connection>>
 	removeConnection(id: string): Promise<AdapterResult<void>>
 

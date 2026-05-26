@@ -128,13 +128,11 @@ Make MySQL a real backend connection type instead of a frontend scaffold.
     - `apps/desktop/src-tauri/src/database/services/connection.rs`
 5. Add a `DatabaseType::MySQL` adapter enum case and adapter construction in:
     - `apps/desktop/src-tauri/src/database/adapter.rs`
-6. Decide whether SSH tunneling is:
-    - not supported in MySQL beta, or
-    - supported by reusing `ssh_tunnel.rs`
+6. SSH tunneling is supported for MySQL by reusing `ssh_tunnel.rs`
 
 ### Notes
 
-- For MySQL beta, it is acceptable to ship without SSH tunneling if the UI reflects that cleanly.
+- MySQL beta includes SSH tunneling support through the same tunnel flow used for Postgres.
 - If MySQL uses a separate driver crate, make the connection object fit the `DatabaseClient` abstraction used by query and mutation services.
 
 ### Done When
