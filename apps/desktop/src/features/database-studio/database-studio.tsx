@@ -40,6 +40,12 @@ import { StudioToolbar } from './components/studio-toolbar'
 import { ImportCsvDialog } from './components/import-csv-dialog'
 import { DataSeederDialog } from './data-seeder-dialog'
 import { enrichColumnsWithFKs } from './utils/fk-enrichment'
+import {
+	createDefaultValues,
+	normalizeRowForInsert,
+	normalizeValueForInsert,
+	rowsToCsv
+} from './utils/studio-data'
 import { useLiveMonitor } from '@/core/live-monitor'
 import { areValuesEqual } from '@/shared/utils/value-equality'
 import {
@@ -1406,105 +1412,6 @@ export function DatabaseStudio({
 		}
 	}
 
-	function createDefaultValues(columns: ColumnDefinition[]): Record<string, unknown> {
-		const defaults: Record<string, unknown> = {}
-		const now = new Date().toISOString()
-
-		for (const col of columns) {
-			if (col.primaryKey) continue
-
-			const type = col.type.toLowerCase()
-			const name = col.name.toLowerCase()
-			if (type.includes('timestamp') || type.includes('datetime') || type.includes('date')) {
-				defaults[col.name] = now
-			} else if (name.includes('created') || name.includes('updated') || name === 'date') {
-				defaults[col.name] = now
-			} else {
-				defaults[col.name] = col.nullable ? null : ''
-			}
-		}
-		return defaults
-	}
-
-	function normalizeValueForInsert(column: ColumnDefinition, value: unknown): unknown {
-		const type = column.type.toLowerCase()
-		const isIntegerType = type.includes('int') || type.includes('serial')
-		const isFloatType =
-			type.includes('float') ||
-			type.includes('double') ||
-			type.includes('decimal') ||
-			type.includes('numeric')
-		const isBooleanType = type.includes('bool')
-		const isJsonType = type.includes('json')
-
-		if (value === null || value === undefined) {
-			return column.nullable ? null : value
-		}
-
-		if (typeof value === 'string') {
-			const trimmed = value.trim()
-
-			if (trimmed === '') {
-				if (column.nullable) return null
-				if (isIntegerType || isFloatType) return 0
-				if (isBooleanType) return false
-				return ''
-			}
-
-			if (isIntegerType) {
-				const parsed = Number.parseInt(trimmed, 10)
-				return Number.isNaN(parsed) ? (column.nullable ? null : 0) : parsed
-			}
-
-			if (isFloatType) {
-				const parsed = Number.parseFloat(trimmed)
-				return Number.isNaN(parsed) ? (column.nullable ? null : 0) : parsed
-			}
-
-			if (isBooleanType) {
-				const normalized = trimmed.toLowerCase()
-				return (
-					normalized === 'true' ||
-					normalized === '1' ||
-					normalized === 't' ||
-					normalized === 'yes' ||
-					normalized === 'on'
-				)
-			}
-
-			if (isJsonType) {
-				try {
-					return JSON.parse(trimmed)
-				} catch {
-					return trimmed
-				}
-			}
-
-			return value
-		}
-
-		return value
-	}
-
-	function normalizeRowForInsert(
-		rowData: Record<string, unknown>,
-		columns: ColumnDefinition[]
-	): Record<string, unknown> {
-		const byName = new Map(
-			columns.map(function (column) {
-				return [column.name, column] as const
-			})
-		)
-		const normalized: Record<string, unknown> = {}
-
-		for (const [key, value] of Object.entries(rowData)) {
-			const column = byName.get(key)
-			normalized[key] = column ? normalizeValueForInsert(column, value) : value
-		}
-
-		return normalized
-	}
-
 	function handleAddRecord() {
 		if (!tableData) return
 		setEditingRowState(null)
@@ -1642,32 +1549,9 @@ export function DatabaseStudio({
 
 	function handleExportCsvAll() {
 		if (!tableData || tableData.rows.length === 0) return
-
-		const headers = tableData.columns.map(function (col) {
+		const csvString = rowsToCsv(tableData.rows, tableData.columns.map(function (col) {
 			return col.name
-		})
-		const csvRows = [
-			headers.join(','),
-			...tableData.rows.map(function (row) {
-				return headers
-					.map(function (header) {
-						const value = row[header]
-						if (value === null || value === undefined) return ''
-						const stringValue = String(value)
-						if (
-							stringValue.includes(',') ||
-							stringValue.includes('"') ||
-							stringValue.includes('\n')
-						) {
-							return `"${stringValue.replace(/"/g, '""')}"`
-						}
-						return stringValue
-					})
-					.join(',')
-			})
-		]
-
-		const csvString = csvRows.join('\n')
+		}))
 		const blob = new Blob([csvString], { type: 'text/csv' })
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
