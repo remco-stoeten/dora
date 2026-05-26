@@ -784,11 +784,7 @@ export function DatabaseStudio({
 					setShowDeleteConfirmDialog(false)
 				},
 				onError: function (error: Error) {
-					toast({
-						title: 'Failed to delete rows',
-						description: error.message,
-						variant: 'destructive'
-					})
+					notifyActionFailure('Failed to delete rows', error)
 				}
 			}
 		)
@@ -829,12 +825,7 @@ export function DatabaseStudio({
 				loadTableData()
 			})
 			.catch(function (error) {
-				console.error('Failed to duplicate rows:', error)
-				toast({
-					title: 'Failed to duplicate rows',
-					description: error instanceof Error ? error.message : 'An error occurred',
-					variant: 'destructive'
-				})
+				notifyActionFailure('Failed to duplicate rows', error)
 			})
 			.finally(function () {
 				setIsBulkActionLoading(false)
@@ -873,13 +864,7 @@ export function DatabaseStudio({
 						setPendingSingleDeleteRow(null)
 					},
 					onError: function onDeleteError(error) {
-						console.error('Failed to delete row(s):', error)
-						toast({
-							title: 'Failed to delete rows',
-							description:
-								error instanceof Error ? error.message : 'An error occurred',
-							variant: 'destructive'
-						})
+						notifyActionFailure('Failed to delete rows', error)
 					}
 				}
 			)
@@ -913,14 +898,9 @@ export function DatabaseStudio({
 				.then(function () {
 					setSelectedRows(new Set())
 					loadTableData()
-				})
+			})
 				.catch(function (error) {
-					console.error('Failed to duplicate rows:', error)
-					toast({
-						title: 'Failed to duplicate rows',
-						description: error instanceof Error ? error.message : 'An error occurred',
-						variant: 'destructive'
-					})
+					notifyActionFailure('Failed to duplicate rows', error)
 				})
 				.finally(function () {
 					setIsBulkActionLoading(false)
@@ -1012,12 +992,7 @@ export function DatabaseStudio({
 			}
 			loadTableData()
 		} catch (error) {
-			console.error('Failed to seed data:', error)
-			toast({
-				title: 'Seeder failed',
-				description: error instanceof Error ? error.message : 'An error occurred',
-				variant: 'destructive'
-			})
+			notifyActionFailure('Seeder failed', error)
 		}
 	}
 
@@ -1091,6 +1066,14 @@ export function DatabaseStudio({
 		toast({
 			title: `Cannot ${actionLabel}`,
 			description: `Table "${displayTableName ?? tableRefName}" has no primary key, so this action cannot be saved safely.`,
+			variant: 'destructive'
+		})
+	}
+
+	function notifyActionFailure(title: string, error: unknown) {
+		toast({
+			title,
+			description: error instanceof Error ? error.message : 'An error occurred',
 			variant: 'destructive'
 		})
 	}
