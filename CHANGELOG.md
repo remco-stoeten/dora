@@ -1,6 +1,28 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [v0.26.5]
+
+
+### Bug Fixes
+
+- improve connection UX and Groq chat mode handling
+
+
+### CI/CD
+
+- extend asset poll budget for packaging workflows to 30 minutes
+
+
+### Other
+
+- Dora follow-up stability and UI fixes
+
+
+### Refactoring
+
+- redesign connection switcher with inline delete, settings panel, and sidebar polish
+
 ## [v0.26.4]
 
 
@@ -27,7 +49,7 @@ All notable changes to this project will be documented in this file.
 
 - fix release script to push tag separately
 
-- v0.26.3
+- v0.26.4
 
 
 ### Features
@@ -81,8 +103,6 @@ All notable changes to this project will be documented in this file.
 - update dora to 0.25.1
 
 - regenerate Tauri bindings
-
-- refresh bundle visualizer output
 
 - prune stale apps/db-tester entries from bun.lock
 
@@ -217,13 +237,6 @@ All notable changes to this project will be documented in this file.
 - git-cliff config and workflow to generate proper release notes
 
 ## [v0.0.116]
-
-
-### Other
-
-- re-run release workflow with git-cliff
-
-## [v0.0.114]
 
 
 ### Features
