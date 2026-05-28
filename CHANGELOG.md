@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file.
 - extend asset poll budget for packaging workflows to 30 minutes
 
 
+### Chores
+
+- v0.26.5
+
+
 ### Other
 
 - Dora follow-up stability and UI fixes
