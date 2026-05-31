@@ -1,13 +1,11 @@
 name: AUR
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish to AUR (e.g. v0.2.0). Defaults to the release event tag."
-        required: false
+        description: "Release tag to publish to AUR (e.g. v0.26.6)."
+        required: true
         type: string
 
 permissions:
@@ -31,11 +29,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${{ inputs.tag || github.event.release.tag_name }}"
-          if [[ -z "${TAG}" ]]; then
-            echo "No release tag provided. Supply workflow input 'tag' when manually dispatching." >&2
-            exit 1
-          fi
+          TAG="${{ inputs.tag }}"
           VERSION="${TAG#v}"
 
           ASSET_URL=""

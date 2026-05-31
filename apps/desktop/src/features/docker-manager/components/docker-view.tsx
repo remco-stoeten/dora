@@ -40,6 +40,7 @@ import { cn } from '@/shared/utils/cn'
 
 type Props = {
 	onOpenInDataViewer?: (container: DockerContainer) => void
+	windowControls?: ReactNode
 }
 
 type StatusFilter = 'all' | 'running' | 'stopped' | 'created'
@@ -53,7 +54,7 @@ const STATUS_FILTER_OPTIONS: ReadonlyArray<{ value: StatusFilter; label: string 
 	{ value: 'created', label: 'Created' }
 ]
 
-export function DockerView({ onOpenInDataViewer }: Props) {
+export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [showExternal, setShowExternal] = useState(true)
 	const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null)
@@ -421,7 +422,10 @@ export function DockerView({ onOpenInDataViewer }: Props) {
 	return (
 		<div className='flex-1 flex flex-col h-full overflow-hidden'>
 			<header className='border-b border-border bg-gradient-to-r from-emerald-500/10 via-transparent to-cyan-500/10'>
-				<div className='flex items-center justify-between px-4 py-3'>
+				<div
+					className='flex items-center justify-between gap-4 px-4 py-3'
+					data-tauri-drag-region='true'
+				>
 					<div className='flex min-w-0 items-center gap-3'>
 						<div className='inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10'>
 							<Container className='h-5 w-5 text-emerald-500' />
@@ -433,6 +437,11 @@ export function DockerView({ onOpenInDataViewer }: Props) {
 							</p>
 						</div>
 					</div>
+					{windowControls ? (
+						<div className='shrink-0' data-tauri-drag-region='false'>
+							{windowControls}
+						</div>
+					) : null}
 				</div>
 
 				<div className='px-4 pb-3'>

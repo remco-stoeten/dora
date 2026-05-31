@@ -1,13 +1,10 @@
 name: APT Repository
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag (e.g. v0.0.106). Leave empty to use latest.
+        description: Existing GitHub release tag (e.g. v0.26.6). Leave empty to use latest.
         required: false
         type: string
       publish:
@@ -37,11 +34,7 @@ jobs:
         id: meta
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           VERSION="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
           if [[ -n "$TAG" ]]; then
@@ -111,6 +104,6 @@ jobs:
           path: _site
 
       - name: Deploy to GitHub Pages
-        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+        if: ${{ inputs.publish }}
         id: deploy
         uses: actions/deploy-pages@v4

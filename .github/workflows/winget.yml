@@ -1,13 +1,10 @@
 name: Winget
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag like v0.0.102.
+        description: Existing GitHub release tag like v0.26.6.
         required: true
         type: string
       submit_update:
@@ -39,11 +36,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           # Resolve actual .msi URL from release assets (filename version may differ from tag)
           INSTALLER_URL=""
@@ -108,16 +101,9 @@ jobs:
           name: winget-manifests-${{ steps.meta.outputs.version }}
           path: winget-manifests-${{ steps.meta.outputs.version }}.tar.gz
 
-      - name: Upload Winget manifests to GitHub release
-        if: ${{ github.event_name == 'release' }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ steps.meta.outputs.tag }} winget-manifests-${{ steps.meta.outputs.version }}.tar.gz --clobber
-
   submit-update:
     needs: generate-manifests
-    if: ${{ (github.event_name == 'release' && vars.WINGET_PACKAGE_READY == 'true') || (github.event_name == 'workflow_dispatch' && inputs.submit_update) }}
+    if: ${{ inputs.submit_update }}
     runs-on: windows-latest
     env:
       WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}

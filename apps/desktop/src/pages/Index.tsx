@@ -458,12 +458,6 @@ function IndexInner() {
     <TooltipProvider>
       <SidebarProvider>
         <div className="flex flex-col h-full w-full bg-background overflow-hidden">
-          <div
-            className="flex items-center justify-end h-8 w-full shrink-0 bg-sidebar border-b border-border"
-            data-tauri-drag-region="true"
-          >
-            <WindowControls className="pr-2" />
-          </div>
           <div className="flex flex-1 overflow-hidden">
             <NavigationSidebar
               activeNavId={activeNavId}
@@ -515,15 +509,24 @@ function IndexInner() {
               !isLoading &&
               (activeNavId === "database-studio" ||
                 activeNavId === "sql-console") ? (
-                <EmptyState
-                  icon={<Plug className="h-16 w-16" />}
-                  title="No Connections"
-                  description="Add a database connection to start exploring your data."
-                  action={{
-                    label: "Add Connection",
-                    onClick: handleOpenNewConnection,
-                  }}
-                />
+                <div className="flex flex-col flex-1 min-h-0">
+                  <TabBar
+                    tabs={[]}
+                    activeTabId={null}
+                    onTabClick={function () {}}
+                    onTabClose={function () {}}
+                    rightSlot={<WindowControls />}
+                  />
+                  <EmptyState
+                    icon={<Plug className="h-16 w-16" />}
+                    title="No Connections"
+                    description="Add a database connection to start exploring your data."
+                    action={{
+                      label: "Add Connection",
+                      onClick: handleOpenNewConnection,
+                    }}
+                  />
+                </div>
               ) : activeNavId === "database-studio" ? (
                 <div className="flex flex-col flex-1 min-h-0">
                   <TabBar
@@ -531,6 +534,7 @@ function IndexInner() {
                     activeTabId={activeTabId}
                     onTabClick={handleTabClick}
                     onTabClose={closeTab}
+                    rightSlot={<WindowControls />}
                   />
                   <ErrorBoundary feature="Database Studio">
                     <DatabaseStudio
@@ -571,15 +575,17 @@ function IndexInner() {
                       handleTableSelect(tableId, tableName);
                       setActiveNavId("database-studio");
                     }}
+                    windowControls={<WindowControls />}
                   />
                 </ErrorBoundary>
               ) : activeNavId === "settings" ? (
                 <ErrorBoundary feature="Settings">
-                  <SettingsView />
+                  <SettingsView windowControls={<WindowControls />} />
                 </ErrorBoundary>
               ) : activeNavId === "docker" ? (
                 <ErrorBoundary feature="Docker Manager">
                   <DockerView
+                    windowControls={<WindowControls />}
                     onOpenInDataViewer={async function (container) {
                       const userEnv = container.env.find(function (e) {
                         return e.startsWith("POSTGRES_USER=");

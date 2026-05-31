@@ -1,13 +1,10 @@
 name: Homebrew
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag like v0.0.111. Leave empty to use latest.
+        description: Existing GitHub release tag like v0.26.6. Leave empty to use latest.
         required: false
         type: string
       publish:
@@ -37,11 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           if [[ -z "$TAG" ]]; then
             TAG="$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name')"
@@ -117,20 +110,13 @@ jobs:
           name: homebrew-cask-${{ steps.meta.outputs.version }}
           path: homebrew-cask-${{ steps.meta.outputs.version }}.tar.gz
 
-      - name: Upload Cask to GitHub release
-        if: ${{ github.event_name == 'release' && steps.meta.outputs.tag != '' }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ steps.meta.outputs.tag }} homebrew-cask-${{ steps.meta.outputs.version }}.tar.gz --clobber
-
       - name: Skip Homebrew publish when SSH key is not configured
         if: ${{ env.HOMEBREW_SSH_PRIVATE_KEY == '' }}
         shell: bash
         run: echo "HOMEBREW_SSH_PRIVATE_KEY is not configured. Generated Cask only."
 
       - name: Publish Cask to Homebrew tap
-        if: ${{ env.HOMEBREW_SSH_PRIVATE_KEY != '' && ((github.event_name == 'release' && vars.HOMEBREW_PACKAGE_READY == 'true') || (github.event_name == 'workflow_dispatch' && inputs.publish)) }}
+        if: ${{ env.HOMEBREW_SSH_PRIVATE_KEY != '' && inputs.publish }}
         shell: bash
         run: |
           set -euo pipefail

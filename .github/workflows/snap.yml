@@ -1,13 +1,10 @@
 name: Snap
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag like v0.0.102. Leave empty for artifact-only builds.
+        description: Existing GitHub release tag like v0.26.6. Leave empty for artifact-only builds.
         required: false
         type: string
       publish:
@@ -47,21 +44,14 @@ jobs:
         id: meta
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           VERSION="$(python -c "import json; print(json.load(open('package.json'))['version'])")"
           if [[ -n "$TAG" ]]; then
             VERSION="${TAG#v}"
           fi
 
-          CHANNEL="stable"
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            CHANNEL="${{ inputs.release_channel }}"
-          fi
+          CHANNEL="${{ inputs.release_channel }}"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -98,15 +88,8 @@ jobs:
           name: dora-snap-${{ steps.meta.outputs.version }}
           path: ${{ steps.build.outputs.snap }}
 
-      - name: Upload snap to GitHub release
-        if: ${{ github.event_name == 'release' && steps.meta.outputs.tag != '' }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ steps.meta.outputs.tag }} ${{ steps.build.outputs.snap }} --clobber
-
       - name: Publish snap to Snap Store
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' && (github.event_name == 'release' || inputs.publish) }}
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' && inputs.publish }}
         uses: snapcore/action-publish@v1 # no Node 22 version available yet
         with:
           snap: ${{ steps.build.outputs.snap }}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "use-shortcut": {
+      "source": "remcostoeten/use-shortcut",
+      "sourceType": "github",
+      "skillPath": "skills/use-shortcut/SKILL.md",
+      "computedHash": "f612150bb8fae7f49fd94f34cb49b010382f706dc0da585507682cbaf8d57a9f"
+    }
+  }
+}

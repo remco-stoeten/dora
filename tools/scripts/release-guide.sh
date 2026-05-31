@@ -189,9 +189,9 @@ Do not create or publish the GitHub release manually.
 
 The safe release path is:
   1. create and push tag v$CURRENT_VERSION
-  2. let .github/workflows/release.yml build every Tauri artifact into a draft release
-  3. let the final release job publish the draft only after assets and notes are attached
-  4. package-manager workflows run from the release:published event
+  2. let .github/workflows/release.yml build every Tauri artifact as workflow artifacts
+  3. let the final release job create the GitHub release only after assets and notes are ready
+  4. let the release workflow dispatch package-manager workflows with the completed release tag
 
 Manual release publication before assets exist is what makes APT, AUR, Homebrew,
 and Winget fail on missing release assets.

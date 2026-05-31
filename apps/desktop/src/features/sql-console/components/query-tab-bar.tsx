@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, X, Loader2, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { useQueryTabs } from '../stores/tab-store'
 import { cn } from '@/shared/utils/cn'
+import { WindowControls } from '@/components/window-controls'
 import {
 	ContextMenu,
 	ContextMenuTrigger,
@@ -85,13 +86,17 @@ export function QueryTabBar() {
 	}
 
 	return (
-		<div className='query-tab-bar flex items-center h-[33px] bg-sidebar border-b border-sidebar-border shrink-0 select-none'>
+		<div
+			className='query-tab-bar flex items-center h-[33px] bg-sidebar border-b border-sidebar-border shrink-0 select-none'
+			data-tauri-drag-region='true'
+		>
 			{/* Scroll left button */}
 			{showScrollButtons && (
 				<button
 					className='flex items-center justify-center h-full w-6 shrink-0 text-muted-foreground hover:text-foreground transition-colors border-r border-sidebar-border'
 					onClick={scrollLeft}
 					title='Scroll tabs left'
+					data-tauri-drag-region='false'
 				>
 					<ChevronLeft className='h-3 w-3' />
 				</button>
@@ -120,6 +125,7 @@ export function QueryTabBar() {
 									onMouseDown={function (e) { handleMiddleClick(e, tab.id) }}
 									onDoubleClick={function () { handleDoubleClick(tab.id, tab.title) }}
 									title={tab.title}
+									data-tauri-drag-region='false'
 								>
 									{/* Active indicator line */}
 									{isActive && (
@@ -172,6 +178,7 @@ export function QueryTabBar() {
 											role='button'
 											tabIndex={-1}
 											title='Close tab (Ctrl+W)'
+											data-tauri-drag-region='false'
 										>
 											<X className='h-3 w-3' />
 										</span>
@@ -205,6 +212,7 @@ export function QueryTabBar() {
 					className='flex items-center justify-center h-full w-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors'
 					onClick={addTab}
 					title='New tab (Ctrl+T)'
+					data-tauri-drag-region='false'
 				>
 					<Plus className='h-3.5 w-3.5' />
 				</button>
@@ -216,10 +224,14 @@ export function QueryTabBar() {
 					className='flex items-center justify-center h-full w-6 shrink-0 text-muted-foreground hover:text-foreground transition-colors border-l border-sidebar-border'
 					onClick={scrollRight}
 					title='Scroll tabs right'
+					data-tauri-drag-region='false'
 				>
 					<ChevronRight className='h-3 w-3' />
 				</button>
 			)}
+			<div className='flex h-full shrink-0 items-center border-l border-sidebar-border px-1' data-tauri-drag-region='false'>
+				<WindowControls />
+			</div>
 		</div>
 	)
 }

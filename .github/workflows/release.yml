@@ -410,3 +410,73 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run aur.yml --ref master -f tag="${{ github.ref_name }}"
+
+  publish-homebrew:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+      - name: Dispatch Homebrew publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run brew.yml --ref master -f tag="${{ github.ref_name }}" -f publish=true
+
+  publish-apt:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+      - name: Dispatch APT repository workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run apt.yml --ref master -f tag="${{ github.ref_name }}" -f publish=true
+
+  publish-winget:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+      - name: Dispatch Winget workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run winget.yml --ref master -f tag="${{ github.ref_name }}" -f submit_update=true
+
+  publish-snap:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+      - name: Dispatch Snap workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run snap.yml --ref master -f tag="${{ github.ref_name }}" -f publish=true -f release_channel=stable
+
+  build-flatpak:
+    needs: generate-release-notes
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+      - name: Dispatch Flatpak build workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run flatpak.yml --ref master -f tag="${{ github.ref_name }}"

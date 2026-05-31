@@ -1,0 +1,4 @@
+interface:
+  display_name: "use-shortcut"
+  short_description: "Build React keyboard shortcut flows"
+  default_prompt: "Use $use-shortcut to add accessible keyboard shortcuts to a React app."

@@ -1,13 +1,10 @@
 name: Flatpak
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag like v0.2.0. Leave empty for artifact-only builds.
+        description: Existing GitHub release tag like v0.26.6. Leave empty for artifact-only builds.
         required: false
         type: string
 
@@ -29,11 +26,7 @@ jobs:
         id: meta
         shell: bash
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG="${{ inputs.tag }}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           VERSION="$(python -c "import json; print(json.load(open('package.json'))['version'])")"
           if [[ -n "$TAG" ]]; then
@@ -99,13 +92,3 @@ jobs:
           name: dora-flatpak-repo-${{ steps.meta.outputs.version }}
           path: ${{ steps.build.outputs.repo }}
           include-hidden-files: true
-
-      - name: Upload Flatpak to GitHub release
-        if: ${{ steps.meta.outputs.tag != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          if ! gh release upload "${{ steps.meta.outputs.tag }}" "${{ steps.build.outputs.bundle }}" --clobber; then
-            echo "::warning::Flatpak bundle was built and uploaded as a workflow artifact, but GitHub rejected the release asset upload. Existing published releases can be immutable, so rerun without a tag for artifact-only builds or attach the bundle before publishing the release."
-          fi

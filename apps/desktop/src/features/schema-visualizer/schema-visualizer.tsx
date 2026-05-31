@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Network, AlertCircle } from 'lucide-react'
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { convertSchemaToDrizzle } from '@/core/data-generation/sql-to-drizzle'
 import { useAdapter } from '@/core/data-provider'
@@ -42,6 +42,7 @@ type Props = {
 	selectedTableId?: string
 	onSelectTable?: (tableId: string, tableName: string) => void
 	onOpenTable?: (tableId: string, tableName: string) => void
+	windowControls?: ReactNode
 }
 
 type ExportPreviewState = {
@@ -192,6 +193,7 @@ function SchemaVisualizerInner({
 	selectedTableId,
 	onSelectTable,
 	onOpenTable,
+	windowControls,
 }: Props) {
 	const adapter = useAdapter()
 	const reactFlow = useReactFlow<Node<TableNodeData>, Edge<RelationshipEdgeData>>()
@@ -609,6 +611,7 @@ function SchemaVisualizerInner({
 				edgeCount={visibleCounts.edges}
 				isSearchResult={visibleCounts.isSearchResult}
 				isLoading={isLoading}
+				rightSlot={windowControls}
 			/>
 
 			<div className='schema-visualizer__workspace'>

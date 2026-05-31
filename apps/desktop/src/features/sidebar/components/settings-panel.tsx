@@ -20,6 +20,10 @@ import { AiKeysSection } from './ai-keys-section'
 import { ShortcutRecorder } from './shortcut-recorder'
 import { StorageSection } from './storage-section'
 
+type SettingsViewProps = {
+	windowControls?: ReactNode
+}
+
 type SettingsSectionId =
 	| 'editor'
 	| 'shortcuts'
@@ -135,7 +139,7 @@ function SectionCard({
 	)
 }
 
-export function SettingsView() {
+export function SettingsView({ windowControls }: SettingsViewProps = {}) {
 	const { settings, updateSetting } = useSettings()
 	const { setShortcut, resetShortcut, overrides } = useShortcutStore()
 	const effectiveShortcuts = useEffectiveShortcuts()
@@ -188,13 +192,23 @@ export function SettingsView() {
 			</aside>
 
 			<main className='flex min-w-0 flex-1 flex-col min-h-0'>
-				<div className='flex h-16 flex-col justify-center border-b border-border bg-sidebar/20 px-5'>
-					<h1 className='text-base font-semibold text-sidebar-foreground'>
-						Application settings
-					</h1>
-					<p className='mt-0.5 text-xs text-muted-foreground'>
-						Editor behavior, shortcuts, AI keys, storage, and interface preferences
-					</p>
+				<div
+					className='flex h-16 items-center justify-between gap-4 border-b border-border bg-sidebar/20 px-5'
+					data-tauri-drag-region='true'
+				>
+					<div className='min-w-0'>
+						<h1 className='text-base font-semibold text-sidebar-foreground'>
+							Application settings
+						</h1>
+						<p className='mt-0.5 text-xs text-muted-foreground'>
+							Editor behavior, shortcuts, AI keys, storage, and interface preferences
+						</p>
+					</div>
+					{windowControls ? (
+						<div className='shrink-0' data-tauri-drag-region='false'>
+							{windowControls}
+						</div>
+					) : null}
 				</div>
 
 				<div className='min-h-0 flex-1 overflow-hidden'>

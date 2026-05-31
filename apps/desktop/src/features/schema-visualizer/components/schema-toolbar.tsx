@@ -49,6 +49,7 @@ type Props = {
 	edgeCount: number
 	isSearchResult: boolean
 	isLoading: boolean
+	rightSlot?: ReactNode
 }
 
 type ToolbarIconButtonProps = {
@@ -306,6 +307,7 @@ export function SchemaToolbar({
 	edgeCount,
 	isSearchResult,
 	isLoading,
+	rightSlot,
 }: Props) {
 	const { fitView } = useReactFlow()
 	const summary = isSearchResult
@@ -313,8 +315,8 @@ export function SchemaToolbar({
 		: `${tableCount} tables • ${edgeCount} relationships`
 
 	return (
-		<div className='sv-toolbar'>
-			<div className='sv-toolbar__search-group'>
+		<div className='sv-toolbar' data-tauri-drag-region='true'>
+			<div className='sv-toolbar__search-group' data-tauri-drag-region='false'>
 				<div className='sv-toolbar__copy'>
 					<div className='sv-toolbar__label'>Explore the map</div>
 					<div className='sv-toolbar__summary'>{summary}</div>
@@ -326,7 +328,7 @@ export function SchemaToolbar({
 				/>
 			</div>
 
-			<div className='sv-toolbar__actions'>
+			<div className='sv-toolbar__actions' data-tauri-drag-region='false'>
 				<ToolbarIconButton
 					label='Fit schema to viewport'
 					onClick={() => fitView({ padding: 0.12, duration: 220 })}
@@ -381,6 +383,12 @@ export function SchemaToolbar({
 						)}
 					/>
 				</ToolbarIconButton>
+				{rightSlot ? (
+					<>
+						<div className='mx-1 h-5 w-px bg-sidebar-border' />
+						{rightSlot}
+					</>
+				) : null}
 			</div>
 		</div>
 	)
