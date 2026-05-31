@@ -3,6 +3,7 @@ import {
     softwareSchema,
     websiteSchema
 } from '@/core/config/structured-data'
+import { FeaturesSection } from '@/components/features-section'
 import { GitHubStats as GitStats } from '@/components/github-stats'
 import { Hero } from '@/components/hero'
 
@@ -20,6 +21,7 @@ export default function HomeView() {
                 type="application/ld+json"
             />
             <Hero />
+            <FeaturesSection />
             <GitStats />
         </>
     )
