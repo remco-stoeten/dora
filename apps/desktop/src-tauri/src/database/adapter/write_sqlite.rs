@@ -278,3 +278,109 @@ impl WriteAdapter for SqliteAdapter {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::sync::{Arc, Mutex};
+
+    fn setup() -> (SqliteAdapter, Arc<Mutex<rusqlite::Connection>>) {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE t (
+                id INTEGER PRIMARY KEY,
+                n INTEGER,
+                price REAL,
+                name TEXT,
+                ts TIMESTAMP
+            );
+            INSERT INTO t (id, n, price, name, ts) VALUES (1, 0, 0, '', NULL);",
+        )
+        .unwrap();
+        let shared = Arc::new(Mutex::new(conn));
+        (SqliteAdapter::new(shared.clone()), shared)
+    }
+
+    // SQLite (and libSQL, which shares its type-affinity model) must persist
+    // edits from the string-shaped values the UI sends, coercing them into the
+    // column's type via affinity rather than erroring like a strict engine.
+    #[tokio::test]
+    async fn update_cell_coerces_string_values_into_column_types() {
+        let (adapter, shared) = setup();
+        // integer column fed a string -> stored as an integer (affinity)
+        adapter
+            .update_cell("t".into(), None, "id".into(), json!(1), "n".into(), json!("123"))
+            .await
+            .unwrap();
+        // text column
+        adapter
+            .update_cell("t".into(), None, "id".into(), json!(1), "name".into(), json!("hello"))
+            .await
+            .unwrap();
+        // timestamp column keeps the string form (SQLite has no datetime type)
+        adapter
+            .update_cell(
+                "t".into(),
+                None,
+                "id".into(),
+                json!(1),
+                "ts".into(),
+                json!("2024-01-01 10:00:00"),
+            )
+            .await
+            .unwrap();
+
+        let conn = shared.lock().unwrap();
+        let (n, n_type): (i64, String) = conn
+            .query_row("SELECT n, typeof(n) FROM t WHERE id = 1", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(n, 123);
+        assert_eq!(n_type, "integer");
+
+        let name: String = conn
+            .query_row("SELECT name FROM t WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(name, "hello");
+
+        let ts: String = conn
+            .query_row("SELECT ts FROM t WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(ts, "2024-01-01 10:00:00");
+    }
+
+    #[tokio::test]
+    async fn update_cell_sets_null() {
+        let (adapter, shared) = setup();
+        adapter
+            .update_cell("t".into(), None, "id".into(), json!(1), "name".into(), json!(null))
+            .await
+            .unwrap();
+        let conn = shared.lock().unwrap();
+        let name: Option<String> = conn
+            .query_row("SELECT name FROM t WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(name, None);
+    }
+
+    #[tokio::test]
+    async fn insert_row_coerces_typed_values() {
+        let (adapter, shared) = setup();
+        let mut row = serde_json::Map::new();
+        row.insert("id".into(), json!(2));
+        row.insert("n".into(), json!("456"));
+        row.insert("name".into(), json!("world"));
+        adapter.insert_row("t".into(), None, row).await.unwrap();
+
+        let conn = shared.lock().unwrap();
+        let (n, name): (i64, String) = conn
+            .query_row("SELECT n, name FROM t WHERE id = 2", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(n, 456);
+        assert_eq!(name, "world");
+    }
+}
