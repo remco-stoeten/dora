@@ -141,11 +141,11 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
             </div>
             <div className="px-5 pb-5">
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
-                    Query History
+                    Connect Anywhere
                 </h3>
                 <p className="text-xs text-[#5a5a5a] leading-relaxed">
-                    Every query logged and queryable. Full audit trail.
-                    Time-series playback.
+                    Local, Neon, Turso, or over SSH. Connect to databases
+                    wherever they run.
                 </p>
             </div>
         </div>
