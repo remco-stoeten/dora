@@ -59,7 +59,11 @@ git-cliff -o CHANGELOG.md --tag "$NEXT_TAG"
 echo "Updated CHANGELOG.md"
 echo
 
-git add CHANGELOG.md package.json apps/desktop/package.json apps/desktop/src-tauri/tauri.conf.json apps/desktop/src-tauri/Cargo.toml apps/desktop/src-tauri/Cargo.lock
+bun scripts/sync-changelog-data.ts
+echo "Synced in-app changelog data"
+echo
+
+git add CHANGELOG.md apps/desktop/src/features/sidebar/changelog-data.ts apps/marketing/src/core/content/changelog-data.ts package.json apps/desktop/package.json apps/desktop/src-tauri/tauri.conf.json apps/desktop/src-tauri/Cargo.toml apps/desktop/src-tauri/Cargo.lock
 git commit -m "chore(release): $NEXT_TAG"
 git tag "$NEXT_TAG"
 

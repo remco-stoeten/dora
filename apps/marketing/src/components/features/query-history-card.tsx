@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState } from 'react'
 
+import { useGate } from './use-scroll-motion'
+
 /* ---------------------------------------------------------------------------
  * Query History — an abstract replay timeline. Each past query is a latency
  * bar along a time axis (taller = slower); a rose "replay head" sweeps across
@@ -18,10 +20,12 @@ const HISTORY: { sql: string; ms: number; ago: string }[] = [
     { sql: 'VACUUM ANALYZE products', ms: 21, ago: '24m' }
 ]
 
-export function QueryHistoryCard() {
+export function QueryHistoryCard({ animate }: { animate: boolean }) {
     const ref = useRef<HTMLDivElement>(null)
     const [revealed, setRevealed] = useState(false)
     const [hover, setHover] = useState<number | null>(null)
+    const gate = useGate(ref)
+    const running = animate && gate.active
 
     useEffect(() => {
         const el = ref.current
@@ -100,14 +104,16 @@ export function QueryHistoryCard() {
                         height={BASE - 12}
                         fill="url(#qh-sweep)"
                     >
-                        <animateTransform
-                            attributeName="transform"
-                            type="translate"
-                            from="0 0"
-                            to={`${X1 - X0 + 8} 0`}
-                            dur="3.4s"
-                            repeatCount="indefinite"
-                        />
+                        {running ? (
+                            <animateTransform
+                                attributeName="transform"
+                                type="translate"
+                                from="0 0"
+                                to={`${X1 - X0 + 8} 0`}
+                                dur="3.4s"
+                                repeatCount="indefinite"
+                            />
+                        ) : null}
                     </rect>
 
                     {/* latency bars — newest on the right */}
@@ -154,7 +160,7 @@ export function QueryHistoryCard() {
                                     fill={lit ? '#f5c0c0' : '#5a4f56'}
                                     className="transition-all duration-200"
                                 >
-                                    {idx === 0 ? (
+                                    {idx === 0 && running ? (
                                         <animate
                                             attributeName="r"
                                             values="1.8;3;1.8"
@@ -179,7 +185,7 @@ export function QueryHistoryCard() {
                     <span className="shrink-0 text-[#e3b2b3]/80 tabular-nums">
                         {q.ms}ms
                     </span>
-                    <span className="shrink-0 w-7 text-right text-[#6a6a6a]">
+                    <span className="shrink-0 w-7 text-right text-[#8a8a8a]">
                         {q.ago}
                     </span>
                 </div>
@@ -189,7 +195,7 @@ export function QueryHistoryCard() {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Query History
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     Every query saved. Search, replay, analyze.
                 </p>
             </div>

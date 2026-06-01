@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 
-import type { Motion } from './use-scroll-motion'
+import { useGate, type Motion } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
  * Connection String Morph — database URIs cycle through with staggered
@@ -37,9 +37,18 @@ const NODE_POS = [
 ]
 
 // Character-by-character reveal of a string; restarts whenever `resetKey` flips.
-function useTypewriter(text: string, resetKey: number, speed = 20) {
+function useTypewriter(
+    text: string,
+    resetKey: number,
+    enabled: boolean,
+    speed = 20
+) {
     const [count, setCount] = useState(0)
     useEffect(() => {
+        if (!enabled) {
+            setCount(text.length)
+            return
+        }
         setCount(0)
         const id = setInterval(() => {
             setCount((c) => {
@@ -51,7 +60,7 @@ function useTypewriter(text: string, resetKey: number, speed = 20) {
             })
         }, speed)
         return () => clearInterval(id)
-    }, [text, resetKey, speed])
+    }, [enabled, text, resetKey, speed])
     return count
 }
 
@@ -62,14 +71,23 @@ function useTypewriter(text: string, resetKey: number, speed = 20) {
  * provider (or its dot) focuses it, pausing the auto-cycle, and types that
  * provider's connection string in below. The cluster drifts with the pointer.
  * ------------------------------------------------------------------------- */
-export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
+export function DatabaseConnectionCard({
+    animate,
+    motion
+}: {
+    animate: boolean
+    motion: Motion
+}) {
+    const rootRef = useRef<HTMLDivElement>(null)
     const [active, setActive] = useState(0)
     const [paused, setPaused] = useState(false)
     const groupRef = useRef<HTMLDivElement>(null)
     const packetRef = useRef<SVGCircleElement>(null)
+    const gate = useGate(rootRef)
+    const running = animate && gate.active && motion.activeRef.current
 
     const current = CONNECTION_STRINGS[active]
-    const revealed = useTypewriter(current.conn, active)
+    const revealed = useTypewriter(current.conn, active, running)
 
     // Split the URI so the scheme can be tinted and the rest stays muted.
     const scheme = current.conn.split('://')[0]
@@ -85,13 +103,13 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
 
     // Auto-cycle providers until the user hovers one.
     useEffect(() => {
-        if (paused) return
+        if (paused || !running) return
         const id = setInterval(
             () => setActive((a) => (a + 1) % CONNECTION_STRINGS.length),
             3200
         )
         return () => clearInterval(id)
-    }, [paused])
+    }, [running, paused])
 
     // A data packet streams hub -> active node on a loop; scrolling nudges its
     // speed. Driven by direct attribute writes so it never re-renders React.
@@ -99,23 +117,26 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
         const node = NODE_POS[active]
         let raf = 0
         let t = 0
-        const loop = () => {
-            const vel = Math.abs(motion.velocityRef.current ?? 0)
-            t = (t + 0.014 + vel * 0.04) % 1
+        const draw = (running: boolean) => {
+            const vel = running ? Math.abs(motion.velocityRef.current ?? 0) : 0
+            t = (t + (running ? 0.014 + vel * 0.04 : 0)) % 1
             // ease-in-out so the packet accelerates out of the hub and settles
-            const e =
-                t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+            const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
             const c = packetRef.current
             if (c) {
                 c.setAttribute('cx', String(HUB.x + (node.x - HUB.x) * e))
                 c.setAttribute('cy', String(HUB.y + (node.y - HUB.y) * e))
                 c.setAttribute('opacity', String(Math.sin(t * Math.PI)))
             }
-            raf = requestAnimationFrame(loop)
+            if (running) raf = requestAnimationFrame(loop)
         }
-        raf = requestAnimationFrame(loop)
+        const loop = () => {
+            draw(animate && gate.activeRef.current && motion.activeRef.current)
+        }
+        draw(running)
+        if (running) raf = requestAnimationFrame(loop)
         return () => cancelAnimationFrame(raf)
-    }, [active, motion])
+    }, [active, animate, running, motion, gate.activeRef])
 
     // Pointer parallax — the whole cluster leans a few px toward the cursor.
     function onMove(event: React.MouseEvent) {
@@ -127,12 +148,13 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
         g.style.transform = `translate(${dx * 12}px, ${dy * 12}px)`
     }
     function onLeave() {
-        if (groupRef.current) groupRef.current.style.transform = 'translate(0,0)'
+        if (groupRef.current)
+            groupRef.current.style.transform = 'translate(0,0)'
         setPaused(false)
     }
 
     return (
-        <div className="h-full flex flex-col">
+        <div ref={rootRef} className="h-full flex flex-col">
             <div
                 className="relative flex-1 overflow-hidden"
                 onMouseMove={onMove}
@@ -171,7 +193,7 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                                     strokeDasharray="2 2"
                                     className="transition-[stroke,stroke-width] duration-300"
                                 >
-                                    {on ? (
+                                    {on && running ? (
                                         <animate
                                             attributeName="stroke-dashoffset"
                                             from="0"
@@ -194,14 +216,16 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                             strokeWidth="0.4"
                             strokeDasharray="1.5 3"
                         >
-                            <animateTransform
-                                attributeName="transform"
-                                type="rotate"
-                                from={`0 ${HUB.x} ${HUB.y}`}
-                                to={`360 ${HUB.x} ${HUB.y}`}
-                                dur="14s"
-                                repeatCount="indefinite"
-                            />
+                            {running ? (
+                                <animateTransform
+                                    attributeName="transform"
+                                    type="rotate"
+                                    from={`0 ${HUB.x} ${HUB.y}`}
+                                    to={`360 ${HUB.x} ${HUB.y}`}
+                                    dur="14s"
+                                    repeatCount="indefinite"
+                                />
+                            ) : null}
                         </circle>
 
                         {/* hub core */}
@@ -214,12 +238,14 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                             strokeWidth="0.6"
                         />
                         <circle cx={HUB.x} cy={HUB.y} r="1.6" fill="#f5c0c0">
-                            <animate
-                                attributeName="r"
-                                values="1.4;2;1.4"
-                                dur="2.4s"
-                                repeatCount="indefinite"
-                            />
+                            {running ? (
+                                <animate
+                                    attributeName="r"
+                                    values="1.4;2;1.4"
+                                    dur="2.4s"
+                                    repeatCount="indefinite"
+                                />
+                            ) : null}
                         </circle>
 
                         {/* streaming data packet */}
@@ -251,7 +277,7 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                                         r="9"
                                         fill="transparent"
                                     />
-                                    {on ? (
+                                    {on && running ? (
                                         <circle
                                             cx={n.x}
                                             cy={n.y}
@@ -308,7 +334,7 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                         </span>
                         <span className="text-[#6a6a6a]">{sepShown}</span>
                         <span className="text-[#9a9a9a]">{restShown}</span>
-                        {isTyping ? (
+                        {isTyping && running ? (
                             <span
                                 className="ml-px inline-block h-3 w-px animate-pulse align-middle"
                                 style={{ backgroundColor: current.color }}
@@ -319,7 +345,7 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
             </div>
 
             {/* provider selector dots */}
-            <div className="px-5 pb-4 flex items-center justify-center gap-1.5">
+            <div className="px-5 pb-4 flex items-center justify-center gap-1">
                 {CONNECTION_STRINGS.map((db, idx) => (
                     <button
                         key={db.db}
@@ -330,14 +356,19 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                         }}
                         onMouseLeave={() => setPaused(false)}
                         onClick={() => setActive(idx)}
-                        className={`h-1 transition-all duration-300 ${
-                            idx === active ? 'w-4' : 'w-1'
-                        }`}
-                        style={{
-                            backgroundColor:
-                                idx === active ? db.color : '#3a3138'
-                        }}
-                    />
+                        className="flex size-6 items-center justify-center"
+                    >
+                        <span
+                            aria-hidden
+                            className={`h-1 transition-all duration-300 ${
+                                idx === active ? 'w-4' : 'w-1'
+                            }`}
+                            style={{
+                                backgroundColor:
+                                    idx === active ? db.color : '#3a3138'
+                            }}
+                        />
+                    </button>
                 ))}
             </div>
 
@@ -345,7 +376,7 @@ export function DatabaseConnectionCard({ motion }: { motion: Motion }) {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Multi-Database
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     PostgreSQL, SQLite, libSQL, MySQL. Connect anywhere — local,
                     hosted, tunneled, SSH.
                 </p>

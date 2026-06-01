@@ -1,13 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+
+import { useGate } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
  * Schema Visualization — live ER diagram; a pulse travels the foreign-key
  * links and hovering a table highlights its relationships.
  * ------------------------------------------------------------------------- */
-export function SchemaDiagramCard() {
+export function SchemaDiagramCard({ animate }: { animate: boolean }) {
+    const ref = useRef<HTMLDivElement>(null)
     const [hover, setHover] = useState<string | null>(null)
+    const gate = useGate(ref)
+    const running = animate && gate.active
     const nodes = [
         { id: 'users', x: 12, y: 10, w: 54, h: 30 },
         { id: 'products', x: 8, y: 78, w: 60, h: 30 },
@@ -28,7 +33,7 @@ export function SchemaDiagramCard() {
         hover === null || e.a === hover || e.b === hover
 
     return (
-        <div className="h-full flex flex-col">
+        <div ref={ref} className="h-full flex flex-col">
             <div className="flex-1 flex items-center justify-center px-4 pt-5">
                 <svg
                     viewBox="0 0 160 118"
@@ -44,7 +49,7 @@ export function SchemaDiagramCard() {
                             strokeWidth="1.2"
                             strokeDasharray={edgeLit(e) ? '4 4' : undefined}
                         >
-                            {edgeLit(e) ? (
+                            {edgeLit(e) && running ? (
                                 <animate
                                     attributeName="stroke-dashoffset"
                                     dur="0.9s"
@@ -72,7 +77,9 @@ export function SchemaDiagramCard() {
                                     rx="3"
                                     fill="#161218"
                                     stroke={
-                                        lit ? 'rgba(227,178,179,0.4)' : '#2b252c'
+                                        lit
+                                            ? 'rgba(227,178,179,0.4)'
+                                            : '#2b252c'
                                     }
                                     strokeWidth="1"
                                     className="transition-colors duration-200"
@@ -80,7 +87,9 @@ export function SchemaDiagramCard() {
                                 <path
                                     d={`M${n.x} ${n.y + 3} a3 3 0 0 1 3 -3 h${n.w - 6} a3 3 0 0 1 3 3 v7 h-${n.w} Z`}
                                     fill={
-                                        lit ? 'rgba(227,178,179,0.16)' : '#1c1820'
+                                        lit
+                                            ? 'rgba(227,178,179,0.16)'
+                                            : '#1c1820'
                                     }
                                     className="transition-colors duration-200"
                                 />
@@ -118,7 +127,7 @@ export function SchemaDiagramCard() {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Schema Visualization
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     ERD diagram. Live relationships. Query-driven discovery.
                     Instant insight.
                 </p>

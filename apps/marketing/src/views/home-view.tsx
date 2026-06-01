@@ -4,7 +4,7 @@ import {
     websiteSchema
 } from '@/core/config/structured-data'
 import { FeaturesSection } from '@/components/features-section'
-import { GitHubStats as GitStats } from '@/components/github-stats'
+import { DeferredGitHubStats } from '@/components/github-stats/deferred-github-stats'
 import { Hero } from '@/components/hero'
 import { getGitHubStats } from '@/core/github/get-github-stats'
 
@@ -27,7 +27,7 @@ export default async function HomeView() {
             />
             <Hero />
             <FeaturesSection />
-            {stats ? <GitStats data={stats} /> : null}
+            {stats ? <DeferredGitHubStats data={stats} /> : null}
         </>
     )
 }

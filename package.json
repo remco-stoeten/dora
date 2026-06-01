@@ -9,6 +9,7 @@
 	"scripts": {
 		"dev": "turbo dev",
 		"generate:releasetext": "bash scripts/generate-release-text.sh",
+		"generate:changelog-data": "bun scripts/sync-changelog-data.ts",
 		"release": "bash scripts/release.sh",
 		"prebuild": "bun run tools/prebuild.ts",
 		"build": "turbo build",

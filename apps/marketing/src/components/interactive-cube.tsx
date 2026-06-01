@@ -28,6 +28,7 @@ const FACE_COORDS = FACE_ENGINES.map((e) => e.coord)
 
 const CYAN = '#f5f5f5'
 const MAGENTA = '#888888'
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
 // Shared per-face screen-space data updated each frame inside Canvas,
 // read by the SVG overlay rendered alongside.
@@ -302,13 +303,15 @@ function CubeMesh({
     pointer,
     flash,
     flashFace,
-    labelData
+    labelData,
+    animationActive
 }: {
     spin: { x: number; y: number }
     pointer: { x: number; y: number; active: boolean }
     flash: number
     flashFace: number | null
     labelData: React.MutableRefObject<LabelDatum[]>
+    animationActive: boolean
 }) {
     const grp = useRef<THREE.Group>(null!)
     const innerRef = useRef<THREE.Group>(null!)
@@ -369,10 +372,11 @@ function CubeMesh({
     )
 
     useFrame((_, delta) => {
-        if (!grp.current) return
+        if (!animationActive || !grp.current) return
+        const dt = Math.min(delta, 0.05)
         const speed = pointer.active ? 0.55 : 0.25
-        auto.current.y += delta * speed
-        auto.current.x += delta * speed * 0.35
+        auto.current.y += dt * speed
+        auto.current.x += dt * speed * 0.35
 
         const targetY = auto.current.y + spin.y + pointer.x * 0.6
         const targetX = auto.current.x + spin.x - pointer.y * 0.4
@@ -382,24 +386,24 @@ function CubeMesh({
 
         // Inner counter-rotation
         if (innerRef.current) {
-            innerRef.current.rotation.y -= delta * 0.6
-            innerRef.current.rotation.x += delta * 0.25
+            innerRef.current.rotation.y -= dt * 0.6
+            innerRef.current.rotation.x += dt * 0.25
         }
         // Orbiting ring
         if (ringRef.current) {
-            ringRef.current.rotation.z += delta * 0.4
+            ringRef.current.rotation.z += dt * 0.4
             ringRef.current.rotation.x =
                 Math.sin(performance.now() * 0.0004) * 0.3
         }
         // Second tilted ring (counter-rotating)
         if (ring2Ref.current) {
-            ring2Ref.current.rotation.y -= delta * 0.55
+            ring2Ref.current.rotation.y -= dt * 0.55
             ring2Ref.current.rotation.z =
                 Math.cos(performance.now() * 0.0005) * 0.4
         }
         // Particles slow drift
         if (particlesRef.current) {
-            particlesRef.current.rotation.y += delta * 0.08
+            particlesRef.current.rotation.y += dt * 0.08
         }
         // Orbiting shards
         if (shardsRef.current) {
@@ -412,8 +416,8 @@ function CubeMesh({
                     Math.sin(angle * 0.7 + sh.tilt) * 0.5,
                     Math.sin(angle) * sh.radius
                 )
-                child.rotation.x += delta * 1.2
-                child.rotation.y += delta * 0.8
+                child.rotation.x += dt * 1.2
+                child.rotation.y += dt * 0.8
             })
         }
         // Vertical data stream — packets flow upward, wrap around
@@ -421,7 +425,7 @@ function CubeMesh({
             const pos = streamRef.current.geometry.attributes.position
                 .array as Float32Array
             for (let i = 0; i < pos.length; i += 3) {
-                pos[i + 1] += delta * 1.6
+                pos[i + 1] += dt * 1.6
                 if (pos[i + 1] > 2) pos[i + 1] = -2
             }
             streamRef.current.geometry.attributes.position.needsUpdate = true
@@ -645,13 +649,15 @@ function Scene({
     pointer,
     flash,
     flashFace,
-    labelData
+    labelData,
+    animationActive
 }: {
     spin: { x: number; y: number }
     pointer: { x: number; y: number; active: boolean }
     flash: number
     flashFace: number | null
     labelData: React.MutableRefObject<LabelDatum[]>
+    animationActive: boolean
 }) {
     const { camera } = useThree()
     useEffect(() => {
@@ -660,14 +666,42 @@ function Scene({
         ortho.updateProjectionMatrix()
     }, [camera])
     return (
-        <CubeMesh
-            spin={spin}
-            pointer={pointer}
-            flash={flash}
-            flashFace={flashFace}
-            labelData={labelData}
-        />
+        <>
+            <DemandRenderLoop active={animationActive} />
+            <CubeMesh
+                spin={spin}
+                pointer={pointer}
+                flash={flash}
+                flashFace={flashFace}
+                labelData={labelData}
+                animationActive={animationActive}
+            />
+        </>
     )
+}
+
+function DemandRenderLoop({ active }: { active: boolean }) {
+    const invalidate = useThree((state) => state.invalidate)
+
+    useEffect(() => {
+        let raf = 0
+
+        if (!active) {
+            invalidate()
+            return
+        }
+
+        const tick = () => {
+            invalidate()
+            raf = requestAnimationFrame(tick)
+        }
+
+        tick()
+
+        return () => cancelAnimationFrame(raf)
+    }, [active, invalidate])
+
+    return null
 }
 
 /**
@@ -676,10 +710,12 @@ function Scene({
  */
 function ConnectorOverlay({
     labelData,
-    size
+    size,
+    active
 }: {
     labelData: React.MutableRefObject<LabelDatum[]>
     size: { w: number; h: number }
+    active: boolean
 }) {
     const pathRefs = useRef<(SVGPathElement | null)[]>([])
     const dotRefs = useRef<(SVGCircleElement | null)[]>([])
@@ -690,6 +726,8 @@ function ConnectorOverlay({
     const pulsePhase = useRef<number[]>(new Array(6).fill(0))
 
     useEffect(() => {
+        if (!active) return
+
         let raf = 0
         let last = performance.now()
         const tick = (now: number) => {
@@ -760,7 +798,7 @@ function ConnectorOverlay({
         }
         raf = requestAnimationFrame(tick)
         return () => cancelAnimationFrame(raf)
-    }, [labelData])
+    }, [active, labelData])
 
     return (
         <svg
@@ -817,6 +855,64 @@ function ConnectorOverlay({
     )
 }
 
+function useCubeMotionState(wrapRef: React.RefObject<HTMLDivElement | null>) {
+    const [inView, setInView] = useState(false)
+    const [pageActive, setPageActive] = useState(() => {
+        if (typeof document === 'undefined') return true
+        return document.visibilityState === 'visible' && document.hasFocus()
+    })
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+    useEffect(() => {
+        const el = wrapRef.current
+        if (!el) return
+
+        if (!('IntersectionObserver' in window)) {
+            setInView(true)
+            return
+        }
+
+        const observer = new IntersectionObserver(
+            ([entry]) => setInView(entry.isIntersecting),
+            { threshold: 0.01 }
+        )
+
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [wrapRef])
+
+    useEffect(() => {
+        const update = () => {
+            setPageActive(
+                document.visibilityState === 'visible' && document.hasFocus()
+            )
+        }
+
+        update()
+        document.addEventListener('visibilitychange', update)
+        window.addEventListener('focus', update)
+        window.addEventListener('blur', update)
+
+        return () => {
+            document.removeEventListener('visibilitychange', update)
+            window.removeEventListener('focus', update)
+            window.removeEventListener('blur', update)
+        }
+    }, [])
+
+    useEffect(() => {
+        const media = window.matchMedia(REDUCED_MOTION_QUERY)
+        const update = () => setPrefersReducedMotion(media.matches)
+
+        update()
+        media.addEventListener('change', update)
+
+        return () => media.removeEventListener('change', update)
+    }, [])
+
+    return inView && pageActive && !prefersReducedMotion
+}
+
 export function InteractiveCube({ className = '' }: { className?: string }) {
     const wrapRef = useRef<HTMLDivElement>(null)
     const [spin, setSpin] = useState({ x: 0, y: 0 })
@@ -827,6 +923,7 @@ export function InteractiveCube({ className = '' }: { className?: string }) {
     const [flashFace, setFlashFace] = useState<number | null>(null)
     const labelData = useRef<LabelDatum[]>([])
     const [overlaySize, setOverlaySize] = useState({ w: 0, h: 0 })
+    const animationActive = useCubeMotionState(wrapRef)
 
     useEffect(() => {
         if (!wrapRef.current) return
@@ -837,6 +934,16 @@ export function InteractiveCube({ className = '' }: { className?: string }) {
         ro.observe(wrapRef.current)
         return () => ro.disconnect()
     }, [])
+
+    useEffect(() => {
+        if (animationActive) return
+        dragging.current = false
+        setPointer((p) =>
+            p.active || p.x !== 0 || p.y !== 0
+                ? { x: 0, y: 0, active: false }
+                : p
+        )
+    }, [animationActive])
 
     const onMove = (e: React.PointerEvent) => {
         const rect = wrapRef.current!.getBoundingClientRect()
@@ -894,7 +1001,8 @@ export function InteractiveCube({ className = '' }: { className?: string }) {
             <Canvas
                 flat
                 orthographic
-                dpr={[1.5, 2]}
+                frameloop="demand"
+                dpr={[1, 1.5]}
                 camera={{ position: [3, 2, 4], zoom: 155 }}
                 gl={{ alpha: true, antialias: true }}
                 style={{
@@ -909,11 +1017,16 @@ export function InteractiveCube({ className = '' }: { className?: string }) {
                     flash={flash}
                     flashFace={flashFace}
                     labelData={labelData}
+                    animationActive={animationActive}
                 />
             </Canvas>
 
             {/* Connector lines overlay (rendered above canvas, below labels) */}
-            <ConnectorOverlay labelData={labelData} size={overlaySize} />
+            <ConnectorOverlay
+                labelData={labelData}
+                size={overlaySize}
+                active={animationActive}
+            />
         </div>
     )
 }

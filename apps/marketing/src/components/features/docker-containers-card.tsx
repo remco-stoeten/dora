@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState } from 'react'
 
+import { useGate } from './use-scroll-motion'
+
 /* ---------------------------------------------------------------------------
  * Docker Containers — three live container blocks, each with an animated
  * activity equalizer. One reboots on a loop: its bars freeze and a spinner
@@ -21,7 +23,15 @@ const EQ_BARS = [
     { x: 32, values: '8;11;16;10;8', dur: '1.2s', begin: '-0.45s' }
 ]
 
-function EqualizerBars({ active, color }: { active: boolean; color: string }) {
+function EqualizerBars({
+    active,
+    animate,
+    color
+}: {
+    active: boolean
+    animate: boolean
+    color: string
+}) {
     return (
         <svg viewBox="0 0 39 22" className="w-full h-7" aria-hidden="true">
             {EQ_BARS.map((b) => {
@@ -41,7 +51,7 @@ function EqualizerBars({ active, color }: { active: boolean; color: string }) {
                         y={active ? 11 : 17}
                         height={active ? 10 : 4}
                     >
-                        {active ? (
+                        {active && animate ? (
                             <>
                                 <animate
                                     attributeName="height"
@@ -66,11 +76,13 @@ function EqualizerBars({ active, color }: { active: boolean; color: string }) {
     )
 }
 
-export function DockerContainersCard() {
+export function DockerContainersCard({ animate }: { animate: boolean }) {
     const ref = useRef<HTMLDivElement>(null)
     const [restarting, setRestarting] = useState<number | null>(null)
     const [hover, setHover] = useState<number | null>(null)
     const [revealed, setRevealed] = useState(false)
+    const gate = useGate(ref)
+    const running = animate && gate.active
 
     useEffect(() => {
         const el = ref.current
@@ -87,6 +99,11 @@ export function DockerContainersCard() {
     }, [])
 
     useEffect(() => {
+        if (!running) {
+            setRestarting(null)
+            return
+        }
+
         let timer: ReturnType<typeof setTimeout>
         let i = 0
         const cycle = () => {
@@ -99,7 +116,7 @@ export function DockerContainersCard() {
         }
         timer = setTimeout(cycle, 1600)
         return () => clearTimeout(timer)
-    }, [])
+    }, [running])
 
     return (
         <div ref={ref} className="h-full flex flex-col">
@@ -116,7 +133,9 @@ export function DockerContainersCard() {
                             className="relative flex flex-col items-center justify-between gap-2 rounded-md border px-2 py-2.5 cursor-pointer"
                             style={{
                                 borderColor: lit ? '#3a3138' : '#2b252c',
-                                backgroundColor: lit ? '#161218' : 'transparent',
+                                backgroundColor: lit
+                                    ? '#161218'
+                                    : 'transparent',
                                 opacity: revealed ? 1 : 0,
                                 transform: revealed
                                     ? lit
@@ -138,8 +157,12 @@ export function DockerContainersCard() {
 
                             {/* live activity / boot spinner */}
                             <div className="relative flex h-7 w-full items-center justify-center">
-                                <EqualizerBars active={!starting} color={color} />
-                                {starting ? (
+                                <EqualizerBars
+                                    active={!starting}
+                                    animate={running}
+                                    color={color}
+                                />
+                                {starting && running ? (
                                     <span className="absolute h-3.5 w-3.5 rounded-full border border-[#ad8eb6] border-t-transparent animate-spin" />
                                 ) : null}
                             </div>
@@ -173,7 +196,7 @@ export function DockerContainersCard() {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Docker Containers
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     Start, stop, restart. Live process management.
                     Auto-reconnect on failure.
                 </p>

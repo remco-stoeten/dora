@@ -2,16 +2,24 @@
 
 import { useRef, useEffect, useState } from 'react'
 
-import type { Motion } from './use-scroll-motion'
+import { useGate, type Motion } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
  * Connect Anywhere — wireframe globe; rotation speed reacts to scroll.
  * ------------------------------------------------------------------------- */
-export function RegionGlobeCard({ motion }: { motion: Motion }) {
+export function RegionGlobeCard({
+    animate,
+    motion
+}: {
+    animate: boolean
+    motion: Motion
+}) {
+    const rootRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [hoveredRegion, setHoveredRegion] = useState<string | null>(null)
     const rotationRef = useRef(0)
     const animationRef = useRef<number>(0)
+    const gate = useGate(rootRef)
 
     const regions = [
         { name: 'Local', angle: 0, radius: 0.35 },
@@ -26,7 +34,7 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        const dpr = window.devicePixelRatio || 1
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
         const rect = canvas.getBoundingClientRect()
         canvas.width = rect.width * dpr
         canvas.height = rect.height * dpr
@@ -36,13 +44,13 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
         const cy = rect.height / 2 - 10
         const baseRadius = Math.min(rect.width, rect.height) * 0.35
 
-        const animate = () => {
-            const vel = motion.velocityRef.current ?? 0
+        const draw = (running: boolean) => {
+            const vel = running ? (motion.velocityRef.current ?? 0) : 0
             // gently drifts at rest; scrolling just nudges the rotation speed
-            rotationRef.current += 0.0025 + vel * 0.05
+            rotationRef.current += running ? 0.0025 + vel * 0.05 : 0
             // autonomous phase that always advances, independent of scroll, so the
             // colour highlight travels around the globe on its own
-            const t = performance.now() / 1000
+            const t = running ? performance.now() / 1000 : 0.75
             ctx.clearRect(0, 0, rect.width, rect.height)
 
             for (let i = 0; i < 3; i++) {
@@ -91,15 +99,21 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
             ctx.lineWidth = 1
             ctx.stroke()
 
-            animationRef.current = requestAnimationFrame(animate)
+            if (running) animationRef.current = requestAnimationFrame(loop)
         }
 
-        animate()
+        const loop = () => {
+            draw(animate && gate.activeRef.current && motion.activeRef.current)
+        }
+
+        const canRun = animate && gate.active && motion.activeRef.current
+        draw(canRun)
+        if (canRun) animationRef.current = requestAnimationFrame(loop)
         return () => cancelAnimationFrame(animationRef.current)
-    }, [motion])
+    }, [animate, motion, gate.active, gate.activeRef])
 
     return (
-        <div className="h-full flex flex-col relative">
+        <div ref={rootRef} className="h-full flex flex-col relative">
             <div className="flex-1 relative">
                 <canvas ref={canvasRef} className="w-full h-full" />
                 {regions.map((region) => {
@@ -131,7 +145,7 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
                                             : 'bg-[#3a3a3a]'
                                     }`}
                                 />
-                                <span className="text-[9px] text-[#5a5a5a] font-mono">
+                                <span className="text-[9px] text-[#8a8a8a] font-mono">
                                     {region.name}
                                 </span>
                             </div>
@@ -143,7 +157,7 @@ export function RegionGlobeCard({ motion }: { motion: Motion }) {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Connect Anywhere
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     Local, Neon, Turso, or over SSH. Connect to databases
                     wherever they run.
                 </p>

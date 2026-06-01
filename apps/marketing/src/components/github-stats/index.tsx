@@ -23,7 +23,6 @@ import type { GitHubStatsData } from '@/core/github/get-github-stats'
 // indicator slide and the label/command cross-fades so motion feels intentional.
 const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)'
 
-
 function formatDownloads(num: number): string {
     if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
     if (num >= 1_000) return `${(num / 1_000).toFixed(1)}k`
@@ -117,7 +116,7 @@ function CopyButton({ text }: { text: string }) {
     return (
         <button
             onClick={handleCopy}
-            className="relative border border-[#3a3138] p-1.5 text-[#4a4a4a] transition-colors hover:border-[#e3b2b3]/45 hover:bg-[#e3b2b3]/5 hover:text-[#e3b2b3]"
+            className="relative border border-[#3a3138] p-1.5 text-[#8a8a8a] transition-colors hover:border-[#e3b2b3]/45 hover:bg-[#e3b2b3]/5 hover:text-[#e3b2b3]"
             title="Copy command"
         >
             {copied ? (
@@ -136,7 +135,13 @@ function CopyButton({ text }: { text: string }) {
 // label, where an opacity crossfade is invisible. The in-flow sizer reserves
 // the widest word's box so the tab never jiggles. Reduced motion drops the roll
 // for a plain crossfade.
-function CyclingLabel({ words, hold = 2200 }: { words: string[]; hold?: number }) {
+function CyclingLabel({
+    words,
+    hold = 2200
+}: {
+    words: string[]
+    hold?: number
+}) {
     const [index, setIndex] = useState(0)
     const reduced = usePrefersReducedMotion()
 
@@ -337,7 +342,7 @@ export function GitHubStats({
                                 rel="noopener noreferrer"
                                 className="block px-5 py-4 border-b border-[#1a1a1a] hover:bg-[#0d0d0d] transition-colors"
                             >
-                                <div className="flex items-center gap-2 text-[#4a4a4a] text-xs uppercase tracking-wider mb-1">
+                                <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-1">
                                     <Tag className="w-3 h-3" />
                                     Version
                                 </div>
@@ -350,7 +355,7 @@ export function GitHubStats({
                             <div className="px-5 py-4">
                                 <div className="flex items-center gap-4 text-[11px]">
                                     <div>
-                                        <div className="flex items-center gap-1.5 text-[#4a4a4a] uppercase tracking-wider mb-1">
+                                        <div className="flex items-center gap-1.5 text-[#8a8a8a] uppercase tracking-wider mb-1">
                                             <Calendar className="w-2.5 h-2.5" />
                                             Started
                                         </div>
@@ -369,7 +374,7 @@ export function GitHubStats({
                                         rel="noopener noreferrer"
                                         className="hover:text-[#9a9a9a] transition-colors"
                                     >
-                                        <div className="flex items-center gap-1.5 text-[#4a4a4a] uppercase tracking-wider mb-1">
+                                        <div className="flex items-center gap-1.5 text-[#8a8a8a] uppercase tracking-wider mb-1">
                                             <Clock className="w-2.5 h-2.5" />
                                             Latest
                                         </div>
@@ -378,7 +383,7 @@ export function GitHubStats({
                                         </div>
                                     </a>
                                 </div>
-                                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#3a3a3a]">
+                                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8a8a8a]">
                                     <Star className="w-2.5 h-2.5" />
                                     <span>
                                         {stars} star{stars !== 1 ? 's' : ''}
@@ -417,14 +422,14 @@ export function GitHubStats({
 
                             {/* Content - with pointer-events-none so hover/click passes through */}
                             <div className="relative z-20 pointer-events-none">
-                                <div className="flex items-center gap-2 text-[#4a4a4a] text-xs uppercase tracking-wider mb-1">
+                                <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-1">
                                     <GitCommit className="w-3 h-3" />
                                     Commits
                                 </div>
                                 <div className="text-[#9a9a9a] text-2xl font-medium tabular-nums">
                                     {totalCommits}
                                 </div>
-                                <div className="mt-1 hidden items-center gap-2 text-[10px] text-[#3a3a3a] sm:flex">
+                                <div className="mt-1 hidden items-center gap-2 text-[10px] text-[#8a8a8a] sm:flex">
                                     <span>Scroll to pan</span>
                                     <span className="text-[#2a2a2a]">|</span>
                                     <span className="flex items-center gap-1">
@@ -440,7 +445,7 @@ export function GitHubStats({
 
                     {/* Bottom row: Install section - full width */}
                     <div className="border-t border-[#1a1a1a] px-5 py-7 sm:px-6 sm:py-8">
-                        <div className="flex items-center gap-2 text-[#4a4a4a] text-xs uppercase tracking-wider mb-5">
+                        <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-5">
                             <Download className="w-3 h-3" />
                             Install
                         </div>
@@ -468,7 +473,7 @@ export function GitHubStats({
                                         className={`group/tab relative z-10 flex shrink-0 items-center gap-2 border border-transparent px-3 py-2 text-xs font-medium transition-[color,border-color,transform] duration-200 ease-out hover:border-[#e3b2b3]/25 motion-safe:active:scale-[0.97] ${
                                             activeInstall === pkg.platform
                                                 ? 'border-[#e3b2b3]/45 text-[#e3b2b3]'
-                                                : 'text-[#4a4a4a] hover:text-[#6a6a6a]'
+                                                : 'text-[#8a8a8a] hover:text-[#b0b0b0]'
                                         }`}
                                         title={pkg.name}
                                     >
@@ -505,7 +510,9 @@ export function GitHubStats({
                                             className="w-4 h-4"
                                         />
                                         {pkg.platform === 'aur' ? (
-                                            <CyclingLabel words={['AUR', 'yay']} />
+                                            <CyclingLabel
+                                                words={['AUR', 'yay']}
+                                            />
                                         ) : (
                                             <span>{pkg.name}</span>
                                         )}
@@ -545,7 +552,7 @@ export function GitHubStats({
                             {/* Downloads indicator */}
                             {activePackage?.downloads !== undefined &&
                                 activePackage.downloads > 0 && (
-                                    <span className="text-[10px] text-[#3a3a3a] whitespace-nowrap">
+                                    <span className="text-[10px] text-[#8a8a8a] whitespace-nowrap">
                                         {formatDownloads(
                                             activePackage.downloads
                                         )}{' '}

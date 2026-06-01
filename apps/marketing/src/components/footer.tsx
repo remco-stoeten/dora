@@ -59,7 +59,7 @@ export function Footer() {
                     <span className="text-xs text-muted-foreground/80">
                         {siteConfig.footerTagline}
                     </span>
-                    <span className="text-xs text-muted-foreground/60">
+                    <span className="text-xs text-muted-foreground">
                         &copy; {year} {siteConfig.name}. All rights reserved.
                     </span>
                 </div>

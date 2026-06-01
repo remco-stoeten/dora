@@ -2,16 +2,24 @@
 
 import { useRef, useEffect, useState } from 'react'
 
-import type { Motion } from './use-scroll-motion'
+import { useGate, type Motion } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
  * Rust-Native — orbit animation; orbit speed reacts to scroll + hover.
  * ------------------------------------------------------------------------- */
-export function NativePerformanceCard({ motion }: { motion: Motion }) {
+export function NativePerformanceCard({
+    animate,
+    motion
+}: {
+    animate: boolean
+    motion: Motion
+}) {
+    const rootRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const animationRef = useRef<number>(0)
     const [isHovered, setIsHovered] = useState(false)
     const hoverRef = useRef(false)
+    const gate = useGate(rootRef)
 
     useEffect(() => {
         hoverRef.current = isHovered
@@ -23,7 +31,7 @@ export function NativePerformanceCard({ motion }: { motion: Motion }) {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        const dpr = window.devicePixelRatio || 1
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
         const rect = canvas.getBoundingClientRect()
         canvas.width = rect.width * dpr
         canvas.height = rect.height * dpr
@@ -33,16 +41,18 @@ export function NativePerformanceCard({ motion }: { motion: Motion }) {
         const cy = rect.height / 2
         let time = 0
 
-        const animate = () => {
-            const vel = Math.abs(motion.velocityRef.current ?? 0)
+        const draw = (running: boolean) => {
+            const vel = running ? Math.abs(motion.velocityRef.current ?? 0) : 0
             // scroll only nudges the spin speed; colour responds to hover only, so
             // it never blinks or flashes while scrolling
-            time += (hoverRef.current ? 0.024 : 0.008) + vel * 0.05
+            time += running
+                ? (hoverRef.current ? 0.024 : 0.008) + vel * 0.05
+                : 0
             const active = hoverRef.current
             ctx.clearRect(0, 0, rect.width, rect.height)
 
             // autonomous phase so the nodes pulse green on their own, scroll-independent
-            const t = performance.now() / 1000
+            const t = running ? performance.now() / 1000 : 0.75
 
             const orbits = [30, 45, 60]
             orbits.forEach((radius, idx) => {
@@ -79,15 +89,21 @@ export function NativePerformanceCard({ motion }: { motion: Motion }) {
             ctx.fillStyle = `rgb(${Math.round(42 + coreLit * (227 - 42))}, ${Math.round(42 + coreLit * (178 - 42))}, ${Math.round(42 + coreLit * (179 - 42))})`
             ctx.fill()
 
-            animationRef.current = requestAnimationFrame(animate)
+            if (running) animationRef.current = requestAnimationFrame(loop)
         }
 
-        animate()
+        const loop = () => {
+            draw(animate && gate.activeRef.current && motion.activeRef.current)
+        }
+
+        const canRun = animate && gate.active && motion.activeRef.current
+        draw(canRun)
+        if (canRun) animationRef.current = requestAnimationFrame(loop)
         return () => cancelAnimationFrame(animationRef.current)
-    }, [motion])
+    }, [animate, motion, gate.active, gate.activeRef])
 
     return (
-        <div className="h-full flex flex-col">
+        <div ref={rootRef} className="h-full flex flex-col">
             <div
                 className="flex-1 flex items-center justify-center cursor-pointer"
                 onMouseEnter={() => setIsHovered(true)}
@@ -99,7 +115,7 @@ export function NativePerformanceCard({ motion }: { motion: Motion }) {
                 <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
                     Rust-Native
                 </h3>
-                <p className="text-xs text-[#5a5a5a] leading-relaxed">
+                <p className="text-xs text-[#8a8a8a] leading-relaxed">
                     Edge-optimized engine. Instant queries. Orchestrated
                     container management.
                 </p>

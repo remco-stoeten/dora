@@ -10,18 +10,26 @@ import { NativePerformanceCard } from '@/components/features/native-performance-
 import { QueryHistoryCard } from '@/components/features/query-history-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
+import { usePageVisible } from '@/shared/hooks/use-page-visible'
+import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
 export function FeaturesSection() {
     const sectionRef = useRef<HTMLElement>(null)
     const [isVisible, setIsVisible] = useState(false)
-    const motion = useScrollMotion(sectionRef)
+    const [isInView, setIsInView] = useState(false)
+    const pageVisible = usePageVisible()
+    const reducedMotion = usePrefersReducedMotion()
+    const animate = isInView && pageVisible && !reducedMotion
+    const motion = useScrollMotion(sectionRef, { active: animate })
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) setIsVisible(true)
+                const visible = entry.isIntersecting
+                if (visible) setIsVisible(true)
+                setIsInView(visible)
             },
-            { threshold: 0.1 }
+            { rootMargin: '160px 0px', threshold: 0.1 }
         )
         if (sectionRef.current) observer.observe(sectionRef.current)
         return () => observer.disconnect()
@@ -44,7 +52,7 @@ export function FeaturesSection() {
                         : 'opacity-0 translate-y-8'
                 }`}
             >
-                <h2 className="text-2xl text-[#5a5a5a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
+                <h2 className="text-2xl text-[#7a7a7a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
                     More Than a GUI.
                 </h2>
                 <h3 className="text-3xl text-[#f0f0f0] font-semibold font-[family-name:var(--font-pixel)]">
@@ -66,22 +74,22 @@ export function FeaturesSection() {
                 <CornerTick className="hidden md:block left-2/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <DatabaseConnectionCard motion={motion} />
+                    <DatabaseConnectionCard animate={animate} motion={motion} />
                 </div>
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <RegionGlobeCard motion={motion} />
+                    <RegionGlobeCard animate={animate} motion={motion} />
                 </div>
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <DockerContainersCard />
+                    <DockerContainersCard animate={animate} />
                 </div>
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <SchemaDiagramCard />
+                    <SchemaDiagramCard animate={animate} />
                 </div>
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <NativePerformanceCard motion={motion} />
+                    <NativePerformanceCard animate={animate} motion={motion} />
                 </div>
                 <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <QueryHistoryCard />
+                    <QueryHistoryCard animate={animate} />
                 </div>
             </div>
         </section>

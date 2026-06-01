@@ -80,9 +80,9 @@ export function ChangelogPanel({
 
 			<SidebarPanelContent className='min-h-0' maxHeight={maxHeight}>
 				<div className='p-2 space-y-1'>
-					{CHANGELOG.map(function (entry) {
+					{CHANGELOG.map(function (entry, index) {
 						const Icon = getTypeIcon(entry.type)
-						const isLatest = entry.version === CURRENT_VERSION
+						const isLatest = index === 0
 						const isExpanded = expandedVersions.has(entry.version)
 
 						return (

@@ -336,13 +336,7 @@ function NavItem({ label, href, chevron }: TNavItem) {
  * rows. Exit is faster than enter. Honors prefers-reduced-motion by dropping
  * the transform offsets and keeping only a quick fade.
  */
-function NavDropdown({
-    item,
-    reduced
-}: {
-    item: TNavItem
-    reduced: boolean
-}) {
+function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
     const menu = item.menu ?? []
     const [open, setOpen] = useState(false)
     const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -413,7 +407,6 @@ function NavDropdown({
                 style={{ pointerEvents: open ? 'auto' : 'none' }}
             >
                 <div
-                    role="menu"
                     className="relative w-[340px] overflow-hidden border border-[#2b252c] bg-[#100d12]/90 p-1.5 shadow-[0_24px_70px_-24px_rgba(0,0,0,0.85)] backdrop-blur-xl"
                     style={{
                         transformOrigin: 'top center',
@@ -493,7 +486,7 @@ function Logo() {
     return (
         <Link
             aria-label="Dora home"
-            className="font-pixel select-none px-2 text-[20px] tracking-[0.08em] text-[#f5c0c0] [text-shadow:0_0_14px_rgba(245,192,192,0.45)]"
+            className="select-none px-2 [font-family:system-ui,sans-serif] text-[20px] font-semibold tracking-[0.08em] text-[#f5c0c0] [text-shadow:0_0_14px_rgba(245,192,192,0.45)]"
             href="/"
         >
             DORA
