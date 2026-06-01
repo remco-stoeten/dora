@@ -861,9 +861,32 @@ export type TruncateResult = { success: boolean; affected_rows: number; tables_t
 /** tauri-specta globals **/
 
 import {
-	invoke as TAURI_INVOKE,
+	invoke as RAW_TAURI_INVOKE,
 	Channel as TAURI_CHANNEL,
 } from "@tauri-apps/api/core";
+
+// NOTE: kept across tauri-specta regeneration. The studio package also runs as a
+// web demo (apps/marketing /app) where there is no Tauri backend. Off-Tauri,
+// reject with a non-Error value so the generated command wrappers below return
+// `{ status: "error" }` instead of throwing `undefined.invoke` as an unhandled
+// rejection. On desktop this delegates to the real Tauri invoke unchanged.
+function __isTauriRuntime(): boolean {
+	return (
+		typeof window !== "undefined" &&
+		("__TAURI__" in window || "__TAURI_INTERNALS__" in window)
+	);
+}
+
+function TAURI_INVOKE<T>(
+	cmd: string,
+	args?: Record<string, unknown>,
+	options?: Parameters<typeof RAW_TAURI_INVOKE>[2],
+): Promise<T> {
+	if (!__isTauriRuntime()) {
+		return Promise.reject("tauri-unavailable");
+	}
+	return RAW_TAURI_INVOKE<T>(cmd, args, options);
+}
 import * as TAURI_API_EVENT from "@tauri-apps/api/event";
 import { type WebviewWindow as __WebviewWindow__ } from "@tauri-apps/api/webviewWindow";
 

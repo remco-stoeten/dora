@@ -11,7 +11,17 @@ type DatabaseInfo = {
 	active: boolean
 }
 
+function isTauriRuntime(): boolean {
+	return (
+		typeof window !== 'undefined' &&
+		('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
+	)
+}
+
 async function callCmd<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+	if (!isTauriRuntime()) {
+		throw new Error('Storage management is only available in the desktop app.')
+	}
 	return invoke<T>(cmd, args)
 }
 
@@ -31,6 +41,13 @@ export function StorageSection() {
 	const load = useCallback(async function load() {
 		setLoading(true)
 		setError(null)
+		if (!isTauriRuntime()) {
+			// Web demo: no local database files to manage, show a representative entry.
+			setDbs([{ name: 'dora-demo.db', path: '/demo/dora-demo.db', active: true }])
+			setActivePath('/demo/dora-demo.db')
+			setLoading(false)
+			return
+		}
 		try {
 			const [list, path] = await Promise.all([
 				callCmd<DatabaseInfo[]>('list_databases'),
