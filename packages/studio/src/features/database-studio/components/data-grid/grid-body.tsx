@@ -139,6 +139,15 @@ export function GridBody({
 					'group transition-colors cursor-pointer',
 					rowBackgroundClasses
 				)
+				// The checkbox column is sticky, so it floats over other cells during
+				// horizontal scroll — it needs an OPAQUE background (the translucent row
+				// tints would let scrolled content bleed through). Use the solid, theme-aware
+				// table tokens so striping/hover/selection still read correctly.
+				const stickyCellBackgroundClasses = selectedRows.has(rowIndex)
+					? 'bg-table-row-selected'
+					: rowIndex % 2 === 1
+						? 'bg-table-header group-hover:bg-table-row-hover'
+						: 'bg-background group-hover:bg-table-row-hover'
 
 				return (
 					<React.Fragment key={rowIndex}>
@@ -170,8 +179,7 @@ export function GridBody({
 								<td
 									className={cn(
 										'w-[30px] min-w-[30px] p-0 text-center align-middle border-b border-l border-r border-sidebar-border sticky left-0 z-20 transition-colors',
-										rowBackgroundClasses,
-										selectedRows.has(rowIndex) && 'bg-sidebar-accent'
+										stickyCellBackgroundClasses
 									)}
 									role='gridcell'
 								>
