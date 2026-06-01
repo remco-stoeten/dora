@@ -44,6 +44,9 @@ export function GridHeader({
 						}}
 						className='h-4 w-4'
 						aria-label={allSelected ? 'Deselect all rows' : 'Select all rows'}
+						// Not a tab stop — the grid is reached as one stop; toggle
+						// via click or mod+A (select all).
+						tabIndex={-1}
 					/>
 				</th>
 				{columns.map(function (col) {

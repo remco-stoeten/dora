@@ -13,6 +13,9 @@ export function FKNavigateIcon({ foreignKey, cellValue, onNavigate }: Props) {
 	return (
 		<button
 			aria-label={`Navigate to ${foreignKey.referencedTable}`}
+			// Not a tab stop — keep the grid a single tab stop; reachable by mouse
+			// (the icon only appears on cell hover).
+			tabIndex={-1}
 			onClick={(e) => {
 				e.stopPropagation()
 				onNavigate(foreignKey.referencedTable, foreignKey.referencedColumn, cellValue, foreignKey.referencedSchema)

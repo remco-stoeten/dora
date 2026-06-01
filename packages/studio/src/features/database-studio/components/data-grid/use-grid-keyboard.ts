@@ -67,8 +67,12 @@ export function useGridKeyboard({
 						e.key === 'ArrowUp' ||
 						e.key === 'ArrowLeft' ||
 						e.key === 'ArrowRight' ||
+						e.key === 'Tab' ||
 						e.key === 'Enter')
 				) {
+					// First key inside the (single-tab-stop) grid lands on the
+					// top-left cell. From there arrows / Tab walk individual cells;
+					// Tab still escapes the grid once you reach the last cell.
 					e.preventDefault()
 					const firstPos = { row: 0, col: 0 }
 					setFocusedCell(firstPos)

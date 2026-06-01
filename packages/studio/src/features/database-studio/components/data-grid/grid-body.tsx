@@ -190,6 +190,11 @@ export function GridBody({
 										}}
 										className='h-4 w-4'
 										aria-label={`Select row ${rowIndex + 1}`}
+										// Keep the grid a single tab stop: the table owns roving
+										// keyboard focus (arrows navigate cells, Space toggles the
+										// row). A tabbable checkbox per row would make Tab hop
+										// checkboxes and skip the data cells.
+										tabIndex={-1}
 									/>
 								</td>
 								{columns.map(function (col, colIndex) {
