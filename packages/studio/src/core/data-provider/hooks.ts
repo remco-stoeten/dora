@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import type { SortDescriptor, FilterDescriptor, TableData } from '@studio/features/database-studio/types'
+import type { Connection } from '@studio/features/connections/types'
 import type { DatabaseInfo, JsonValue } from '@studio/lib/bindings'
 import { useAdapter } from './context'
 import { getAdapterError } from './types'
@@ -77,7 +78,23 @@ export function useConnectionMutations() {
 			const res = await adapter.removeConnection(id)
 			if (!res.ok) throw new Error(getAdapterError(res))
 		},
-		onSuccess: function () {
+		onMutate: async function (id) {
+			await queryClient.cancelQueries({ queryKey: ['connections'] })
+			const previousConnections = queryClient.getQueryData<Connection[]>(['connections'])
+			queryClient.setQueryData<Connection[]>(['connections'], function (current) {
+				if (!current) return current
+				return current.filter(function (connection) {
+					return connection.id !== id
+				})
+			})
+			return { previousConnections }
+		},
+		onError: function (_error, _id, context) {
+			if (context?.previousConnections) {
+				queryClient.setQueryData(['connections'], context.previousConnections)
+			}
+		},
+		onSettled: function () {
 			queryClient.invalidateQueries({ queryKey: ['connections'] })
 		}
 	})

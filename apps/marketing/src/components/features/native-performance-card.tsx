@@ -4,6 +4,14 @@ import { useRef, useEffect, useState } from 'react'
 
 import { useGate, type Motion } from './use-scroll-motion'
 
+const PARTICLES = [
+    { left: '28%', top: '24%', size: 2, opacity: 0.45 },
+    { left: '66%', top: '22%', size: 1.5, opacity: 0.34 },
+    { left: '74%', top: '45%', size: 2, opacity: 0.4 },
+    { left: '36%', top: '55%', size: 1.5, opacity: 0.3 },
+    { left: '57%', top: '64%', size: 1, opacity: 0.42 }
+] as const
+
 /* ---------------------------------------------------------------------------
  * Rust-Native — orbit animation; orbit speed reacts to scroll + hover.
  * ------------------------------------------------------------------------- */
@@ -103,16 +111,39 @@ export function NativePerformanceCard({
     }, [animate, motion, gate.active, gate.activeRef])
 
     return (
-        <div ref={rootRef} className="h-full flex flex-col">
+        <div ref={rootRef} className="relative h-full flex flex-col overflow-hidden">
             <div
-                className="flex-1 flex items-center justify-center cursor-pointer"
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-[38%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-75 blur-2xl"
+                style={{
+                    background:
+                        'radial-gradient(circle, rgba(227,178,179,0.13) 0%, rgba(173,142,182,0.05) 38%, transparent 70%)'
+                }}
+            />
+            {PARTICLES.map((particle, index) => (
+                <span
+                    aria-hidden
+                    key={`${particle.left}-${particle.top}`}
+                    className="pointer-events-none absolute rounded-full bg-[#f5c0c0]"
+                    style={{
+                        left: particle.left,
+                        top: particle.top,
+                        width: particle.size,
+                        height: particle.size,
+                        opacity: particle.opacity,
+                        animation: `particleFloat ${3.8 + index * 0.55}s cubic-bezier(0.23, 1, 0.32, 1) ${index * 120}ms infinite alternate`
+                    }}
+                />
+            ))}
+            <div
+                className="relative flex-1 flex items-center justify-center cursor-pointer"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <canvas ref={canvasRef} className="w-32 h-32" />
             </div>
-            <div className="px-5 pb-5">
-                <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
+            <div className="relative px-5 pb-5">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Rust-Native
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">

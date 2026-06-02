@@ -7,10 +7,9 @@ import {
 	Pencil,
 	Trash2,
 	AlertCircle,
-	Search,
-	Check,
-	X
+	Search
 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import {
 	ContextMenu,
@@ -27,16 +26,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from '@studio/shared/ui/dropdown-menu'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle
-} from '@studio/shared/ui/alert-dialog'
 import { cn } from '@studio/shared/utils/cn'
 import { Input } from '@studio/shared/ui/input'
 import { Connection, DatabaseType } from '../types'
@@ -101,36 +90,11 @@ export function ConnectionSwitcher({
 	const [searchQuery, setSearchQuery] = useState('')
 	const [dropdownOpen, setDropdownOpen] = useState(false)
 	const [contextMenuConnectionId, setContextMenuConnectionId] = useState<string | null>(null)
-	const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
-	const [deleteDialogConnectionId, setDeleteDialogConnectionId] = useState<string | null>(
-		null
-	)
-	const confirmDeleteRef = useRef<HTMLButtonElement>(null)
+	const keepOpenAfterDeleteRef = useRef(false)
 	const connectionRowRefs = useRef(new Map<string, HTMLDivElement>())
+	const prefersReducedMotion = useReducedMotion()
 	const activeConnection = connections.find((c) => c.id === activeConnectionId)
 	const status = activeConnection?.status || 'idle'
-
-	useEffect(
-		function autoCancelPendingDelete() {
-			if (!pendingDeleteId) return
-			const handle = window.setTimeout(function () {
-				setPendingDeleteId(null)
-			}, 4000)
-			return function () {
-				window.clearTimeout(handle)
-			}
-		},
-		[pendingDeleteId]
-	)
-
-	useEffect(
-		function focusConfirmOnArm() {
-			if (pendingDeleteId && confirmDeleteRef.current) {
-				confirmDeleteRef.current.focus()
-			}
-		},
-		[pendingDeleteId]
-	)
 
 	const filteredConnections = useMemo(
 		function getFilteredConnections() {
@@ -165,22 +129,10 @@ export function ConnectionSwitcher({
 		[activeConnectionId, dropdownOpen, filteredConnections]
 	)
 
-	function armDelete(id: string) {
-		setPendingDeleteId(id)
-	}
-
-	function cancelDelete() {
-		setPendingDeleteId(null)
-	}
-
 	function confirmDelete(id: string) {
-		setPendingDeleteId(null)
-		setDeleteDialogConnectionId(null)
+		keepOpenAfterDeleteRef.current = true
 		onDeleteConnection?.(id)
-	}
-
-	function requestDelete(id: string) {
-		setDeleteDialogConnectionId(id)
+		setDropdownOpen(true)
 	}
 
 	function closeMenus() {
@@ -243,20 +195,18 @@ export function ConnectionSwitcher({
 		}
 	}
 
-	const deleteDialogConnection = deleteDialogConnectionId
-		? connections.find(function (connection) {
-				return connection.id === deleteDialogConnectionId
-			})
-		: undefined
-
 	return (
 		<>
 		<DropdownMenu
 			open={dropdownOpen}
 			onOpenChange={function handleMenuOpenChange(open) {
 				if (!open && contextMenuConnectionId) return
+				if (!open && keepOpenAfterDeleteRef.current) {
+					keepOpenAfterDeleteRef.current = false
+					setDropdownOpen(true)
+					return
+				}
 				setDropdownOpen(open)
-				if (!open) setPendingDeleteId(null)
 			}}
 		>
 			<DropdownMenuTrigger asChild>
@@ -363,18 +313,33 @@ export function ConnectionSwitcher({
 
 				<div className='max-h-[320px] overflow-y-auto px-1'>
 					{filteredConnections.length > 0 ? (
-						filteredConnections.map(function renderConnection(connection, index) {
-							const isActive = connection.id === activeConnectionId
-							const isPendingDelete = pendingDeleteId === connection.id
-							return (
-								<ContextMenu
-									key={connection.id}
-									modal={false}
-								>
+						<AnimatePresence initial={false} mode='popLayout'>
+							{filteredConnections.map(function renderConnection(connection) {
+								const isActive = connection.id === activeConnectionId
+								return (
+									<motion.div
+										key={connection.id}
+										layout={!prefersReducedMotion}
+										initial={false}
+										exit={
+											prefersReducedMotion
+												? { opacity: 0 }
+												: { opacity: 0, height: 0, scale: 0.98 }
+										}
+										transition={{
+											duration: prefersReducedMotion ? 0.08 : 0.18,
+											ease: [0.16, 1, 0.3, 1]
+										}}
+									>
+									<ContextMenu modal={false}>
 									<DropdownMenuItem
 										asChild
 										onSelect={function handleMenuItemSelect(e) {
-											if (isPendingDelete) {
+											const target = e.target
+											if (
+												target instanceof HTMLElement &&
+												target.closest('[data-connection-action]')
+											) {
 												e.preventDefault()
 											}
 										}}
@@ -397,27 +362,12 @@ export function ConnectionSwitcher({
 													setContextMenuConnectionId(connection.id)
 													setDropdownOpen(true)
 												}}
-												onClick={function handleConnectionClick(e) {
-													if (isPendingDelete) {
-														e.preventDefault()
-														cancelDelete()
-														return
-													}
+												onClick={function handleConnectionClick() {
 													onConnectionSelect(connection.id)
 												}}
 												onKeyDown={function handleRowKeyDown(e) {
-													if (isPendingDelete && e.key === 'Escape') {
-														e.preventDefault()
-														e.stopPropagation()
-														cancelDelete()
-														return
-													}
 													if (e.key === 'Enter' || e.key === ' ') {
 														e.preventDefault()
-														if (isPendingDelete) {
-															cancelDelete()
-															return
-														}
 														onConnectionSelect(connection.id)
 													}
 												}}
@@ -426,27 +376,17 @@ export function ConnectionSwitcher({
 													'flex items-center outline-hidden',
 													'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
 													'focus:bg-sidebar-accent data-[highlighted]:bg-sidebar-accent',
-													'animate-in fade-in-0 slide-in-from-top-1',
-													isActive && 'bg-sidebar-accent/40',
-													isPendingDelete && 'bg-destructive/5'
+													isActive && 'bg-sidebar-accent/40'
 												)}
-												style={{
-													animationDuration: '180ms',
-													animationDelay: `${Math.min(index * 25, 200)}ms`,
-													animationTimingFunction: 'var(--ease-out)',
-													animationFillMode: 'backwards'
-												}}
 											>
 											<span
 												aria-hidden
 												className={cn(
 													'pointer-events-none absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full',
 													'origin-left transition-[transform,background-color] duration-200 ease-[var(--ease-out)]',
-													isPendingDelete
-														? 'scale-x-100 bg-destructive'
-														: isActive
-															? 'scale-x-100 bg-primary'
-															: 'scale-x-0 bg-primary'
+													isActive
+														? 'scale-x-100 bg-primary'
+														: 'scale-x-0 bg-primary'
 												)}
 											/>
 											<div
@@ -481,27 +421,30 @@ export function ConnectionSwitcher({
 													{connection.name}
 												</div>
 												<div className='truncate text-[10px] text-muted-foreground/80'>
-													{isPendingDelete
-														? 'Delete this connection?'
-														: `${formatDatabaseType(connection.type)} • ${formatQuickDate(connection.lastConnectedAt)}`}
+													{`${formatDatabaseType(connection.type)} • ${formatQuickDate(connection.lastConnectedAt)}`}
 												</div>
 											</div>
 											<div className='relative ml-auto flex items-center'>
-												{isPendingDelete ? (
-													<div
-														className='flex items-center gap-1 animate-in fade-in-0 slide-in-from-right-1'
-														style={{
-															animationDuration: '160ms',
-															animationTimingFunction: 'var(--ease-out)'
-														}}
-													>
+												<div
+													className='flex items-center animate-in fade-in-0'
+													style={{
+														animationDuration: '160ms',
+														animationTimingFunction: 'var(--ease-out)'
+													}}
+												>
+													{onEditConnection && (
 														<button
+															data-connection-action
 															type='button'
 															className={cn(
 																'flex h-6 w-6 items-center justify-center rounded-sm',
-																'text-muted-foreground hover:text-foreground hover:bg-background/60',
-																'transition-[color,background-color] duration-150 ease-[var(--ease-out)]',
-																'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
+																'text-muted-foreground',
+																'opacity-0 -translate-x-1 pointer-events-none',
+																'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
+																'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
+																'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
+																'hover:text-foreground hover:bg-background/60',
+																'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
 															)}
 															onPointerDown={function (e) {
 																e.preventDefault()
@@ -510,24 +453,30 @@ export function ConnectionSwitcher({
 															onClick={function (e) {
 																e.preventDefault()
 																e.stopPropagation()
-																cancelDelete()
+																onEditConnection(connection.id)
 															}}
-															title='Cancel'
-															aria-label='Cancel delete'
+															title={`Edit ${connection.name}`}
+															aria-label={`Edit ${connection.name}`}
 														>
-															<X className='h-3 w-3' />
+															<Pencil className='h-3 w-3' />
 														</button>
+													)}
+													{onDeleteConnection && (
 														<button
-															ref={confirmDeleteRef}
+															data-connection-action
 															type='button'
 															className={cn(
-																'flex h-6 items-center gap-1 rounded-sm px-1.5 text-[11px] font-medium',
-																'bg-destructive/15 text-destructive',
-																'hover:bg-destructive/25',
-																'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
-																'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-destructive/50'
+																'flex h-6 w-6 items-center justify-center rounded-sm',
+																'text-muted-foreground',
+																'opacity-0 -translate-x-1 pointer-events-none',
+																'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
+																'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
+																'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
+																'hover:text-destructive hover:bg-background/60',
+																'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-destructive/40'
 															)}
 															onPointerDown={function (e) {
+																keepOpenAfterDeleteRef.current = true
 																e.preventDefault()
 																e.stopPropagation()
 															}}
@@ -536,79 +485,13 @@ export function ConnectionSwitcher({
 																e.stopPropagation()
 																confirmDelete(connection.id)
 															}}
-															title={`Confirm delete ${connection.name}`}
-															aria-label={`Confirm delete ${connection.name}`}
+															title={`Delete ${connection.name}`}
+															aria-label={`Delete ${connection.name}`}
 														>
-															<Check className='h-3 w-3' />
-															Delete
+															<Trash2 className='h-3 w-3' />
 														</button>
-													</div>
-												) : (
-													<div
-														className='flex items-center animate-in fade-in-0'
-														style={{
-															animationDuration: '160ms',
-															animationTimingFunction: 'var(--ease-out)'
-														}}
-													>
-														{onEditConnection && (
-															<button
-																type='button'
-																className={cn(
-																	'flex h-6 w-6 items-center justify-center rounded-sm',
-																	'text-muted-foreground',
-																	'opacity-0 -translate-x-1 pointer-events-none',
-																	'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
-																	'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
-																	'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
-																	'hover:text-foreground hover:bg-background/60',
-																	'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
-																)}
-																onPointerDown={function (e) {
-																	e.preventDefault()
-																	e.stopPropagation()
-																}}
-																onClick={function (e) {
-																	e.preventDefault()
-																	e.stopPropagation()
-																	onEditConnection(connection.id)
-																}}
-																title={`Edit ${connection.name}`}
-																aria-label={`Edit ${connection.name}`}
-															>
-																<Pencil className='h-3 w-3' />
-															</button>
-														)}
-														{onDeleteConnection && (
-															<button
-																type='button'
-																className={cn(
-																	'flex h-6 w-6 items-center justify-center rounded-sm',
-																	'text-muted-foreground',
-																	'opacity-0 -translate-x-1 pointer-events-none',
-																	'group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
-																	'group-data-[highlighted]/row:opacity-100 group-data-[highlighted]/row:translate-x-0 group-data-[highlighted]/row:pointer-events-auto',
-																	'transition-[opacity,transform,color] duration-150 ease-[var(--ease-out)]',
-																	'hover:text-destructive hover:bg-background/60',
-																	'focus-visible:outline-hidden focus-visible:opacity-100 focus-visible:translate-x-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-destructive/40'
-																)}
-																onPointerDown={function (e) {
-																	e.preventDefault()
-																	e.stopPropagation()
-																}}
-																onClick={function (e) {
-																	e.preventDefault()
-																	e.stopPropagation()
-																	armDelete(connection.id)
-																}}
-																title={`Delete ${connection.name}`}
-																aria-label={`Delete ${connection.name}`}
-															>
-																<Trash2 className='h-3 w-3' />
-															</button>
-														)}
-													</div>
-												)}
+													)}
+												</div>
 											</div>
 											</div>
 										</ContextMenuTrigger>
@@ -649,8 +532,8 @@ export function ConnectionSwitcher({
 												<ContextMenuSeparator />
 												<ContextMenuItem
 													onSelect={function deleteConnection() {
-														requestDelete(connection.id)
-														closeMenus()
+														confirmDelete(connection.id)
+														setContextMenuConnectionId(null)
 													}}
 													className='gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer'
 												>
@@ -660,9 +543,11 @@ export function ConnectionSwitcher({
 											</>
 										)}
 									</ContextMenuContent>
-								</ContextMenu>
-							)
-						})
+									</ContextMenu>
+									</motion.div>
+								)
+							})}
+						</AnimatePresence>
 					) : (
 						<div className='px-2 py-6 text-xs text-center text-muted-foreground'>
 							{connections.length > 0
@@ -696,35 +581,6 @@ export function ConnectionSwitcher({
 			</DropdownMenuContent>
 		</DropdownMenu>
 
-		<AlertDialog
-			open={deleteDialogConnectionId !== null}
-			onOpenChange={function handleDeleteDialogOpenChange(open) {
-				if (!open) setDeleteDialogConnectionId(null)
-			}}
-		>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Delete connection?</AlertDialogTitle>
-					<AlertDialogDescription>
-						{deleteDialogConnection
-							? `"${deleteDialogConnection.name}" will be removed from Dora. This cannot be undone.`
-							: 'This connection will be removed from Dora. This cannot be undone.'}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogAction
-						onClick={function handleConfirmDeleteDialog() {
-							if (deleteDialogConnectionId) {
-								confirmDelete(deleteDialogConnectionId)
-							}
-						}}
-					>
-						Delete
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
 		</>
 	)
 }

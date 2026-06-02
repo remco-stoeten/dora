@@ -2,6 +2,15 @@
 
 import { useRef, useEffect, useState } from 'react'
 
+import {
+    BOOT_JITTER,
+    BOOT_MIN_DURATION,
+    CONTAINERS,
+    EASE_OUT,
+    RESTART_JITTER,
+    RESTART_MIN_DELAY
+} from './docker-containers-motion'
+import { EqualizerBars } from './docker-containers-equalizer'
 import { useGate } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
@@ -9,71 +18,16 @@ import { useGate } from './use-scroll-motion'
  * activity equalizer. One reboots on a loop: its bars freeze and a spinner
  * takes over before it bursts back to "up". Hovering a block lifts it.
  * ------------------------------------------------------------------------- */
-const CONTAINERS = [
-    { name: 'postgres', tag: '16', port: '5432' },
-    { name: 'mysql', tag: '8.4', port: '3306' },
-    { name: 'redis', tag: '7', port: '6379' }
-]
 
-const EQ_BARS = [
-    { x: 4, values: '5;16;8;14;5', dur: '0.9s', begin: '0s' },
-    { x: 11, values: '7;18;6;15;7', dur: '1.1s', begin: '-0.3s' },
-    { x: 18, values: '6;12;18;9;6', dur: '0.8s', begin: '-0.6s' },
-    { x: 25, values: '5;15;7;17;5', dur: '1s', begin: '-0.15s' },
-    { x: 32, values: '8;11;16;10;8', dur: '1.2s', begin: '-0.45s' }
-]
-
-function EqualizerBars({
-    active,
-    animate,
-    color
-}: {
-    active: boolean
-    animate: boolean
-    color: string
-}) {
-    return (
-        <svg viewBox="0 0 39 22" className="w-full h-7" aria-hidden="true">
-            {EQ_BARS.map((b) => {
-                // keep each bar bottom-anchored at y = 21 as it grows
-                const yValues = b.values
-                    .split(';')
-                    .map((v) => 21 - Number(v))
-                    .join(';')
-                return (
-                    <rect
-                        key={b.x}
-                        x={b.x}
-                        width="3"
-                        rx="1"
-                        fill={color}
-                        opacity={active ? 0.9 : 0.3}
-                        y={active ? 11 : 17}
-                        height={active ? 10 : 4}
-                    >
-                        {active && animate ? (
-                            <>
-                                <animate
-                                    attributeName="height"
-                                    values={b.values}
-                                    dur={b.dur}
-                                    begin={b.begin}
-                                    repeatCount="indefinite"
-                                />
-                                <animate
-                                    attributeName="y"
-                                    values={yValues}
-                                    dur={b.dur}
-                                    begin={b.begin}
-                                    repeatCount="indefinite"
-                                />
-                            </>
-                        ) : null}
-                    </rect>
-                )
-            })}
-        </svg>
-    )
+function getContainerTransform(
+    revealed: boolean,
+    lit: boolean,
+    starting: boolean
+) {
+    if (!revealed) return 'translateY(10px)'
+    if (lit) return 'translate3d(0,-2px,0)'
+    if (starting) return 'translate3d(0,1px,0)'
+    return 'translate3d(0,0,0)'
 }
 
 export function DockerContainersCard({ animate }: { animate: boolean }) {
@@ -81,6 +35,7 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
     const [restarting, setRestarting] = useState<number | null>(null)
     const [hover, setHover] = useState<number | null>(null)
     const [revealed, setRevealed] = useState(false)
+    const lastRestartRef = useRef<number | null>(null)
     const gate = useGate(ref)
     const running = animate && gate.active
 
@@ -105,16 +60,31 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
         }
 
         let timer: ReturnType<typeof setTimeout>
-        let i = 0
-        const cycle = () => {
-            setRestarting(i % CONTAINERS.length)
-            timer = setTimeout(() => {
-                setRestarting(null)
-                i += 1
-                timer = setTimeout(cycle, 2400)
-            }, 1400)
+
+        const pickNext = () => {
+            let next = Math.floor(Math.random() * CONTAINERS.length)
+            if (CONTAINERS.length > 1 && next === lastRestartRef.current)
+                next =
+                    (next + 1 + Math.floor(Math.random() * 2)) %
+                    CONTAINERS.length
+            lastRestartRef.current = next
+            return next
         }
-        timer = setTimeout(cycle, 1600)
+
+        const cycle = () => {
+            setRestarting(pickNext())
+            timer = setTimeout(
+                () => {
+                    setRestarting(null)
+                    timer = setTimeout(
+                        cycle,
+                        RESTART_MIN_DELAY + Math.random() * RESTART_JITTER
+                    )
+                },
+                BOOT_MIN_DURATION + Math.random() * BOOT_JITTER
+            )
+        }
+        timer = setTimeout(cycle, 1200 + Math.random() * 900)
         return () => clearTimeout(timer)
     }, [running])
 
@@ -125,6 +95,7 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                     const starting = restarting === idx
                     const lit = hover === idx
                     const color = starting ? '#ad8eb6' : '#e3b2b3'
+                    const entryDelay = idx * 70
                     return (
                         <div
                             key={c.name}
@@ -137,20 +108,20 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                                     ? '#161218'
                                     : 'transparent',
                                 opacity: revealed ? 1 : 0,
-                                transform: revealed
-                                    ? lit
-                                        ? 'translateY(-2px)'
-                                        : 'translateY(0)'
-                                    : 'translateY(10px)',
-                                transition: `opacity 500ms ease ${idx * 100}ms, transform 500ms cubic-bezier(0.34,1.56,0.64,1) ${idx * 100}ms, border-color 300ms ease, background-color 300ms ease`
+                                transform: getContainerTransform(
+                                    revealed,
+                                    lit,
+                                    starting
+                                ),
+                                transition: `opacity 420ms ${EASE_OUT} ${entryDelay}ms, transform 260ms ${EASE_OUT} ${entryDelay}ms, border-color 220ms ease, background-color 220ms ease`
                             }}
                         >
                             {/* image name */}
                             <div className="flex w-full min-w-0 items-baseline gap-px">
-                                <span className="truncate text-[9px] font-mono text-[#cfcfcf]">
+                                <span className="truncate font-mono text-[9px] text-[#cfcfcf] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                     {c.name}
                                 </span>
-                                <span className="shrink-0 text-[8px] font-mono text-[#6a6a6a]">
+                                <span className="shrink-0 font-mono text-[8px] text-[#6a6a6a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                     :{c.tag}
                                 </span>
                             </div>
@@ -161,9 +132,16 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                                     active={!starting}
                                     animate={running}
                                     color={color}
+                                    phase={c.phase}
                                 />
                                 {starting && running ? (
-                                    <span className="absolute h-3.5 w-3.5 rounded-full border border-[#ad8eb6] border-t-transparent animate-spin" />
+                                    <span
+                                        className="absolute h-4 w-4 rounded-full border border-[#ad8eb6]/60 border-t-[#f0c9d2]"
+                                        style={{
+                                            animation:
+                                                'dockerBootSpin 720ms linear infinite, dockerBootPulse 1180ms cubic-bezier(0.23, 1, 0.32, 1) infinite'
+                                        }}
+                                    />
                                 ) : null}
                             </div>
 
@@ -178,13 +156,13 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                                         }}
                                     />
                                     <span
-                                        className="text-[7px] font-mono uppercase tracking-wider"
+                                        className="font-mono text-[7px] uppercase tracking-wider [font-family:var(--font-geist-mono),ui-monospace,monospace]"
                                         style={{ color }}
                                     >
                                         {starting ? 'boot' : 'up'}
                                     </span>
                                 </span>
-                                <span className="text-[7px] font-mono text-[#5a4f56]">
+                                <span className="font-mono text-[7px] text-[#5a4f56] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                     :{c.port}
                                 </span>
                             </div>
@@ -193,7 +171,7 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                 })}
             </div>
             <div className="px-5 pb-5">
-                <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Docker Containers
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">

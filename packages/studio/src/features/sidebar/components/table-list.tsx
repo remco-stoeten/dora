@@ -165,17 +165,40 @@ function TableItemRow({
 		handleRightClickAction('copy-name')
 	}
 
+	function handleRowKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+		if (isEditing) {
+			return
+		}
+
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault()
+			onSelect?.()
+			return
+		}
+
+		if (e.key === 'F2') {
+			e.preventDefault()
+			startEditing()
+		}
+	}
+
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger asChild>
 				<div>
 					<div
 						className={cn(
-							'group flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors',
+							'group flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors outline-hidden focus-visible:bg-sidebar-accent focus-visible:ring-1 focus-visible:ring-sidebar-ring',
 							isActive && 'bg-sidebar-accent',
 							!isActive && 'hover:bg-sidebar-accent/60'
 						)}
+						role='treeitem'
+						tabIndex={0}
+						aria-current={isActive ? 'page' : undefined}
+						aria-selected={isMultiSelectMode ? isSelected : undefined}
+						aria-label={`${item.name}, ${item.type}, ${formatRowCount(item.rowCount)} rows`}
 						onClick={onSelect}
+						onKeyDown={handleRowKeyDown}
 					>
 						{isMultiSelectMode && (
 							<Checkbox
@@ -195,16 +218,17 @@ function TableItemRow({
 									type='text'
 									value={editValue}
 									onChange={(e) => setEditValue(e.target.value)}
-								onKeyDown={handleEditKeyDown}
-								onBlur={handleEditBlur}
-								data-no-shortcuts='true'
-								className='flex-1 h-5 px-1 text-sm bg-transparent border-none outline-hidden'
-								onClick={(e) => e.stopPropagation()}
-							/>
+									onKeyDown={handleEditKeyDown}
+									onBlur={handleEditBlur}
+									data-no-shortcuts='true'
+									className='flex-1 h-5 px-1 text-sm bg-transparent border-none outline-hidden'
+									onClick={(e) => e.stopPropagation()}
+								/>
 								<Button
 									variant='ghost'
 									size='icon'
 									className='h-5 w-5 shrink-0'
+									aria-label={`Save table name for ${item.name}`}
 									onClick={(e) => {
 										e.stopPropagation()
 										if (editValue.trim() && editValue !== item.name) {
@@ -218,6 +242,7 @@ function TableItemRow({
 									variant='ghost'
 									size='icon'
 									className='h-5 w-5 shrink-0'
+									aria-label={`Cancel renaming ${item.name}`}
 									onClick={(e) => {
 										e.stopPropagation()
 										onEditCancel?.()
@@ -247,9 +272,10 @@ function TableItemRow({
 								variant='ghost'
 								size='icon'
 								className={cn(
-									'h-5 w-5 shrink-0 hidden group-hover:flex items-center justify-center opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent',
+									'h-5 w-5 shrink-0 hidden group-hover:flex group-focus-within:flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent',
 									showContextMenu && 'opacity-100 flex'
 								)}
+								aria-label={`Open actions for ${item.name}`}
 								onClick={(e) => {
 									e.stopPropagation()
 									setShowContextMenu(true)
@@ -384,7 +410,7 @@ export function TableList({
 		setInternalEditingId(undefined)
 	}
 	return (
-		<div className='flex flex-col py-1'>
+		<div className='flex flex-col py-1' role='tree' aria-label='Database tables'>
 			{tables.map((table) => (
 				<TableItemRow
 					key={table.id}

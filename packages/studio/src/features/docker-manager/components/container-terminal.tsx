@@ -15,6 +15,26 @@ type TerminalState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'err
 
 const MAX_OUTPUT_CHARS = 120000
 
+function getErrorMessage(error: unknown, fallback: string): string {
+	if (error instanceof Error) {
+		return error.message
+	}
+
+	if (typeof error === 'string') {
+		return error
+	}
+
+	if (error && typeof error === 'object') {
+		try {
+			return JSON.stringify(error)
+		} catch {
+			return fallback
+		}
+	}
+
+	return fallback
+}
+
 export function ContainerTerminal({ container, enabled }: Props) {
 	const [output, setOutput] = useState('')
 	const [command, setCommand] = useState('')
@@ -131,7 +151,7 @@ export function ContainerTerminal({ container, enabled }: Props) {
 				inputRef.current?.focus()
 			} catch (error) {
 				connectingRef.current = false
-				const message = error instanceof Error ? error.message : 'Failed to open terminal'
+				const message = getErrorMessage(error, 'Failed to open terminal')
 				appendOutput(`\n[connection failed] ${message}\n`)
 				setTerminalState('error')
 			}
@@ -201,7 +221,7 @@ export function ContainerTerminal({ container, enabled }: Props) {
 		try {
 			await session.write(`${nextCommand}\n`)
 		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Failed to send command'
+			const message = getErrorMessage(error, 'Failed to send command')
 			appendOutput(`[write failed] ${message}\n`)
 			setTerminalState('error')
 		}
@@ -245,7 +265,7 @@ export function ContainerTerminal({ container, enabled }: Props) {
 		try {
 			await sessionRef.current.write('\u0003')
 		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Failed to send interrupt'
+			const message = getErrorMessage(error, 'Failed to send interrupt')
 			appendOutput(`[interrupt failed] ${message}\n`)
 		}
 	}

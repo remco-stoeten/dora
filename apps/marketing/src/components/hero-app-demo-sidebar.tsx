@@ -107,7 +107,7 @@ export function DemoSidebar() {
                     </div>
                     <div className="grid flex-1 min-w-0 text-left text-sm leading-tight">
                         <span className="truncate font-semibold text-foreground">
-                            Demo E-Commerce (PostgreSQL)
+                            Demo E-Commerce
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
                             PostgreSQL • localhost
@@ -120,7 +120,7 @@ export function DemoSidebar() {
                     main panel's studio toolbar. */}
                 <div className="flex items-center gap-1.5 px-2 h-10 border-b border-sidebar-border shrink-0">
                     <div className="relative flex-1 flex items-center h-8 px-3 rounded-md border border-sidebar-border/60 text-sm text-muted-foreground/70">
-                        Search tables...
+                        Search...
                     </div>
                     <div className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground shrink-0">
                         <Filter className="h-4 w-4" />

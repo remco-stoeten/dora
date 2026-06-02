@@ -235,6 +235,7 @@
     display: grid;
     grid-template-columns: 64px 244px minmax(0, 1fr);
     height: 100%;
+    width: 100%;
     min-width: 980px;
     background: var(--color-background);
 }

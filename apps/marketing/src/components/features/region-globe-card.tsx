@@ -154,7 +154,7 @@ export function RegionGlobeCard({
                 })}
             </div>
             <div className="px-5 pb-5">
-                <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Connect Anywhere
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">

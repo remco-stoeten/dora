@@ -4,6 +4,14 @@ import { useRef, useState } from 'react'
 
 import { useGate } from './use-scroll-motion'
 
+const PARTICLES = [
+    { left: '22%', top: '30%', size: 1.5, opacity: 0.36 },
+    { left: '43%', top: '21%', size: 2, opacity: 0.42 },
+    { left: '70%', top: '32%', size: 1, opacity: 0.32 },
+    { left: '76%', top: '58%', size: 1.5, opacity: 0.38 },
+    { left: '31%', top: '67%', size: 1, opacity: 0.3 }
+] as const
+
 /* ---------------------------------------------------------------------------
  * Schema Visualization — live ER diagram; a pulse travels the foreign-key
  * links and hovering a table highlights its relationships.
@@ -33,8 +41,31 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
         hover === null || e.a === hover || e.b === hover
 
     return (
-        <div ref={ref} className="h-full flex flex-col">
-            <div className="flex-1 flex items-center justify-center px-4 pt-5">
+        <div ref={ref} className="relative h-full flex flex-col overflow-hidden">
+            <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-[42%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-2xl"
+                style={{
+                    background:
+                        'radial-gradient(circle, rgba(227,178,179,0.12) 0%, rgba(173,142,182,0.05) 38%, transparent 70%)'
+                }}
+            />
+            {PARTICLES.map((particle, index) => (
+                <span
+                    aria-hidden
+                    key={`${particle.left}-${particle.top}`}
+                    className="pointer-events-none absolute rounded-full bg-[#f5c0c0]"
+                    style={{
+                        left: particle.left,
+                        top: particle.top,
+                        width: particle.size,
+                        height: particle.size,
+                        opacity: particle.opacity,
+                        animation: `particleFloat ${4.1 + index * 0.5}s cubic-bezier(0.23, 1, 0.32, 1) ${index * 140}ms infinite alternate`
+                    }}
+                />
+            ))}
+            <div className="relative flex-1 flex items-center justify-center px-4 pt-5">
                 <svg
                     viewBox="0 0 160 118"
                     className="w-full h-[118px]"
@@ -98,6 +129,9 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                                     y={n.y + 7.6}
                                     fontSize="6.5"
                                     className="font-mono transition-colors duration-200"
+                                    style={{
+                                        fontFamily: 'var(--font-geist-mono)'
+                                    }}
                                     fill={lit ? '#e3b2b3' : '#6a6a6a'}
                                 >
                                     {n.id}
@@ -123,8 +157,8 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                     })}
                 </svg>
             </div>
-            <div className="px-5 pb-5">
-                <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
+            <div className="relative px-5 pb-5">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Schema Visualization
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">
