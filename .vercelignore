@@ -1,0 +1,28 @@
+# Marketing is the only thing Vercel builds. Keep the upload small by excluding
+# everything the Next build doesn't need — Vercel reinstalls deps and rebuilds
+# .next remotely via installCommand/buildCommand.
+
+# Heavy desktop/Rust build artifacts (tens of GB)
+apps/desktop/src-tauri/target
+
+# Local caches / build output (regenerated on Vercel)
+.turbo
+**/.turbo
+node_modules
+**/node_modules
+.next
+**/.next
+
+# Bulky binaries and local-only assets
+dora-manager-executor
+dora-runner
+*.AppImage
+*.deb
+*.rpm
+*.dmg
+*.msi
+*.exe
+*.snap
+recordings
+.tauri-logs
+.vercel/output

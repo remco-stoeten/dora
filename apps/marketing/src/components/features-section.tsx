@@ -10,12 +10,16 @@ import { NativePerformanceCard } from '@/components/features/native-performance-
 import { QueryHistoryCard } from '@/components/features/query-history-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
+import { ScrollReveal } from '@/components/scroll-reveal'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
+const FEATURE_CELL_CLASS =
+    'min-h-[300px] border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]'
+const FEATURE_REVEAL_CLASS = 'flex h-full w-full'
+
 export function FeaturesSection() {
     const sectionRef = useRef<HTMLElement>(null)
-    const [isVisible, setIsVisible] = useState(false)
     const [isInView, setIsInView] = useState(false)
     const pageVisible = usePageVisible()
     const reducedMotion = usePrefersReducedMotion()
@@ -26,7 +30,6 @@ export function FeaturesSection() {
         const observer = new IntersectionObserver(
             ([entry]) => {
                 const visible = entry.isIntersecting
-                if (visible) setIsVisible(true)
                 setIsInView(visible)
             },
             { rootMargin: '160px 0px', threshold: 0.1 }
@@ -45,51 +48,59 @@ export function FeaturesSection() {
             <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
             <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
             {/* Heading */}
-            <div
-                className={`px-6 sm:px-8 py-12 border-b border-[#2b252c] transition-all duration-700 delay-150 ${
-                    isVisible
-                        ? 'opacity-100 translate-y-0'
-                        : 'opacity-0 translate-y-8'
-                }`}
-            >
-                <h2 className="text-2xl text-[#7a7a7a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
-                    More Than a GUI.
-                </h2>
-                <h3 className="text-3xl text-[#f0f0f0] font-semibold font-[family-name:var(--font-pixel)]">
-                    The Interface Databases Deserve.
-                </h3>
+            <div className="px-6 sm:px-8 py-12 border-b border-[#2b252c]">
+                <ScrollReveal delay={40}>
+                    <h2 className="text-2xl text-[#7a7a7a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
+                        More Than a GUI.
+                    </h2>
+                    <h3 className="text-3xl text-[#f0f0f0] font-semibold font-[family-name:var(--font-pixel)]">
+                        The Interface Databases Deserve.
+                    </h3>
+                </ScrollReveal>
             </div>
 
             {/* Feature cards — collapsed bordered grid */}
-            <div
-                className={`relative grid grid-cols-2 md:grid-cols-3 md:grid-rows-2 transition-all duration-700 delay-300 ${
-                    isVisible
-                        ? 'opacity-100 translate-y-0'
-                        : 'opacity-0 translate-y-8'
-                }`}
-            >
+            <div className="relative grid grid-cols-2 md:grid-cols-3 md:grid-rows-2">
                 {/* squares along the divider between the top and bottom three */}
                 <CornerTick className="hidden md:block left-0 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-2/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <DatabaseConnectionCard animate={animate} motion={motion} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={0}>
+                        <DatabaseConnectionCard
+                            animate={animate}
+                            motion={motion}
+                        />
+                    </ScrollReveal>
                 </div>
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <RegionGlobeCard animate={animate} motion={motion} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={55}>
+                        <RegionGlobeCard animate={animate} motion={motion} />
+                    </ScrollReveal>
                 </div>
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <DockerContainersCard animate={animate} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={110}>
+                        <DockerContainersCard animate={animate} />
+                    </ScrollReveal>
                 </div>
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <SchemaDiagramCard animate={animate} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={165}>
+                        <SchemaDiagramCard animate={animate} />
+                    </ScrollReveal>
                 </div>
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <NativePerformanceCard animate={animate} motion={motion} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={220}>
+                        <NativePerformanceCard
+                            animate={animate}
+                            motion={motion}
+                        />
+                    </ScrollReveal>
                 </div>
-                <div className="border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]">
-                    <QueryHistoryCard animate={animate} />
+                <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={275}>
+                        <QueryHistoryCard animate={animate} />
+                    </ScrollReveal>
                 </div>
             </div>
         </section>

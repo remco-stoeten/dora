@@ -27,6 +27,7 @@ export function createMetadata({
     const fullTitle =
         title === siteConfig.name ? title : `${title} | ${siteConfig.name}`
     const canonical = absoluteUrl(path)
+    const imageUrl = absoluteUrl(image)
 
     return {
         title: fullTitle,
@@ -58,7 +59,7 @@ export function createMetadata({
             description,
             images: [
                 {
-                    url: image,
+                    url: imageUrl,
                     width: 1200,
                     height: 630,
                     alt: `${siteConfig.name} brand preview`
@@ -69,7 +70,7 @@ export function createMetadata({
             card: 'summary_large_image',
             title: fullTitle,
             description,
-            images: [image]
+            images: [imageUrl]
         }
     }
 }

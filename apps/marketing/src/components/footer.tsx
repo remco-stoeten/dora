@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { CornerTick } from '@/components/corner-tick'
+import { ScrollReveal } from '@/components/scroll-reveal'
 import { siteConfig } from '@/core/config/site'
 
 const FOOTER_LINKS = [
@@ -52,24 +53,29 @@ export function Footer() {
             <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
             <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
             <footer className="flex flex-col items-start justify-between gap-6 px-6 py-10 sm:flex-row sm:items-center sm:px-8">
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium tracking-wide text-foreground">
-                        {siteConfig.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground/80">
-                        {siteConfig.footerTagline}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                        &copy; {year} {siteConfig.name}. All rights reserved.
-                    </span>
-                </div>
+                <ScrollReveal delay={0}>
+                    <div className="flex flex-col gap-1.5">
+                        <span className="font-pixel text-sm font-[500] tracking-[0] text-foreground">
+                            {siteConfig.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground/80">
+                            {siteConfig.footerTagline}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            &copy; {year} {siteConfig.name}. All rights
+                            reserved.
+                        </span>
+                    </div>
+                </ScrollReveal>
 
-                <nav
-                    aria-label="Footer navigation"
-                    className="flex flex-wrap items-center gap-6"
-                >
-                    {FOOTER_LINKS.map(renderLink)}
-                </nav>
+                <ScrollReveal delay={70}>
+                    <nav
+                        aria-label="Footer navigation"
+                        className="flex flex-wrap items-center gap-6"
+                    >
+                        {FOOTER_LINKS.map(renderLink)}
+                    </nav>
+                </ScrollReveal>
             </footer>
         </section>
     )

@@ -1,0 +1,71 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { NuqsAdapter } from 'nuqs/adapters/react-router/v6'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { DemoBanner } from '@studio/components/demo-banner'
+import { Toaster } from '@studio/shared/ui/notifier'
+import { DataProvider } from '@studio/core/data-provider'
+import { PendingEditsProvider } from '@studio/core/pending-edits'
+import { SettingsProvider, useSettings } from '@studio/core/settings'
+import { AnalyticsProvider } from '@studio/features/analytics'
+import type { AnalyticsConfig } from '@studio/features/analytics'
+import { QueryHistoryProvider } from '@studio/features/sql-console/stores/query-history-store'
+import { ThemeSync } from '@studio/features/sidebar/components/theme-sync'
+import Index from '@studio/pages/Index'
+import NotFound from '@studio/pages/NotFound'
+
+const queryClient = new QueryClient()
+
+function GlobalToaster() {
+	const { settings } = useSettings()
+	if (settings.showToasts === false) return null
+	return <Toaster />
+}
+
+type Props = {
+	/** Force the in-memory mock adapter (web demo). Desktop leaves this false so Tauri is auto-detected. */
+	forceMock?: boolean
+	/** Analytics configuration for the host (desktop passes desktopAnalyticsConfig). */
+	analyticsConfig: AnalyticsConfig
+	/** Router basename. Desktop runs at root; marketing mounts the app under `/app`. */
+	basename?: string
+}
+
+/**
+ * The whole Studio application: router + provider stack + routed views.
+ *
+ * The router lives here (not in the host) so there is exactly ONE react-router
+ * instance — hosting `<BrowserRouter>` separately in each app loaded a second
+ * copy of react-router and broke the Router context (`useLocation` outside a
+ * `<Router>`). Hosts differ only by `basename`.
+ */
+export function StudioApp({ forceMock = false, analyticsConfig, basename }: Props) {
+	return (
+		<BrowserRouter basename={basename}>
+			<QueryClientProvider client={queryClient}>
+				<AnalyticsProvider config={analyticsConfig}>
+					<SettingsProvider>
+						<PendingEditsProvider>
+							<DataProvider forceMock={forceMock}>
+								<QueryHistoryProvider>
+									<div className='flex flex-col h-screen'>
+										<DemoBanner />
+										<div className='flex-1 overflow-hidden'>
+											<GlobalToaster />
+											<NuqsAdapter>
+												<ThemeSync />
+												<Routes>
+													<Route path='/' element={<Index />} />
+													<Route path='*' element={<NotFound />} />
+												</Routes>
+											</NuqsAdapter>
+										</div>
+									</div>
+								</QueryHistoryProvider>
+							</DataProvider>
+						</PendingEditsProvider>
+					</SettingsProvider>
+				</AnalyticsProvider>
+			</QueryClientProvider>
+		</BrowserRouter>
+	)
+}

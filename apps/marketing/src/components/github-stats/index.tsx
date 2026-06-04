@@ -1,6 +1,12 @@
 'use client'
 
-import { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import {
+    useRef,
+    useState,
+    useEffect,
+    useLayoutEffect,
+    type CSSProperties
+} from 'react'
 import {
     Tag,
     Calendar,
@@ -259,6 +265,8 @@ export function GitHubStats({
     data,
     accentColor = ACCENT_COLOR
 }: GitHubStatsProps) {
+    const reduced = usePrefersReducedMotion()
+    const [contentVisible, setContentVisible] = useState(false)
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
     const [tooltipPosition, setTooltipPosition] = useState<{
         x: number
@@ -272,6 +280,29 @@ export function GitHubStats({
     const commitsContainerRef = useRef<HTMLDivElement>(null)
     const tabsContainerRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+    const revealClass = reduced
+        ? 'opacity-100'
+        : contentVisible
+          ? 'opacity-100'
+          : 'opacity-0'
+    function revealStyle(delay: number): CSSProperties {
+        return {
+            transitionDelay: reduced ? '0ms' : `${delay}ms`,
+            transitionDuration: reduced ? '180ms' : '420ms',
+            transitionProperty: 'opacity',
+            transitionTimingFunction: EASE_OUT
+        }
+    }
+
+    useEffect(() => {
+        if (reduced) {
+            setContentVisible(true)
+            return
+        }
+
+        const id = requestAnimationFrame(() => setContentVisible(true))
+        return () => cancelAnimationFrame(id)
+    }, [reduced])
 
     // Update indicator position when active tab changes
     useLayoutEffect(() => {
@@ -340,54 +371,65 @@ export function GitHubStats({
                                 href={versionUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block px-5 py-4 border-b border-[#1a1a1a] hover:bg-[#0d0d0d] transition-colors"
+                                className="block border-b border-[#1a1a1a] px-5 py-4 transition-colors hover:bg-[#0d0d0d]"
                             >
-                                <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-1">
-                                    <Tag className="w-3 h-3" />
-                                    Version
-                                </div>
-                                <div className="text-[#9a9a9a] text-lg font-mono font-medium">
-                                    {version}
+                                <div
+                                    className={revealClass}
+                                    style={revealStyle(0)}
+                                >
+                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                        <Tag className="w-3 h-3" />
+                                        Version
+                                    </div>
+                                    <div className="font-mono text-lg font-medium text-[#9a9a9a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                        {version}
+                                    </div>
                                 </div>
                             </a>
 
                             {/* Timeline */}
                             <div className="px-5 py-4">
-                                <div className="flex items-center gap-4 text-[11px]">
-                                    <div>
-                                        <div className="flex items-center gap-1.5 text-[#8a8a8a] uppercase tracking-wider mb-1">
-                                            <Calendar className="w-2.5 h-2.5" />
-                                            Started
+                                <div
+                                    className={revealClass}
+                                    style={revealStyle(55)}
+                                >
+                                    <div className="flex items-center gap-4 text-[11px]">
+                                        <div>
+                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                                <Calendar className="w-2.5 h-2.5" />
+                                                Started
+                                            </div>
+                                            <div className="text-[#7a7a7a]">
+                                                {startedAt}
+                                            </div>
                                         </div>
-                                        <div className="text-[#7a7a7a]">
-                                            {startedAt}
-                                        </div>
+                                        <div className="w-px h-8 bg-[#1a1a1a]" />
+                                        <a
+                                            href={
+                                                latestCommitSha
+                                                    ? `${sourceUrl}/commit/${latestCommitSha}`
+                                                    : undefined
+                                            }
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="transition-colors hover:text-[#9a9a9a]"
+                                        >
+                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                                <Clock className="w-2.5 h-2.5" />
+                                                Latest
+                                            </div>
+                                            <div className="text-[#7a7a7a]">
+                                                {latestCommitAt}
+                                            </div>
+                                        </a>
                                     </div>
-                                    <div className="w-px h-8 bg-[#1a1a1a]" />
-                                    <a
-                                        href={
-                                            latestCommitSha
-                                                ? `${sourceUrl}/commit/${latestCommitSha}`
-                                                : undefined
-                                        }
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-[#9a9a9a] transition-colors"
-                                    >
-                                        <div className="flex items-center gap-1.5 text-[#8a8a8a] uppercase tracking-wider mb-1">
-                                            <Clock className="w-2.5 h-2.5" />
-                                            Latest
-                                        </div>
-                                        <div className="text-[#7a7a7a]">
-                                            {latestCommitAt}
-                                        </div>
-                                    </a>
-                                </div>
-                                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8a8a8a]">
-                                    <Star className="w-2.5 h-2.5" />
-                                    <span>
-                                        {stars} star{stars !== 1 ? 's' : ''}
-                                    </span>
+                                    <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8a8a8a]">
+                                        <Star className="w-2.5 h-2.5" />
+                                        <span>
+                                            {stars} star
+                                            {stars !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -397,47 +439,54 @@ export function GitHubStats({
                             ref={commitsContainerRef}
                             className="relative min-h-[150px] flex-1 overflow-visible px-5 py-4 group sm:min-h-[120px] sm:px-6"
                         >
-                            {commitData.length > 0 ? (
-                                <>
-                                    <CommitGraph
-                                        data={commitData}
-                                        hoveredIndex={hoveredIndex}
-                                        onHoverChange={handleHoverChange}
-                                        onClick={handleDayClick}
-                                        accentColor={accentColor}
-                                    />
+                            <div
+                                className={revealClass}
+                                style={revealStyle(110)}
+                            >
+                                {commitData.length > 0 ? (
+                                    <>
+                                        <CommitGraph
+                                            data={commitData}
+                                            hoveredIndex={hoveredIndex}
+                                            onHoverChange={handleHoverChange}
+                                            onClick={handleDayClick}
+                                            accentColor={accentColor}
+                                        />
 
-                                    <GraphTooltip
-                                        data={
-                                            hoveredIndex !== null
-                                                ? commitData[hoveredIndex]
-                                                : null
-                                        }
-                                        position={tooltipPosition}
-                                        containerRef={commitsContainerRef}
-                                        accentColor={accentColor}
-                                    />
-                                </>
-                            ) : null}
+                                        <GraphTooltip
+                                            data={
+                                                hoveredIndex !== null
+                                                    ? commitData[hoveredIndex]
+                                                    : null
+                                            }
+                                            position={tooltipPosition}
+                                            containerRef={commitsContainerRef}
+                                            accentColor={accentColor}
+                                        />
+                                    </>
+                                ) : null}
 
-                            {/* Content - with pointer-events-none so hover/click passes through */}
-                            <div className="relative z-20 pointer-events-none">
-                                <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-1">
-                                    <GitCommit className="w-3 h-3" />
-                                    Commits
-                                </div>
-                                <div className="text-[#9a9a9a] text-2xl font-medium tabular-nums">
-                                    {totalCommits}
-                                </div>
-                                <div className="mt-1 hidden items-center gap-2 text-[10px] text-[#8a8a8a] sm:flex">
-                                    <span>Scroll to pan</span>
-                                    <span className="text-[#2a2a2a]">|</span>
-                                    <span className="flex items-center gap-1">
-                                        <kbd className="px-1 py-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-[8px] font-mono">
-                                            shift
-                                        </kbd>
-                                        scroll to zoom
-                                    </span>
+                                {/* Content - with pointer-events-none so hover/click passes through */}
+                                <div className="relative z-20 pointer-events-none">
+                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                        <GitCommit className="w-3 h-3" />
+                                        Commits
+                                    </div>
+                                    <div className="font-pixel text-2xl font-[500] tabular-nums text-[#9a9a9a]">
+                                        {totalCommits}
+                                    </div>
+                                    <div className="mt-1 hidden items-center gap-2 text-[10px] text-[#8a8a8a] sm:flex">
+                                        <span>Scroll to pan</span>
+                                        <span className="text-[#2a2a2a]">
+                                            |
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <kbd className="rounded border border-[#2a2a2a] bg-[#1a1a1a] px-1 py-0.5 font-mono text-[8px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                                shift
+                                            </kbd>
+                                            scroll to zoom
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -445,12 +494,20 @@ export function GitHubStats({
 
                     {/* Bottom row: Install section - full width */}
                     <div className="border-t border-[#1a1a1a] px-5 py-7 sm:px-6 sm:py-8">
-                        <div className="flex items-center gap-2 text-[#8a8a8a] text-xs uppercase tracking-wider mb-5">
-                            <Download className="w-3 h-3" />
-                            Install
+                        <div className="mb-5 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                            <div
+                                className={`flex items-center gap-2 ${revealClass}`}
+                                style={revealStyle(165)}
+                            >
+                                <Download className="w-3 h-3" />
+                                Install
+                            </div>
                         </div>
 
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                        <div
+                            className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6 ${revealClass}`}
+                            style={revealStyle(220)}
+                        >
                             {/* Platform tabs with gooey indicator */}
                             <div
                                 ref={tabsContainerRef}
@@ -534,7 +591,7 @@ export function GitHubStats({
                                         <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
                                         <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
                                         <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
-                                        <code className="text-sm text-[#6a6a6a] font-mono min-w-0 flex-1 group-hover/cmd:text-[#8a8a8a] transition-colors">
+                                        <code className="min-w-0 flex-1 font-mono text-sm text-[#6a6a6a] transition-colors group-hover/cmd:text-[#8a8a8a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                             <CommandSwap>
                                                 {activePackage.command ||
                                                     `Download from ${activePackage.name}`}

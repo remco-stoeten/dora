@@ -1,11 +1,7 @@
 {
-	"framework": "vite",
-	"buildCommand": "cd apps/desktop && bun run build",
-	"outputDirectory": "apps/desktop/dist",
-	"rewrites": [
-		{
-			"source": "/(.*)",
-			"destination": "/index.html"
-		}
-	]
+    "rootDirectory": "apps/marketing",
+    "bunVersion": "1.x",
+    "installCommand": "bun install",
+    "framework": "nextjs",
+    "buildCommand": "bun --bun run build:ci"
 }

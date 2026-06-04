@@ -78,13 +78,14 @@
 
 @theme inline {
     --font-sans:
-        system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', sans-serif;
     --font-mono:
-        ui-monospace, 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono',
-        monospace;
+        var(--font-geist-mono), ui-monospace, 'SFMono-Regular', 'Cascadia Code',
+        'Liberation Mono', monospace;
     --font-pixel:
-        ui-monospace, 'SFMono-Regular', 'Cascadia Code', 'Liberation Mono',
-        monospace;
+        var(--font-geist-pixel-square), var(--font-geist-mono), ui-monospace,
+        'SFMono-Regular', 'Cascadia Code', 'Liberation Mono', monospace;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -131,6 +132,11 @@
     }
     body {
         @apply bg-background text-foreground;
+        /* Guard against the hero demo's 100vw full-bleed nudging a horizontal
+           scrollbar into view (100vw counts the vertical scrollbar gutter).
+           `clip` avoids creating a scroll container, so the sticky header is
+           unaffected. */
+        overflow-x: clip;
     }
 }
 
@@ -146,6 +152,132 @@
     outline: none !important;
 }
 
+/* Hero app demo — a static, faithful replica of /app. The inner UI uses the same
+   Tailwind utilities as the real studio components; only the frame, the layout
+   grid and a subtle camera drift live here. */
+.hero-app-demo {
+    /* The demo intentionally drifts a touch darker than the real /app so it
+       sits in line with the marketing page's near-black background and the
+       full-bleed edges/fade merge seamlessly. The base + sidebar are pinned to
+       the page background (oklch(0.145 0 0)); surfaces step up from there. */
+    --background: oklch(0.145 0 0);
+    --foreground: hsl(0 0% 95%);
+    --card: hsl(0 0% 7%);
+    --card-foreground: hsl(0 0% 95%);
+    --popover: hsl(0 0% 9%);
+    --popover-foreground: hsl(0 0% 95%);
+    --primary: hsl(0 0% 98%);
+    --primary-foreground: hsl(0 0% 9%);
+    --muted: hsl(0 0% 17%);
+    --muted-foreground: hsl(0 0% 52%);
+    --accent: hsl(0 0% 14%);
+    --accent-foreground: hsl(0 0% 98%);
+    --border: hsl(0 0% 16%);
+    --input: hsl(0 0% 16%);
+    --ring: hsl(0 0% 83%);
+    --sidebar: oklch(0.145 0 0);
+    --sidebar-foreground: hsl(0 0% 82%);
+    --sidebar-accent: hsl(0 0% 11%);
+    --sidebar-accent-foreground: hsl(0 0% 95%);
+    --sidebar-border: hsl(0 0% 16%);
+    position: relative;
+    z-index: 2;
+    /* Full-bleed: break out of the frame's horizontal padding so the demo
+       runs edge-to-edge against the frame borders. */
+    margin-top: clamp(4px, 1vh, 12px);
+    /* No bottom gap: the demo's bottom fade lands flush on the frame's bottom
+       border line + corner crosses and merges straight into the next section. */
+    margin-bottom: 0;
+    /* Full-bleed to the viewport edges: break out of the .marketing-container
+       (centered, max 1100px) and the frame padding so the demo runs from one
+       screen edge to the other beneath the framed hero content. */
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+    max-width: 100vw;
+    height: clamp(520px, 58vh, 680px);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.hero-app-demo__viewport {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    /* Framed in the marketing system: a hairline top divider in the same frame
+       color as the header/features/footer, matched by the rose corner ticks on
+       the wrapper. The left/right edges are the hero frame's own border-x; the
+       bottom merges into the page via the fade. */
+    border: 0;
+    border-top: 1px solid #3a3138;
+    border-radius: 0;
+    background: var(--background);
+}
+
+/* Bottom fade: solid page background at the very bottom, easing up into
+   transparency so the demo merges into the body below. */
+.hero-app-demo__viewport::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: clamp(160px, 30%, 280px);
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in srgb, var(--background) 55%, transparent) 45%,
+        var(--background) 88%,
+        var(--background) 100%
+    );
+}
+
+.hero-app-demo__camera {
+    height: 100%;
+    /* Anchor at the top-left so the rail, connection switcher and tab bar stay
+       fully visible while the drift only ever extends the grid off-screen. */
+    transform-origin: 0 0;
+    will-change: transform;
+    animation: heroDemoDrift 32s ease-in-out infinite alternate;
+}
+
+.hero-app-demo__window {
+    display: grid;
+    grid-template-columns: 64px 244px minmax(0, 1fr);
+    height: 100%;
+    width: 100%;
+    min-width: 980px;
+    background: var(--color-background);
+}
+
+@keyframes heroDemoDrift {
+    from {
+        transform: scale(1) translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: scale(1.03) translate3d(-0.5%, 0, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-app-demo__camera {
+        animation: none;
+        transform: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .hero-app-demo {
+        height: 500px;
+    }
+}
+
+@media (max-width: 640px) {
+    .hero-app-demo {
+        height: 440px;
+    }
+}
+
 .marketing-footer,
 .marketing-footer * {
     outline: none !important;
@@ -159,6 +291,43 @@
 .marketing-container {
     width: min(100% - 32px, 1100px);
     margin-inline: auto;
+}
+
+@keyframes dockerBootSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dockerBootPulse {
+    0%,
+    100% {
+        opacity: 0.58;
+        filter: blur(0);
+    }
+
+    46% {
+        opacity: 1;
+        filter: blur(0.25px);
+    }
+}
+
+@keyframes particleFloat {
+    from {
+        transform: translate3d(0, 0, 0) scale(0.85);
+        filter: blur(0);
+    }
+
+    to {
+        transform: translate3d(5px, -7px, 0) scale(1);
+        filter: blur(0.2px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [style*='particleFloat'] {
+        animation: none !important;
+    }
 }
 
 @media (max-width: 640px) {
@@ -199,6 +368,13 @@ body {
 a {
     color: inherit;
     text-decoration: none;
+}
+
+code,
+kbd,
+pre,
+samp {
+    font-family: var(--font-mono);
 }
 
 .page-shell {
@@ -251,10 +427,22 @@ a {
 }
 
 h1 {
+    font-family: var(--font-pixel);
     max-width: 760px;
     margin: 0;
     font-size: clamp(48px, 8vw, 96px);
+    font-weight: 500;
     line-height: 0.95;
+}
+
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-pixel);
+    font-weight: 500;
+    letter-spacing: 0;
 }
 
 .lead {

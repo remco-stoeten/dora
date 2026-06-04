@@ -1,4 +1,3 @@
-export { default as AppView } from './app-view'
 export { default as ChangelogView } from './changelog-view'
 export { default as DocsView } from './docs-view'
 export { default as DownloadsView } from './downloads-view'

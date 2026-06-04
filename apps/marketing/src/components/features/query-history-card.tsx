@@ -156,14 +156,14 @@ export function QueryHistoryCard({ animate }: { animate: boolean }) {
                                 <circle
                                     cx={x}
                                     cy={BASE - hgt}
-                                    r={lit ? 1.8 : 1.2}
+                                    r="1.6"
                                     fill={lit ? '#f5c0c0' : '#5a4f56'}
-                                    className="transition-all duration-200"
+                                    className="transition-[fill] duration-200"
                                 >
                                     {idx === 0 && running ? (
                                         <animate
-                                            attributeName="r"
-                                            values="1.8;3;1.8"
+                                            attributeName="opacity"
+                                            values="1;0.45;1"
                                             dur="1.8s"
                                             repeatCount="indefinite"
                                         />
@@ -177,22 +177,22 @@ export function QueryHistoryCard({ animate }: { animate: boolean }) {
 
             {/* readout */}
             <div className="px-5">
-                <div className="flex items-center gap-2 font-mono text-[10px]">
+                <div className="grid h-4 overflow-hidden grid-cols-[auto_minmax(0,1fr)_2.25rem_1.75rem] items-center gap-2 font-mono text-[10px] leading-none [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#e3b2b3]" />
-                    <span className="flex-1 truncate text-[#cfcfcf]">
+                    <span className="block min-w-0 truncate whitespace-nowrap text-[#cfcfcf]">
                         {q.sql}
                     </span>
-                    <span className="shrink-0 text-[#e3b2b3]/80 tabular-nums">
+                    <span className="block text-right text-[#e3b2b3]/80 tabular-nums">
                         {q.ms}ms
                     </span>
-                    <span className="shrink-0 w-7 text-right text-[#8a8a8a]">
+                    <span className="block text-right text-[#8a8a8a]">
                         {q.ago}
                     </span>
                 </div>
             </div>
 
             <div className="px-5 pb-5 pt-3">
-                <h3 className="text-sm text-[#e0e0e0] font-medium mb-1">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Query History
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">

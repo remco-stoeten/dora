@@ -9,7 +9,7 @@ export const siteConfig = {
         url: 'https://remcostoeten.com'
     },
     repository: 'https://github.com/remcostoeten',
-    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dora.app',
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://doradb.vercel.app',
     locale: 'en_US',
     themeColor: '#f7f2e8',
     keywords: [

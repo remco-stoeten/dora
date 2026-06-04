@@ -5,6 +5,8 @@ import { Download } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { CornerTick } from '@/components/corner-tick'
+import { AppDemo } from '@/components/hero-app-demo'
+import { ScrollReveal } from '@/components/scroll-reveal'
 import { useInView } from '@/shared/hooks/use-in-view'
 
 const InteractiveCube = dynamic(
@@ -16,7 +18,7 @@ const InteractiveCube = dynamic(
 function HeroText() {
     return (
         <div className="relative z-[3] min-w-0 max-w-[560px]">
-            <h1 className="max-w-[560px] [font-family:system-ui,sans-serif] text-[clamp(2.2rem,4.6vw,3.6rem)] font-[650] leading-[1.05] tracking-[0] text-foreground sm:font-pixel sm:font-[400]">
+            <h1 className="max-w-[560px] font-pixel text-[clamp(2.2rem,4.6vw,3.6rem)] font-[500] leading-[1.05] tracking-[0] text-foreground">
                 The database
                 <br />
                 <span className="text-[#f5c0c0] [text-shadow:0_0_18px_rgba(245,192,192,0.45)]">
@@ -100,15 +102,22 @@ export function Hero({ className = '' }: { className?: string }) {
             id="hero"
             className={`hero-frame relative z-10 overflow-visible ${className}`}
         >
-            <div className="hero-frame relative overflow-visible border-x border-t border-[#3a3138] px-6 sm:px-8">
+            <div className="hero-frame relative overflow-visible border-x border-y border-[#3a3138] px-6 sm:px-8">
                 <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
                 <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
-                <div className="hero-frame grid min-w-0 grid-cols-1 items-center gap-10 overflow-visible pt-[64px] pb-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <HeroText />
-                    <HeroInteractive />
+                <div className="hero-frame grid min-w-0 grid-cols-1 items-center gap-10 overflow-visible pt-[64px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <ScrollReveal rootMargin="0px 0px" delay={40}>
+                        <HeroText />
+                    </ScrollReveal>
+                    <ScrollReveal rootMargin="0px 0px" delay={110}>
+                        <HeroInteractive />
+                    </ScrollReveal>
                 </div>
+                <ScrollReveal rootMargin="0px 0px" delay={170}>
+                    <AppDemo />
+                </ScrollReveal>
             </div>
         </section>
     )

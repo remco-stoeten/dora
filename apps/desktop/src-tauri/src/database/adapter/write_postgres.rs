@@ -22,14 +22,26 @@ impl WriteAdapter for PostgresAdapter {
         column: String,
         new_value: serde_json::Value,
     ) -> Result<MutationResult, Error> {
+        // Bind the new value as text and let Postgres parse it into the
+        // column's type ($1::text::<type>). The UI edits cells as strings, so
+        // binding straight to a typed parameter ($1::int4 etc.) makes Postgres
+        // infer $1 as that type and tokio-postgres fails with
+        // "error serializing parameter" when the Rust value is a String.
+        // Routing through text works for ints, timestamps, bools, uuids, ….
         let query = format!(
-            "UPDATE {} SET \"{}\" = $1::{} WHERE \"{}\" = $2",
+            "UPDATE {} SET \"{}\" = $1::text::{} WHERE \"{}\" = $2",
             qualified_table_name(&table, schema.as_deref()),
             column,
             pg_column_type(self.client(), &table, schema.as_deref(), &column).await?,
             pk_column
         );
-        let new_val_param = json_to_pg_param(&new_value);
+        let new_val_text: Option<String> = match &new_value {
+            serde_json::Value::Null => None,
+            serde_json::Value::String(s) => Some(s.clone()),
+            other => Some(other.to_string()),
+        };
+        let new_val_param: Box<dyn tokio_postgres::types::ToSql + Sync + Send> =
+            Box::new(new_val_text);
         let pk_param = json_to_pg_param(&pk_value);
         let result = self
             .client()
@@ -111,24 +123,36 @@ impl WriteAdapter for PostgresAdapter {
             .map(|s| format!("\"{}\".", s))
             .unwrap_or_default();
 
-        let columns: Vec<&String> = row_data.keys().collect();
-        let col_names: String = columns
-            .iter()
-            .map(|c| format!("\"{}\"", c))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let placeholders: String = (1..=row_data.len())
-            .map(|i| format!("${}", i))
-            .collect::<Vec<_>>()
-            .join(", ");
+        // Bind every value as text and let Postgres parse it into the column's
+        // type via `$n::text::<type>` — same rationale as update_cell: the UI
+        // sends edits as strings, and a string bound straight to a typed param
+        // (e.g. a timestamp/uuid column) makes tokio-postgres fail with
+        // "error serializing parameter".
+        let mut col_names_vec: Vec<String> = Vec::with_capacity(row_data.len());
+        let mut placeholders_vec: Vec<String> = Vec::with_capacity(row_data.len());
+        let mut params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> =
+            Vec::with_capacity(row_data.len());
+        for (idx, (col, value)) in row_data.iter().enumerate() {
+            let col_type =
+                pg_column_type(self.client(), &table, schema.as_deref(), col).await?;
+            col_names_vec.push(format!("\"{}\"", col));
+            placeholders_vec.push(format!("${}::text::{}", idx + 1, col_type));
+            let text: Option<String> = match value {
+                serde_json::Value::Null => None,
+                serde_json::Value::String(s) => Some(s.clone()),
+                other => Some(other.to_string()),
+            };
+            params.push(Box::new(text));
+        }
 
         let query = format!(
             "INSERT INTO {}\"{}\" ({}) VALUES ({})",
-            schema_prefix, table, col_names, placeholders
+            schema_prefix,
+            table,
+            col_names_vec.join(", "),
+            placeholders_vec.join(", ")
         );
 
-        let params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> =
-            row_data.values().map(|v| json_to_pg_param(v)).collect();
         let params_ref: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = params
             .iter()
             .map(|p| p.as_ref() as &(dyn tokio_postgres::types::ToSql + Sync))
