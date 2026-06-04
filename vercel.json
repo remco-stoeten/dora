@@ -3,5 +3,5 @@
     "bunVersion": "1.x",
     "installCommand": "bun install",
     "framework": "nextjs",
-    "buildCommand": "bun --bun run build"
+    "buildCommand": "bun --bun run build:ci"
 }
