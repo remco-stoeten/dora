@@ -9,7 +9,8 @@ use crate::{
         services::ai::{
             AIProvider, AIRequest, AIResponse, AIService, AiServiceConfig, AiStatus,
             AiStreamEvent, AnthropicClient, ColumnContext, ForeignKeyContext, GroqClient,
-            OpenAiClient, GroqStatus, OllamaClient, SchemaContext, TableContext,
+            OllamaCatalogEntry, OllamaClient, OllamaPullEvent, OllamaStatus, OpenAiClient,
+            GroqStatus, SchemaContext, TableContext,
         },
         types::DatabaseSchema,
     },
@@ -253,15 +254,101 @@ pub async fn ai_configure_ollama(
     Ok(())
 }
 
+fn ollama_endpoint(state: &AppState) -> String {
+    state
+        .storage
+        .get_setting("ollama_endpoint")
+        .ok()
+        .flatten()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "http://127.0.0.1:11434".to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_get_ollama_status(state: State<'_, AppState>) -> Result<OllamaStatus, Error> {
+    let endpoint = ollama_endpoint(&state);
+    let client = OllamaClient::with_endpoint(endpoint);
+    Ok(client.get_status().await)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_list_ollama_catalog(
+    state: State<'_, AppState>,
+) -> Result<Vec<OllamaCatalogEntry>, Error> {
+    let endpoint = ollama_endpoint(&state);
+    let client = OllamaClient::with_endpoint(endpoint);
+    client.list_catalog().await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_pull_ollama_model(
+    request_id: String,
+    model: String,
+    on_event: tauri::ipc::Channel<OllamaPullEvent>,
+    state: State<'_, AppState>,
+) -> Result<(), Error> {
+    let model = model.trim().to_string();
+    if model.is_empty() {
+        return Err(Error::InvalidInput("Model name cannot be empty".into()));
+    }
+
+    let cancel = Arc::new(AtomicBool::new(false));
+    state
+        .ollama_cancel_flags
+        .insert(request_id.clone(), cancel.clone());
+
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<OllamaPullEvent>();
+    let forward_handle = tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            let _ = on_event.send(event);
+        }
+    });
+
+    let endpoint = ollama_endpoint(&state);
+    let client = OllamaClient::with_endpoint(endpoint);
+    let result = client.pull_model(&model, tx, cancel).await;
+
+    let _ = forward_handle.await;
+    state.ollama_cancel_flags.remove(&request_id);
+
+    result
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_cancel_ollama_pull(
+    request_id: String,
+    state: State<'_, AppState>,
+) -> Result<bool, Error> {
+    if let Some(flag) = state.ollama_cancel_flags.get(&request_id) {
+        flag.store(true, Ordering::Relaxed);
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_delete_ollama_model(model: String, state: State<'_, AppState>) -> Result<(), Error> {
+    let model = model.trim().to_string();
+    if model.is_empty() {
+        return Err(Error::InvalidInput("Model name cannot be empty".into()));
+    }
+
+    let endpoint = ollama_endpoint(&state);
+    let client = OllamaClient::with_endpoint(endpoint);
+    client.delete_model(&model).await
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn ai_list_ollama_models(state: State<'_, AppState>) -> Result<Vec<String>, Error> {
-    let endpoint = state
-        .storage
-        .get_setting("ollama_endpoint")?
-        .unwrap_or_else(|| "http://localhost:11434".to_string());
-
-    let client = OllamaClient::new(endpoint, String::new());
+    let endpoint = ollama_endpoint(&state);
+    let client = OllamaClient::with_endpoint(endpoint);
     client.list_models().await
 }
 

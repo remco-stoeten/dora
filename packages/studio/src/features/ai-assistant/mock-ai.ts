@@ -150,6 +150,71 @@ export function buildMockAiStatus(): import('@studio/lib/bindings').AiStatus {
 	}
 }
 
+export function buildMockOllamaCatalog(): import('@studio/lib/bindings').OllamaCatalogEntry[] {
+	return [
+		{
+			name: 'llama3.2',
+			label: 'Llama 3.2',
+			description: 'Simulated recommended model in the web demo.',
+			installed: true,
+			size_bytes: 1_500_000_000
+		},
+		{
+			name: 'qwen2.5-coder:7b',
+			label: 'Qwen 2.5 Coder',
+			description: 'Simulated SQL-focused model.',
+			installed: false,
+			size_bytes: null
+		},
+		{
+			name: 'deepseek-r1:7b',
+			label: 'DeepSeek R1',
+			description: 'Simulated reasoning model.',
+			installed: false,
+			size_bytes: null
+		}
+	]
+}
+
+export function buildMockOllamaStatus(): import('@studio/lib/bindings').OllamaStatus {
+	return {
+		running: true,
+		endpoint: 'http://127.0.0.1:11434',
+		version: 'demo',
+		installed_count: 1
+	}
+}
+
+type MockOllamaPullOptions = {
+	model: string
+	onEvent: (event: import('@studio/lib/bindings').OllamaPullEvent) => void
+	isCancelled?: () => boolean
+}
+
+export async function streamMockOllamaPull({
+	model,
+	onEvent,
+	isCancelled
+}: MockOllamaPullOptions): Promise<void> {
+	const total = 1_500_000_000
+	onEvent({ type: 'status', message: `Pulling ${model}…` })
+
+	for (let completed = 0; completed < total; completed += 75_000_000) {
+		if (isCancelled?.()) return
+		const next = Math.min(total, completed + 75_000_000)
+		onEvent({
+			type: 'progress',
+			completed: next,
+			total,
+			percent: (next / total) * 100,
+			eta_seconds: Math.max(0, Math.round((total - next) / 120_000_000))
+		})
+		await wait(180)
+	}
+
+	onEvent({ type: 'done', model })
+}
+
 export function buildMockSqlJson(prompt: string, connectionId: string | null): string {
 	const lower = prompt.toLowerCase()
 	const tables = DEMO_TABLES[connectionId ?? ''] ?? DEMO_TABLES['demo-ecommerce-001']

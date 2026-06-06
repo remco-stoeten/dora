@@ -614,6 +614,46 @@ async aiConfigureOllama(endpoint: string | null, model: string | null) : Promise
     else return { status: "error", error: e  as any };
 }
 },
+async aiGetOllamaStatus() : Promise<Result<OllamaStatus, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_get_ollama_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async aiListOllamaCatalog() : Promise<Result<OllamaCatalogEntry[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_list_ollama_catalog") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async aiPullOllamaModel(requestId: string, model: string, onEvent: TAURI_CHANNEL<OllamaPullEvent>) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_pull_ollama_model", { requestId, model, onEvent }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async aiCancelOllamaPull(requestId: string) : Promise<Result<boolean, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_cancel_ollama_pull", { requestId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async aiDeleteOllamaModel(model: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_delete_ollama_model", { model }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async aiListOllamaModels() : Promise<Result<string[], { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("ai_list_ollama_models") };
@@ -859,6 +899,9 @@ export type LiveMonitorSession = { monitorId: string; eventName: string }
  * Result of a mutation operation
  */
 export type MutationResult = { success: boolean; affected_rows: number; message: string | null }
+export type OllamaCatalogEntry = { name: string; label: string; description: string; installed: boolean; size_bytes: number | null }
+export type OllamaPullEvent = { type: "status"; message: string } | { type: "progress"; completed: number; total: number; percent: number; eta_seconds: number | null } | { type: "done"; model: string } | { type: "error"; message: string }
+export type OllamaStatus = { running: boolean; endpoint: string; version: string | null; installed_count: number }
 export type QueryHistoryEntry = { id: number; connection_id: string; query_text: string; executed_at: number; duration_ms: number | null; status: string; row_count: number; error_message: string | null }
 export type QueryStatus = "Pending" | "Running" | "Completed" | "Error"
 export type RegisteredDatabase = { name: string; path: string; active: boolean }

@@ -14,7 +14,7 @@ use crate::storage::Storage;
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
 pub use groq::GroqClient;
-pub use ollama::OllamaClient;
+pub use ollama::{OllamaCatalogEntry, OllamaClient, OllamaPullEvent, OllamaStatus};
 pub use openai::OpenAiClient;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -451,6 +451,11 @@ impl<'a> AIService<'a> {
                 };
                 let _ = sender.send(AiStreamEvent::Final { content: message });
                 Ok(())
+            }
+            AIProvider::Ollama => {
+                let config = self.get_config()?;
+                let client = OllamaClient::new(config.ollama_endpoint, config.model);
+                client.complete_stream(request, sender, cancel).await
             }
             _ => {
                 let response = self.complete(request).await?;

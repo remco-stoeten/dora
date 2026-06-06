@@ -17,6 +17,7 @@ import { Slider } from '@studio/shared/ui/slider'
 import { Switch } from '@studio/shared/ui/switch'
 import { cn } from '@studio/shared/utils/cn'
 import { AiProviderSection } from '@studio/features/ai-assistant/ai-provider-section'
+import { OllamaModelsSection } from '@studio/features/ai-assistant/ollama-models-section'
 import { AiKeysSection } from './ai-keys-section'
 import { ShortcutRecorder } from './shortcut-recorder'
 import { StorageSection } from './storage-section'
@@ -29,6 +30,7 @@ type SettingsSectionId =
 	| 'editor'
 	| 'shortcuts'
 	| 'ai-provider'
+	| 'ollama-models'
 	| 'ai-keys'
 	| 'storage'
 	| 'safety'
@@ -56,6 +58,11 @@ const SETTINGS_SECTIONS: SettingsSectionNav[] = [
 		id: 'ai-provider',
 		title: 'AI Provider',
 		description: 'Active model provider and defaults'
+	},
+	{
+		id: 'ollama-models',
+		title: 'Local models',
+		description: 'Ollama status, pulls, and installed models'
 	},
 	{
 		id: 'ai-keys',
@@ -359,6 +366,15 @@ export function SettingsView({ windowControls }: SettingsViewProps = {}) {
 								sectionRef={registerSectionRef('ai-provider')}
 							>
 								<AiProviderSection />
+							</SectionCard>
+
+							<SectionCard
+								id='ollama-models'
+								title='Local models'
+								description='Install and manage Ollama models on this machine.'
+								sectionRef={registerSectionRef('ollama-models')}
+							>
+								<OllamaModelsSection />
 							</SectionCard>
 
 							<SectionCard

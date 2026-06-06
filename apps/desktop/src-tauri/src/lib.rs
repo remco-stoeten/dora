@@ -44,6 +44,8 @@ pub struct AppState {
     pub command_registry: RwLock<CommandRegistry>,
     /// Cancellation flags keyed by AI request id, set by the abort command and observed by the streaming loop.
     pub ai_cancel_flags: DashMap<String, Arc<std::sync::atomic::AtomicBool>>,
+    /// Cancellation flags keyed by Ollama pull request id.
+    pub ollama_cancel_flags: DashMap<String, Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl AppState {
@@ -66,6 +68,7 @@ impl AppState {
             stmt_manager: StatementManager::new(),
             command_registry: RwLock::new(command_registry),
             ai_cancel_flags: DashMap::new(),
+            ollama_cancel_flags: DashMap::new(),
         };
         credential_storage::warm_up();
         Ok(state)
@@ -226,6 +229,11 @@ pub fn run() {
             database::commands::ai_get_status,
             database::commands::ai_set_gemini_key,
             database::commands::ai_configure_ollama,
+            database::commands::ai_get_ollama_status,
+            database::commands::ai_list_ollama_catalog,
+            database::commands::ai_pull_ollama_model,
+            database::commands::ai_cancel_ollama_pull,
+            database::commands::ai_delete_ollama_model,
             database::commands::ai_list_ollama_models,
             database::commands::ai_groq_status,
             database::commands::ai_abort_stream,
