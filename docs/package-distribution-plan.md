@@ -293,7 +293,7 @@ Use a single primary Arch package name:
 
 - `packaging/aur/PKGBUILD`
 - `packaging/aur/.SRCINFO`
-- `docs/distribution/aur.md`
+- `docs/aur.md`
 
 ### Exact instructions
 

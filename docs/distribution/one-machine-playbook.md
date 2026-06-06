@@ -22,23 +22,11 @@ Details live in `docs/distribution/vm-lab.md`.
 
 ## First milestone: create a real tagged release
 
-Package-manager publishing should start only after a real tagged release exists
-and its assets are visible on the GitHub release page.
+Package-manager publishing should start only after a real tagged release exists and its assets are visible on the GitHub release page.
 
-From the main repo:
+Follow **[Release Workflow](release-guide.md)** — tag, push, wait for CI to build all platforms and publish the release. Do not create the GitHub release manually.
 
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-Then wait for the `Release` GitHub Actions workflow to finish. That workflow now uploads:
-
-- release installers
-- `checksums-linux.txt`
-- `checksums-windows.txt`
-
-Verify the release page first. If the release assets are missing, stop there and fix the release before touching Winget, AUR, or Snap.
+Verify the release page lists every installer before debugging Winget, AUR, or Snap.
 
 ## Winget from a Windows VM
 
