@@ -108,7 +108,9 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::register_database,
         db_commands::create_database,
         db_commands::reset_storage,
-        crate::commands::credential_storage::get_credential_storage_status
+        crate::commands::credential_storage::get_credential_storage_status,
+        crate::commands::credential_storage::get_keyring_install_plan,
+        crate::commands::credential_storage::install_credential_keyring
     ])
 }
 

@@ -823,6 +823,12 @@ async resetStorage() : Promise<Result<null, { kind: string; detail: string }>> {
 },
 async getCredentialStorageStatus() : Promise<CredentialStorageStatus> {
     return await TAURI_INVOKE("get_credential_storage_status");
+},
+async getKeyringInstallPlan() : Promise<KeyringInstallPlan | null> {
+    return await TAURI_INVOKE("get_keyring_install_plan");
+},
+async installCredentialKeyring() : Promise<KeyringInstallResult> {
+    return await TAURI_INVOKE("install_credential_keyring");
 }
 }
 
@@ -937,6 +943,27 @@ referenced_schema: string }
 export type GroqStatus = { available: boolean; key_count: number }
 export type IndexInfo = { name: string; column_names: string[]; is_unique: boolean; is_primary: boolean }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+/**
+ * How the OS-backed credential store can be installed on this machine.
+ */
+export type KeyringInstallPlan = { 
+/**
+ * Detected package manager (e.g. "pacman", "apt-get", "dnf"), if any.
+ */
+package_manager: string | null; 
+/**
+ * Package that provides the OS Secret Service (e.g. "gnome-keyring").
+ */
+package: string; 
+/**
+ * Human-readable command the user could run themselves.
+ */
+command: string; 
+/**
+ * True when Dora can run the install itself (via pkexec on Linux).
+ */
+can_auto_install: boolean }
+export type KeyringInstallResult = { ok: boolean; message: string }
 export type LiveMonitorChangeType = "insert" | "update" | "delete"
 export type LiveMonitorSession = { monitorId: string; eventName: string }
 /**

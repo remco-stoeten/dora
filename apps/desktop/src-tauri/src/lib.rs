@@ -276,6 +276,8 @@ pub fn run() {
             database::commands::create_database,
             database::commands::reset_storage,
             commands::credential_storage::get_credential_storage_status,
+            commands::credential_storage::get_keyring_install_plan,
+            commands::credential_storage::install_credential_keyring,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
