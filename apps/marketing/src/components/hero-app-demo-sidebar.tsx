@@ -186,7 +186,7 @@ function ConnectionRow({
       tabIndex={0}
       onClick={onSelect}
       className={
-        "group/row relative flex cursor-pointer items-center gap-2.5 rounded-[2px] p-1.5 outline-hidden transition-colors " +
+        "group/row relative flex cursor-pointer ml-10 items-center gap-2.5 rounded-[2px] p-1.5 outline-hidden transition-colors " +
         (active ? "bg-sidebar-accent/40" : "hover:bg-sidebar-accent")
       }
     >

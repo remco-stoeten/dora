@@ -10,14 +10,12 @@ import { NativePerformanceCard } from '@/components/features/native-performance-
 import { QueryHistoryCard } from '@/components/features/query-history-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
-import { AIAssistantCard } from '@/components/features/ai-assistant-card'
-import { DrizzleRunnerCard } from '@/components/features/drizzle-runner-card'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
 const FEATURE_CELL_CLASS =
-    'min-h-[300px] border-r border-b border-[#2b252c] overflow-hidden transition-colors hover:bg-[rgba(245,192,192,0.06)]'
+    'min-h-[300px] border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]'
 const FEATURE_REVEAL_CLASS = 'flex h-full w-full'
 
 export function FeaturesSection() {
@@ -50,7 +48,7 @@ export function FeaturesSection() {
             <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
             <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
             {/* Heading */}
-            <div className="px-6 sm:px-8 py-12 border-b border-[#2b252c]">
+            <div className="px-6 sm:px-8 py-12 border-b border-r border-[#2b252c]">
                 <ScrollReveal delay={40}>
                     <h2 className="text-2xl text-[#7a7a7a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
                         More Than a GUI.
@@ -61,14 +59,13 @@ export function FeaturesSection() {
                 </ScrollReveal>
             </div>
 
-            {/* Feature cards — collapsed bordered grid (2-up, widening to 4-up) */}
-            <div className="relative grid grid-cols-2 lg:grid-cols-4">
-                {/* squares along the divider between the top and bottom rows */}
-                <CornerTick className="hidden lg:block left-0 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="hidden lg:block left-1/4 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="hidden lg:block left-2/4 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="hidden lg:block left-3/4 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="hidden lg:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
+            {/* Feature cards — collapsed bordered grid */}
+            <div className="relative grid grid-cols-2 md:grid-cols-3 md:grid-rows-2">
+                {/* squares along the divider between the top and bottom three */}
+                <CornerTick className="hidden md:block left-0 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <CornerTick className="hidden md:block left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <CornerTick className="hidden md:block left-2/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <CornerTick className="hidden md:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <div className={FEATURE_CELL_CLASS}>
                     <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={0}>
                         <DatabaseConnectionCard
@@ -79,31 +76,21 @@ export function FeaturesSection() {
                 </div>
                 <div className={FEATURE_CELL_CLASS}>
                     <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={55}>
-                        <AIAssistantCard animate={animate} />
+                        <RegionGlobeCard animate={animate} motion={motion} />
                     </ScrollReveal>
                 </div>
                 <div className={FEATURE_CELL_CLASS}>
                     <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={110}>
-                        <SchemaDiagramCard animate={animate} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={165}>
                         <DockerContainersCard animate={animate} />
                     </ScrollReveal>
                 </div>
                 <div className={FEATURE_CELL_CLASS}>
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={165}>
+                        <SchemaDiagramCard animate={animate} />
+                    </ScrollReveal>
+                </div>
+                <div className={FEATURE_CELL_CLASS}>
                     <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={220}>
-                        <DrizzleRunnerCard animate={animate} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={275}>
-                        <QueryHistoryCard animate={animate} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={330}>
                         <NativePerformanceCard
                             animate={animate}
                             motion={motion}
@@ -111,8 +98,8 @@ export function FeaturesSection() {
                     </ScrollReveal>
                 </div>
                 <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={385}>
-                        <RegionGlobeCard animate={animate} motion={motion} />
+                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={275}>
+                        <QueryHistoryCard animate={animate} />
                     </ScrollReveal>
                 </div>
             </div>

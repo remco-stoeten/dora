@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { CardAura } from './card-aura'
 import { useGate } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
  * AI Assistant — natural-language → SQL. An English question types into the
  * prompt row, the assistant "thinks" for a beat, then streams a syntax-tinted
- * SQL answer token-by-token with a blinking caret. Loops through a few pairs;
- * hovering a pair's dot jumps straight to it and pauses the cycle.
+ * SQL answer token-by-token with a blinking caret. Auto-cycles through the
+ * pairs on a loop — no manual controls, the animation advances itself.
  * ------------------------------------------------------------------------- */
 const PAIRS = [
     {
@@ -71,6 +72,45 @@ function SqlTokens({ text }: { text: string }) {
     )
 }
 
+// Gradient AI sparkle — the visual signature that the answer is generated.
+function Sparkle({ className, spin }: { className?: string; spin?: boolean }) {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            className={className}
+            aria-hidden="true"
+            fill="none"
+        >
+            <defs>
+                <linearGradient id="ai-spark" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#ad8eb6" />
+                    <stop offset="1" stopColor="#f5c0c0" />
+                </linearGradient>
+            </defs>
+            <path
+                d="M12 2.2l1.9 5.6 5.6 1.9-5.6 1.9L12 17.2l-1.9-5.6L4.5 9.7l5.6-1.9z"
+                fill="url(#ai-spark)"
+            >
+                {spin ? (
+                    <animateTransform
+                        attributeName="transform"
+                        type="rotate"
+                        from="0 12 9.7"
+                        to="360 12 9.7"
+                        dur="4s"
+                        repeatCount="indefinite"
+                    />
+                ) : null}
+            </path>
+            <path
+                d="M18.8 13.4l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8z"
+                fill="url(#ai-spark)"
+                opacity="0.85"
+            />
+        </svg>
+    )
+}
+
 type TPhase = 'ask' | 'think' | 'gen' | 'hold'
 
 export function AIAssistantCard({ animate }: { animate: boolean }) {
@@ -82,10 +122,9 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
     const [phase, setPhase] = useState<TPhase>('ask')
     const [askLen, setAskLen] = useState(0)
     const [sqlLen, setSqlLen] = useState(0)
-    const [paused, setPaused] = useState(false)
 
     const pair = PAIRS[index]
-    const active = running && !paused
+    const active = running
 
     // Drive the ask -> think -> gen -> hold state machine off a single timer per
     // phase so it can pause/resume cleanly when the card leaves the viewport.
@@ -121,27 +160,27 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
         return () => clearTimeout(id)
     }, [active, phase, askLen, sqlLen, pair.ask.length, pair.sql.length])
 
-    // When paused on hover, settle to the fully-rendered pair so it reads cleanly.
-    function jumpTo(i: number) {
-        setPaused(true)
-        setIndex(i)
-        setAskLen(PAIRS[i].ask.length)
-        setSqlLen(PAIRS[i].sql.length)
-        setPhase('hold')
-    }
-
     const askTyping = phase === 'ask' && askLen < pair.ask.length
     const genTyping = phase === 'gen' && sqlLen < pair.sql.length
     const showSql = phase === 'gen' || phase === 'hold'
 
-    function renderAnswer() {
-        if (phase === 'think' && active)
+    const thinking = phase === 'think'
+    const answering = thinking || showSql
+
+    function aiStatus(): { label: string; color: string } {
+        if (thinking) return { label: 'generating…', color: '#9a8aa0' }
+        if (genTyping) return { label: 'writing SQL', color: '#9a8aa0' }
+        return { label: 'ready ✓', color: '#6f9e78' }
+    }
+
+    function renderBody() {
+        if (thinking && active)
             return (
-                <div className="flex items-center gap-1 pt-1">
+                <div className="flex items-center gap-1 pl-0.5">
                     {[0, 1, 2].map((d) => (
                         <span
                             key={d}
-                            className="h-1 w-1 rounded-full bg-[#e3b2b3]"
+                            className="h-1 w-1 rounded-full bg-[#c9a3b5]"
                             style={{
                                 animation: `particleFloat 0.9s ease-in-out ${d * 140}ms infinite alternate`
                             }}
@@ -160,81 +199,68 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
         )
     }
 
+    function renderAnswer() {
+        if (!answering) return null
+        const status = aiStatus()
+        return (
+            <>
+                {/* AI assistant label */}
+                <div className="mb-2 flex items-center gap-1.5">
+                    <span className="flex items-center gap-1 rounded-full border border-[#ad8eb6]/30 bg-[#ad8eb6]/10 py-[1px] pl-1 pr-1.5">
+                        <Sparkle
+                            className="h-2.5 w-2.5"
+                            spin={active && thinking}
+                        />
+                        <span className="font-mono text-[8px] font-medium uppercase tracking-[0.16em] text-[#c9a3b5] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                            Dora AI
+                        </span>
+                    </span>
+                    <span
+                        className="font-mono text-[8.5px] tracking-[0.04em] [font-family:var(--font-geist-mono),ui-monospace,monospace]"
+                        style={{ color: status.color }}
+                    >
+                        {status.label}
+                    </span>
+                </div>
+                {renderBody()}
+            </>
+        )
+    }
+
     return (
         <div
             ref={ref}
             className="relative h-full flex flex-col overflow-hidden"
-            onMouseLeave={() => setPaused(false)}
         >
-            <div
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-[34%] h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70 blur-2xl"
-                style={{
-                    background:
-                        'radial-gradient(circle, rgba(173,142,182,0.14) 0%, rgba(227,178,179,0.06) 40%, transparent 72%)'
-                }}
-            />
+            <CardAura active={active} />
 
             <div className="relative flex-1 px-4 pt-5">
-                {/* prompt row */}
+                {/* prompt row — the user's question */}
                 <div className="flex items-center gap-2 border border-[#2b252c] bg-[#100d12]/80 px-3 py-2">
-                    <svg
-                        viewBox="0 0 24 24"
-                        className="h-3.5 w-3.5 shrink-0"
-                        aria-hidden="true"
-                        fill="none"
-                    >
-                        <path
-                            d="M12 3l1.8 4.9L18.7 9.7 13.8 11.5 12 16.4 10.2 11.5 5.3 9.7 10.2 7.9z"
-                            fill="#ad8eb6"
-                        >
-                            {active ? (
-                                <animate
-                                    attributeName="opacity"
-                                    values="0.6;1;0.6"
-                                    dur="2.2s"
-                                    repeatCount="indefinite"
-                                />
-                            ) : null}
-                        </path>
-                    </svg>
+                    <span className="shrink-0 font-mono text-[12px] leading-none text-[#ad8eb6]/70 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                        ›
+                    </span>
                     <span className="min-w-0 truncate font-mono text-[11px] text-[#cfcfcf] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
-                        {pair.ask.slice(0, askLen)}
+                        {askLen === 0 && active ? (
+                            <span className="text-[#5a5560]">
+                                ask your database…
+                            </span>
+                        ) : (
+                            pair.ask.slice(0, askLen)
+                        )}
                         {askTyping && active ? (
                             <span className="ml-px inline-block h-3 w-px animate-pulse bg-[#ad8eb6] align-middle" />
                         ) : null}
                     </span>
                 </div>
 
-                {/* generated SQL */}
-                <div className="mt-2.5 min-h-[96px] border border-[#2b252c] bg-[#0d0a0f]/80 px-3 py-2.5">
+                {/* AI-generated answer */}
+                <div className="mt-2.5 min-h-[112px] border border-[#ad8eb6]/15 bg-[#0d0a0f]/80 px-3 py-2.5">
                     {renderAnswer()}
                 </div>
             </div>
 
-            {/* pair selector dots */}
-            <div className="flex items-center justify-center gap-1 px-5 pt-3">
-                {PAIRS.map((p, idx) => (
-                    <button
-                        key={p.ask}
-                        aria-label={`Show: ${p.ask}`}
-                        onMouseEnter={() => jumpTo(idx)}
-                        className="flex size-6 items-center justify-center"
-                    >
-                        <span
-                            aria-hidden
-                            className="h-1 transition-all duration-300"
-                            style={{
-                                width: idx === index ? 16 : 4,
-                                backgroundColor:
-                                    idx === index ? '#ad8eb6' : '#3a3138'
-                            }}
-                        />
-                    </button>
-                ))}
-            </div>
-
-            <div className="relative px-5 pb-5 pt-2">
+            <div className="relative px-5 pb-5 pt-4">
                 <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Ask in English
                 </h3>
