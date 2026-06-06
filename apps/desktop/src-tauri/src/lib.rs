@@ -2,8 +2,10 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
 mod bindings;
+mod commands;
 pub mod commands_system;
 pub mod config;
+pub mod credential_storage;
 pub mod credentials;
 pub mod database;
 mod error;
@@ -57,14 +59,16 @@ impl AppState {
             log::warn!("Failed to load custom shortcuts: {}", e);
         }
 
-        Ok(Self {
+        let state = Self {
             connections: DashMap::new(),
             schemas: DashMap::new(),
             storage,
             stmt_manager: StatementManager::new(),
             command_registry: RwLock::new(command_registry),
             ai_cancel_flags: DashMap::new(),
-        })
+        };
+        credential_storage::warm_up();
+        Ok(state)
     }
 }
 
@@ -147,6 +151,7 @@ pub fn run() {
             database::commands::update_connection_color,
             database::commands::connect_to_database,
             database::commands::disconnect_from_database,
+            database::commands::cancel_query,
             database::commands::start_query,
             database::commands::fetch_query,
             database::commands::fetch_page,
@@ -250,6 +255,7 @@ pub fn run() {
             database::commands::register_database,
             database::commands::create_database,
             database::commands::reset_storage,
+            commands::credential_storage::get_credential_storage_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

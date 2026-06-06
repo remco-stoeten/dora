@@ -26,6 +26,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::get_connection_history,
         db_commands::set_connection_pin,
         db_commands::verify_pin_and_get_credentials,
+        db_commands::cancel_query,
         db_commands::start_query,
         db_commands::fetch_query,
         db_commands::fetch_page,
@@ -93,7 +94,8 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::switch_storage,
         db_commands::register_database,
         db_commands::create_database,
-        db_commands::reset_storage
+        db_commands::reset_storage,
+        crate::commands::credential_storage::get_credential_storage_status
     ])
 }
 

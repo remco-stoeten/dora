@@ -44,12 +44,14 @@ export function AiAssistantPanel({
 		return s.setPendingPrompt
 	})
 
-	const { messages, isStreaming, error, send, abort, clear } = useAiChat(activeConnectionId)
+	const { messages, streamingSnapshot, isStreaming, error, send, abort, clear } =
+		useAiChat(activeConnectionId)
 	const [input, setInput] = useState('')
 	const [groqStatus, setGroqStatus] = useState<GroqStatus | null>(null)
 	const [schema, setSchema] = useState<DatabaseSchema | null>(null)
 	const scrollRef = useRef<HTMLDivElement | null>(null)
 	const inputRef = useRef<HTMLTextAreaElement | null>(null)
+	const stickToBottomRef = useRef(true)
 
 	useEffect(
 		function checkGroq() {
@@ -97,11 +99,37 @@ export function AiAssistantPanel({
 	)
 
 	useEffect(
-		function autoScroll() {
-			if (!scrollRef.current) return
-			scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+		function trackScrollIntent() {
+			const el = scrollRef.current
+			if (!el) return
+
+			function onScroll() {
+				const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+				stickToBottomRef.current = distanceFromBottom < 96
+			}
+
+			el.addEventListener('scroll', onScroll, { passive: true })
+			return function cleanup() {
+				el.removeEventListener('scroll', onScroll)
+			}
 		},
-		[messages]
+		[open]
+	)
+
+	useEffect(
+		function autoScroll() {
+			const el = scrollRef.current
+			if (!el) return
+			if (!stickToBottomRef.current && !isStreaming) return
+
+			const frame = requestAnimationFrame(function () {
+				el.scrollTop = el.scrollHeight
+			})
+			return function cleanup() {
+				cancelAnimationFrame(frame)
+			}
+		},
+		[messages, streamingSnapshot, isStreaming]
 	)
 
 	const suggestions = useMemo(
@@ -257,10 +285,19 @@ export function AiAssistantPanel({
 				) : (
 					<div className='divide-y divide-sidebar-border/40'>
 						{messages.map(function (m) {
+							const liveContent =
+								streamingSnapshot?.messageId === m.id
+									? streamingSnapshot.content
+									: m.content
+							const message =
+								liveContent === m.content
+									? m
+									: { ...m, content: liveContent }
+
 							return (
 								<MessageBubble
 									key={m.id}
-									message={m}
+									message={message}
 									activeConnectionId={activeConnectionId}
 									onEditorInsert={onEditorInsert}
 								/>

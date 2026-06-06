@@ -160,6 +160,14 @@ async verifyPinAndGetCredentials(connectionId: string, pin: string) : Promise<Re
     else return { status: "error", error: e  as any };
 }
 },
+async cancelQuery() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cancel_query") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async startQuery(connectionId: string, query: string) : Promise<Result<number[], { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("start_query", { connectionId, query }) };
@@ -708,6 +716,9 @@ async resetStorage() : Promise<Result<null, { kind: string; detail: string }>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getCredentialStorageStatus() : Promise<CredentialStorageStatus> {
+    return await TAURI_INVOKE("get_credential_storage_status");
 }
 }
 
@@ -740,6 +751,8 @@ is_auto_increment?: boolean;
 foreign_key?: ForeignKeyInfo | null }
 export type ConnectionHistoryEntry = { id: number; connection_id: string; connection_name: string; database_type: string; attempted_at: number; success: boolean; error_message: string | null; duration_ms: number | null }
 export type ConnectionInfo = { id: string; name: string; connected: boolean; database_type: DatabaseInfo; last_connected_at: number | null; created_at: number | null; updated_at: number | null; pin_hash: string | null; favorite: boolean | null; color: string | null; sort_order: number | null }
+export type CredentialStorageBackend = "os_keyring" | "local_encrypted_file"
+export type CredentialStorageStatus = { backend: CredentialStorageBackend; message: string; storage_path: string | null; install_hint: string | null }
 export type DatabaseInfo = { Postgres: { connection_string: string; ssh_config: SshConfig | null } } | { MySQL: { connection_string: string; ssh_config: SshConfig | null } } | { SQLite: { db_path: string } } | 
 /**
  * LibSQL/Turso database - can be local path or remote URL with auth token
