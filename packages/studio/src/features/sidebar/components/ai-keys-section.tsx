@@ -8,7 +8,7 @@ import { Input } from '@studio/shared/ui/input'
 import { cn } from '@studio/shared/utils/cn'
 import { SidebarSection } from './sidebar-panel'
 
-type KeyProvider = 'groq' | 'openai' | 'anthropic'
+type KeyProvider = 'groq' | 'openai' | 'anthropic' | 'gemini'
 
 type ProviderConfig = {
 	id: KeyProvider
@@ -43,6 +43,14 @@ const PROVIDERS: ProviderConfig[] = [
 		placeholder: 'sk-ant-...',
 		hint: 'Claude Opus, Sonnet, Haiku, and other Anthropic models.',
 		defaultModel: 'claude-sonnet-4-6'
+	},
+	{
+		id: 'gemini',
+		label: 'Gemini',
+		envVar: 'GEMINI_API_KEY',
+		placeholder: 'AIza...',
+		hint: 'Gemini 2.5 Pro, Flash, and other Google models.',
+		defaultModel: 'gemini-2.5-flash'
 	}
 ]
 

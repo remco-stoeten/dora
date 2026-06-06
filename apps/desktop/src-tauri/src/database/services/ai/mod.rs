@@ -333,19 +333,29 @@ impl<'a> AIService<'a> {
             },
         });
 
-        let gemini_ready = self
-            .storage
-            .get_setting("gemini_api_key")?
-            .is_some_and(|key| !key.trim().is_empty());
-        providers.push(AiProviderReadiness {
-            provider: AIProvider::Gemini.as_str().to_string(),
-            ready: gemini_ready,
-            detail: if gemini_ready {
-                None
-            } else {
-                Some("Gemini API key not configured".into())
+        providers.push(match GeminiClient::from_env_and_storage(self.storage) {
+            Ok(client) => AiProviderReadiness {
+                provider: AIProvider::Gemini.as_str().to_string(),
+                ready: true,
+                detail: None,
+                key_count: Some(client.key_count()),
             },
-            key_count: None,
+            Err(_) => {
+                let keys = self.storage.ai_keys_list(AIProvider::Gemini.as_str())?;
+                let active_count = keys.iter().filter(|key| key.is_active).count();
+                AiProviderReadiness {
+                    provider: AIProvider::Gemini.as_str().to_string(),
+                    ready: active_count > 0,
+                    detail: if active_count > 0 {
+                        None
+                    } else if keys.is_empty() {
+                        Some("Add a Gemini API key in Settings → AI Keys".into())
+                    } else {
+                        Some("Enable an API key in Settings".into())
+                    },
+                    key_count: Some(keys.len()),
+                }
+            }
         });
 
         let ollama_client = OllamaClient::new(config.ollama_endpoint.clone(), String::new());
@@ -464,12 +474,7 @@ impl<'a> AIService<'a> {
                 client.complete(request).await
             }
             AIProvider::Gemini => {
-                let api_key = self
-                    .storage
-                    .get_setting("gemini_api_key")?
-                    .ok_or_else(|| Error::Any(anyhow::anyhow!("Gemini API key not configured")))?;
-
-                let client = GeminiClient::new(api_key);
+                let client = GeminiClient::from_env_and_storage(self.storage)?;
                 client.complete(request).await
             }
             AIProvider::Ollama => {
@@ -491,9 +496,7 @@ impl<'a> AIService<'a> {
         }
     }
 
-    /// Streaming completion. Currently only Groq supports streaming natively;
-    /// Gemini/Ollama fall back to non-streaming and emit the full result as
-    /// a single Final event.
+    /// Streaming completion for cloud and local providers.
     pub async fn complete_stream(
         &self,
         request: AIRequest,
@@ -515,6 +518,10 @@ impl<'a> AIService<'a> {
                 let client = AnthropicClient::from_env_and_storage(self.storage)?;
                 client.complete_stream(request, sender, cancel).await
             }
+            AIProvider::Gemini => {
+                let client = GeminiClient::from_env_and_storage(self.storage)?;
+                client.complete_stream(request, sender, cancel).await
+            }
             AIProvider::Mock => {
                 let message = match self.complete(request).await {
                     Ok(response) => response.content,
@@ -532,13 +539,6 @@ impl<'a> AIService<'a> {
                 let config = self.get_config()?;
                 let client = OllamaClient::new(config.ollama_endpoint, config.model);
                 client.complete_stream(request, sender, cancel).await
-            }
-            _ => {
-                let response = self.complete(request).await?;
-                let _ = sender.send(AiStreamEvent::Final {
-                    content: response.content,
-                });
-                Ok(())
             }
         }
     }

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{copy, Read};
+use std::io::copy;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;

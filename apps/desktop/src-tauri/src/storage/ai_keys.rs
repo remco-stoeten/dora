@@ -173,6 +173,23 @@ impl Storage {
         }
     }
 
+    /// Move legacy `gemini_api_key` app setting into encrypted `ai_api_keys` rows.
+    pub fn migrate_legacy_gemini_key(&self) -> Result<()> {
+        let legacy = self.get_setting("gemini_api_key")?;
+        let Some(key) = legacy.filter(|value| !value.trim().is_empty()) else {
+            return Ok(());
+        };
+
+        let existing = self.ai_keys_list("gemini")?;
+        if existing.is_empty() {
+            self.ai_keys_add("gemini", "Migrated", key.trim())?;
+            tracing::info!("Migrated legacy Gemini API key into encrypted key store");
+        }
+
+        self.delete_setting("gemini_api_key")?;
+        Ok(())
+    }
+
     pub fn ai_keys_get_decrypted(&self, id: i64) -> Result<Option<String>> {
         let conn = self
             .conn

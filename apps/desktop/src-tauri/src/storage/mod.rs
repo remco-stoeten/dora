@@ -42,10 +42,15 @@ impl Storage {
         Self::init_pragmas(&mut conn)?;
         Migrator::new().migrate(&mut conn)?;
 
-        Ok(Self {
+        let storage = Self {
             conn: Mutex::new(conn),
             active_path: Mutex::new(db_path),
-        })
+        };
+        if let Err(error) = storage.migrate_legacy_gemini_key() {
+            tracing::warn!("Gemini key migration skipped: {error}");
+        }
+
+        Ok(storage)
     }
 
     fn init_pragmas(conn: &mut Connection) -> Result<()> {
@@ -99,6 +104,10 @@ impl Storage {
         Migrator::new().migrate(&mut new_conn)?;
 
         *guard = new_conn;
+
+        if let Err(error) = self.migrate_legacy_gemini_key() {
+            tracing::warn!("Gemini key migration skipped: {error}");
+        }
 
         *self
             .active_path

@@ -9,7 +9,7 @@ use crate::{
         services::ai::{
             AIProvider, AIRequest, AIResponse, AIService, AiModelOption, AiServiceConfig, AiStatus,
             AiStreamEvent, AiUsageCapture, AiUsageEntry, AiUsageProviderSummary, AiUsageSummary,
-            AnthropicClient, ColumnContext, ForeignKeyContext, GroqClient, OllamaCatalogEntry,
+            AnthropicClient, ColumnContext, ForeignKeyContext, GeminiClient, GroqClient, OllamaCatalogEntry,
             OllamaClient, OllamaPullEvent, OllamaStatus, OpenAiClient, GroqStatus, SchemaContext,
             TableContext, record_usage, usage_source,
         },
@@ -340,7 +340,13 @@ pub async fn ai_get_status(state: State<'_, AppState>) -> Result<AiStatus, Error
 #[tauri::command]
 #[specta::specta]
 pub async fn ai_set_gemini_key(api_key: String, state: State<'_, AppState>) -> Result<(), Error> {
-    state.storage.set_setting("gemini_api_key", &api_key)?;
+    if api_key.trim().is_empty() {
+        return Err(Error::InvalidInput("API key cannot be empty".into()));
+    }
+    state
+        .storage
+        .ai_keys_add("gemini", "default", api_key.trim())?;
+    let _ = state.storage.delete_setting("gemini_api_key");
     Ok(())
 }
 
@@ -586,6 +592,7 @@ async fn test_ai_key_for_provider(
         "groq" => GroqClient::test_key(api_key, model_ref, prompt_ref).await,
         "openai" => OpenAiClient::test_key(api_key, model_ref, prompt_ref).await,
         "anthropic" => AnthropicClient::test_key(api_key, model_ref, prompt_ref).await,
+        "gemini" => GeminiClient::test_key(api_key, model_ref, prompt_ref).await,
         other => Err(Error::InvalidInput(format!(
             "Key testing is not supported for provider: {other}"
         ))),
