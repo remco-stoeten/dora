@@ -242,6 +242,7 @@ impl GroqClient {
     ) -> GroqRequest {
         // Groq requires the word "json" somewhere in messages when using json_object format,
         // and chat mode expects markdown — so only enable JSON mode for SQL generation.
+        let temperature = if use_json_format { 0.2 } else { 0.35 };
         GroqRequest {
             model: self.model.clone(),
             messages: vec![
@@ -256,7 +257,7 @@ impl GroqClient {
             ],
             max_tokens,
             stream,
-            temperature: Some(0.2),
+            temperature: Some(temperature),
             response_format: use_json_format.then(|| ResponseFormat {
                 kind: "json_object".into(),
             }),
