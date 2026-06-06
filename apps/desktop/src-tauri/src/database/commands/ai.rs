@@ -8,8 +8,8 @@ use crate::{
     database::{
         services::ai::{
             AIProvider, AIRequest, AIResponse, AIService, AiServiceConfig, AiStatus,
-            AiStreamEvent, ColumnContext, ForeignKeyContext, GroqClient, GroqStatus,
-            OllamaClient, SchemaContext, TableContext,
+            AiStreamEvent, AnthropicClient, ColumnContext, ForeignKeyContext, GroqClient,
+            OpenAiClient, GroqStatus, OllamaClient, SchemaContext, TableContext,
         },
         types::DatabaseSchema,
     },
@@ -327,18 +327,39 @@ pub struct AiKeyTestResult {
     pub message: String,
 }
 
+async fn test_ai_key_for_provider(
+    provider: &str,
+    api_key: &str,
+    model: Option<String>,
+) -> Result<String, Error> {
+    let model_ref = model.as_deref();
+    match provider {
+        "groq" => GroqClient::test_key(api_key, model_ref).await,
+        "openai" => OpenAiClient::test_key(api_key, model_ref).await,
+        "anthropic" => AnthropicClient::test_key(api_key, model_ref).await,
+        other => Err(Error::InvalidInput(format!(
+            "Key testing is not supported for provider: {other}"
+        ))),
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn ai_keys_test(id: i64, state: State<'_, AppState>) -> Result<AiKeyTestResult, Error> {
+    let record = state
+        .storage
+        .ai_keys_get(id)?
+        .ok_or_else(|| Error::InvalidInput(format!("No AI key with id {id}")))?;
     let plaintext = state
         .storage
         .ai_keys_get_decrypted(id)?
-        .ok_or_else(|| Error::InvalidInput(format!("No AI key with id {}", id)))?;
+        .ok_or_else(|| Error::InvalidInput(format!("No AI key with id {id}")))?;
+    let model = state.storage.get_setting("ai_model")?;
 
-    let result = GroqClient::test_key(&plaintext, None).await;
+    let result = test_ai_key_for_provider(&record.provider, &plaintext, model).await;
     let (ok, message) = match &result {
         Ok(msg) => (true, msg.clone()),
-        Err(e) => (false, e.to_string()),
+        Err(error) => (false, error.to_string()),
     };
     let _ = state.storage.ai_keys_record_test(id, ok, &message);
     Ok(AiKeyTestResult { ok, message })
@@ -347,16 +368,22 @@ pub async fn ai_keys_test(id: i64, state: State<'_, AppState>) -> Result<AiKeyTe
 /// Test an unsaved key (used by the "Test before save" button).
 #[tauri::command]
 #[specta::specta]
-pub async fn ai_keys_test_raw(api_key: String) -> Result<AiKeyTestResult, Error> {
-    let result = GroqClient::test_key(api_key.trim(), None).await;
+pub async fn ai_keys_test_raw(
+    provider: String,
+    api_key: String,
+    state: State<'_, AppState>,
+) -> Result<AiKeyTestResult, Error> {
+    AIProvider::parse(&provider)?;
+    let model = state.storage.get_setting("ai_model")?;
+    let result = test_ai_key_for_provider(provider.trim(), api_key.trim(), model).await;
     Ok(match result {
         Ok(msg) => AiKeyTestResult {
             ok: true,
             message: msg,
         },
-        Err(e) => AiKeyTestResult {
+        Err(error) => AiKeyTestResult {
             ok: false,
-            message: e.to_string(),
+            message: error.to_string(),
         },
     })
 }

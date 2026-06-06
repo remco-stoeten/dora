@@ -1,6 +1,8 @@
+mod anthropic;
 mod gemini;
 mod groq;
 mod ollama;
+mod openai;
 mod prompts;
 
 use serde::{Deserialize, Serialize};
@@ -9,9 +11,11 @@ use uuid::Uuid;
 use crate::error::Error;
 use crate::storage::Storage;
 
+pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
 pub use groq::GroqClient;
 pub use ollama::OllamaClient;
+pub use openai::OpenAiClient;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 pub enum AIProvider {
@@ -295,23 +299,64 @@ impl<'a> AIService<'a> {
         });
 
         for provider in [AIProvider::Openai, AIProvider::Anthropic] {
-            let keys = self.storage.ai_keys_list(provider.as_str())?;
-            let active_count = keys.iter().filter(|key| key.is_active).count();
-            providers.push(AiProviderReadiness {
-                provider: provider.as_str().to_string(),
-                ready: active_count > 0,
-                detail: if active_count > 0 {
-                    None
-                } else if keys.is_empty() {
-                    Some(format!(
-                        "{} support is coming soon — keys can be saved ahead of time",
-                        provider.label()
-                    ))
-                } else {
-                    Some("Enable an API key in Settings".into())
+            let readiness = match provider {
+                AIProvider::Openai => match OpenAiClient::from_env_and_storage(self.storage) {
+                    Ok(client) => AiProviderReadiness {
+                        provider: provider.as_str().to_string(),
+                        ready: true,
+                        detail: None,
+                        key_count: Some(client.key_count()),
+                    },
+                    Err(_) => {
+                        let keys = self.storage.ai_keys_list(provider.as_str())?;
+                        let active_count = keys.iter().filter(|key| key.is_active).count();
+                        AiProviderReadiness {
+                            provider: provider.as_str().to_string(),
+                            ready: active_count > 0,
+                            detail: if active_count > 0 {
+                                None
+                            } else if keys.is_empty() {
+                                Some(format!(
+                                    "Add an {} API key in Settings → AI Keys",
+                                    provider.label()
+                                ))
+                            } else {
+                                Some("Enable an API key in Settings".into())
+                            },
+                            key_count: Some(keys.len()),
+                        }
+                    }
                 },
-                key_count: Some(keys.len()),
-            });
+                AIProvider::Anthropic => match AnthropicClient::from_env_and_storage(self.storage) {
+                    Ok(client) => AiProviderReadiness {
+                        provider: provider.as_str().to_string(),
+                        ready: true,
+                        detail: None,
+                        key_count: Some(client.key_count()),
+                    },
+                    Err(_) => {
+                        let keys = self.storage.ai_keys_list(provider.as_str())?;
+                        let active_count = keys.iter().filter(|key| key.is_active).count();
+                        AiProviderReadiness {
+                            provider: provider.as_str().to_string(),
+                            ready: active_count > 0,
+                            detail: if active_count > 0 {
+                                None
+                            } else if keys.is_empty() {
+                                Some(format!(
+                                    "Add an {} API key in Settings → AI Keys",
+                                    provider.label()
+                                ))
+                            } else {
+                                Some("Enable an API key in Settings".into())
+                            },
+                            key_count: Some(keys.len()),
+                        }
+                    }
+                },
+                _ => unreachable!(),
+            };
+            providers.push(readiness);
         }
 
         providers.push(AiProviderReadiness {
@@ -356,10 +401,14 @@ impl<'a> AIService<'a> {
                 let client = OllamaClient::new(config.ollama_endpoint, config.model);
                 client.complete(request).await
             }
-            AIProvider::Openai | AIProvider::Anthropic => Err(Error::Any(anyhow::anyhow!(
-                "{} support is coming soon. Switch to Groq in Settings → AI.",
-                provider.label()
-            ))),
+            AIProvider::Openai => {
+                let client = OpenAiClient::from_env_and_storage(self.storage)?;
+                client.complete(request).await
+            }
+            AIProvider::Anthropic => {
+                let client = AnthropicClient::from_env_and_storage(self.storage)?;
+                client.complete(request).await
+            }
             AIProvider::Mock => Err(Error::Any(anyhow::anyhow!(
                 "Mock provider is only available in the web demo."
             ))),
@@ -382,7 +431,15 @@ impl<'a> AIService<'a> {
                 let client = GroqClient::from_env_and_storage(self.storage)?;
                 client.complete_stream(request, sender, cancel).await
             }
-            AIProvider::Openai | AIProvider::Anthropic | AIProvider::Mock => {
+            AIProvider::Openai => {
+                let client = OpenAiClient::from_env_and_storage(self.storage)?;
+                client.complete_stream(request, sender, cancel).await
+            }
+            AIProvider::Anthropic => {
+                let client = AnthropicClient::from_env_and_storage(self.storage)?;
+                client.complete_stream(request, sender, cancel).await
+            }
+            AIProvider::Mock => {
                 let message = match self.complete(request).await {
                     Ok(response) => response.content,
                     Err(error) => {

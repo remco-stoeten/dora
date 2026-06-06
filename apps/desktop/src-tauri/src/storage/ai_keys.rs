@@ -140,6 +140,39 @@ impl Storage {
         Ok(())
     }
 
+    pub fn ai_keys_get(&self, id: i64) -> Result<Option<AiApiKeyRecord>> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| crate::Error::Internal("lock poisoned".into()))?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, provider, label, is_active, last_tested, last_status, created_at, updated_at \
+                 FROM ai_api_keys WHERE id = ?1",
+            )
+            .context("Failed to prepare ai_keys_get statement")?;
+        let mut rows = stmt
+            .query_map([id], |row| {
+                Ok(AiApiKeyRecord {
+                    id: row.get(0)?,
+                    provider: row.get(1)?,
+                    label: row.get(2)?,
+                    is_active: row.get::<_, i64>(3)? != 0,
+                    last_tested: row.get(4)?,
+                    last_status: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })
+            .context("Failed to query ai_api_keys by id")?;
+
+        if let Some(row) = rows.next() {
+            Ok(Some(row.context("Failed to read ai_api_keys row")?))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn ai_keys_get_decrypted(&self, id: i64) -> Result<Option<String>> {
         let conn = self
             .conn

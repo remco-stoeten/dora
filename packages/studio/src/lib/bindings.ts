@@ -685,9 +685,9 @@ async aiKeysTest(id: number) : Promise<Result<AiKeyTestResult, { kind: string; d
 /**
  * Test an unsaved key (used by the "Test before save" button).
  */
-async aiKeysTestRaw(apiKey: string) : Promise<Result<AiKeyTestResult, { kind: string; detail: string }>> {
+async aiKeysTestRaw(provider: string, apiKey: string) : Promise<Result<AiKeyTestResult, { kind: string; detail: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("ai_keys_test_raw", { apiKey }) };
+    return { status: "ok", data: await TAURI_INVOKE("ai_keys_test_raw", { provider, apiKey }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
