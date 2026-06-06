@@ -249,14 +249,51 @@ These jobs run in parallel after `publish-release` succeeds. Each dispatches a d
 | `publish-apt` | `apt.yml` | `publish=true` |
 | `publish-winget` | `winget.yml` | `submit_update=true` |
 | `publish-snap` | `snap.yml` | `publish=true`, `release_channel=stable` |
-| `build-flatpak` | `flatpak.yml` | Flathub build |
+| `build-flatpak` | `flatpak.yml` | Uploads `.flatpak` to the GitHub release |
 
-See the distribution docs for platform-specific setup:
+No manual repackaging is required per release. See [All distribution channels](#all-distribution-channels) below and [Appendix: package manager recovery](#appendix-package-manager-recovery-historic) if a store listing breaks.
 
-- [AUR](../aur.md)
-- [Snap](snap.md)
-- [Flatpak](flatpak.md)
-- [Winget](winget.md)
+---
+
+## All distribution channels
+
+Not everything is a separate “package manager workflow.” A tagged release produces **GitHub release assets** first; six **store/registry workflows** fan out from there.
+
+### GitHub Releases (automatic — no extra workflow)
+
+Built by `release.yml` and attached to every release. Users install directly from the release page:
+
+| Asset | Platform | Store workflow |
+| --- | --- | --- |
+| `.dmg` (Apple Silicon + Intel) | macOS | Also feeds Homebrew |
+| `.msi`, `.exe` | Windows | Also feeds Winget |
+| `.deb` | Debian/Ubuntu | Also feeds APT repo |
+| `.rpm` | Fedora/RHEL/openSUSE | **Direct download only** — no COPR/RPM-repo workflow |
+| `.AppImage` | Linux portable | Direct download only |
+| `dora-x86_64-unknown-linux-gnu.tar.gz` | Arch tarball | Also feeds AUR |
+| `checksums-linux.txt`, `checksums-windows.txt` | All | Used by Winget manifest generation |
+
+### Store / registry (automatic — dispatched after publish)
+
+| Channel | Workflow | Install example |
+| --- | --- | --- |
+| AUR | `aur.yml` | `yay -S dora` |
+| Homebrew | `brew.yml` | `brew install --cask remcostoeten/dora/dora` |
+| APT | `apt.yml` | `apt install dora` (GitHub Pages repo) |
+| Winget | `winget.yml` | `winget install RemcoStoeten.Dora` |
+| Snap | `snap.yml` | `snap install dora` |
+| Flatpak bundle | `flatpak.yml` | `flatpak install --user Dora-<version>-x86_64.flatpak` from the release |
+
+### External or not automated in this repo
+
+| Channel | Status |
+| --- | --- |
+| **Flathub** (`flatpak install flathub …`) | Separate submission/review — not the same as the GitHub-release `.flatpak` from `flatpak.yml` |
+| **Scoop** | Not implemented — no workflow or manifest in repo |
+| **Chocolatey** | Not implemented — no workflow or manifest in repo |
+| **Fedora COPR / RPM repository** | Not implemented — `.rpm` is on GitHub Releases only |
+
+The appendix below covers recovery for the six automated store workflows only. GitHub release assets are rebuilt automatically whenever `release.yml` succeeds; you only need to re-bootstrap a store if its listing or secrets are lost.
 
 ---
 
@@ -350,5 +387,107 @@ Either nothing changed (files already matched) or the push to `master` failed. C
 
 - Interactive preflight: `bun run release:guide`
 - AI-assisted release notes draft: `.agent/workflows/release.md`
-- One-machine packaging fallback: [one-machine-playbook.md](one-machine-playbook.md)
 - Agent guidelines for labels and changelog tone: `.agent/AGENTS.md`
+
+---
+
+## Appendix: Package manager recovery (historic)
+
+> **Historic reference only.** Package manager publishing is already configured and runs automatically on every tagged release. You do not need this section for normal releases, and nobody should clone the repo to repackage or publish manually.
+>
+> **Read this only if** a channel was removed from a store/registry, GitHub secrets expired, or CI can no longer publish to that channel and you need to bootstrap it again.
+
+### AUR
+
+**Workflow:** `.github/workflows/aur.yml`  
+**Package:** `dora` on AUR, built from `dora-x86_64-unknown-linux-gnu.tar.gz` on the GitHub release.
+
+1. Create the `dora` package at [aur.archlinux.org](https://aur.archlinux.org).
+2. Generate a deploy key: `ssh-keygen -t ed25519 -C "github-actions-aur" -f ./aur_deploy_key`
+3. Add the public key to your AUR account.
+4. Set GitHub secrets:
+   - `AUR_SSH_PRIVATE_KEY`
+   - `AUR_KNOWN_HOSTS` (pinned `aur.archlinux.org` entry)
+5. Helper script: `bash packaging/aur/setup-aur-publishing.sh`
+6. Tag a release — `aur.yml` updates `packaging/aur/PKGBUILD`, commits to this repo, and pushes to AUR.
+
+Local validation: `cd packaging/aur && makepkg -si`, or `bash tools/scripts/test-aur-docker.sh`.
+
+### Homebrew
+
+**Workflow:** `.github/workflows/brew.yml`  
+**Tap:** `remcostoeten/homebrew-dora`
+
+1. Create the tap repo if it does not exist.
+2. Set GitHub secret `HOMEBREW_SSH_PRIVATE_KEY` (deploy key with push access to the tap).
+3. Tag a release — `brew.yml` generates the Cask from release DMGs and pushes to the tap when `publish=true`.
+
+### APT
+
+**Workflow:** `.github/workflows/apt.yml`
+
+1. Enable GitHub Pages on the repository.
+2. Set GitHub secret `GPG_PRIVATE_KEY` for signing the repo metadata.
+3. Tag a release — `apt.yml` builds the repo from the release `.deb` and deploys to Pages when `publish=true`.
+
+### Winget
+
+**Workflow:** `.github/workflows/winget.yml`  
+**Package ID:** `RemcoStoeten.Dora`
+
+First-time bootstrap (Windows, one-time):
+
+```powershell
+winget install wingetcreate
+wingetcreate new "https://github.com/remcostoeten/dora/releases/download/vX.Y.Z/Dora_X.Y.Z_x64_en-US.msi"
+```
+
+After the `microsoft/winget-pkgs` PR merges:
+
+1. Set GitHub secret `WINGET_CREATE_GITHUB_TOKEN` (classic PAT, `public_repo` scope).
+2. Set repository variable `WINGET_PACKAGE_READY=true`.
+3. Tag a release — `winget.yml` generates manifests and submits update PRs automatically.
+
+### Snap
+
+**Workflow:** `.github/workflows/snap.yml`  
+**Manifest:** `snap/snapcraft.yaml`
+
+1. Register the `dora` snap name on Snapcraft.
+2. Export credentials:
+
+```bash
+snapcraft export-login --snaps=dora \
+  --acls package_access,package_push,package_update,package_release \
+  exported.txt
+```
+
+3. Set GitHub secret `SNAPCRAFT_STORE_CREDENTIALS` to the contents of `exported.txt`.
+4. Tag a release — CI builds with `snapcraft pack --destructive-mode` on `ubuntu-22.04` and publishes to the stable channel.
+
+### Flatpak (GitHub release bundle)
+
+**Workflow:** `.github/workflows/flatpak.yml`  
+**App ID:** `io.github.remcostoeten.dora`  
+**Manifest:** `packaging/flatpak/io.github.remcostoeten.dora.yml`
+
+CI uploads `Dora-<version>-x86_64.flatpak` to each GitHub release. Local build helper: `bun run release:flatpak:build`.
+
+### Flathub (not automated here)
+
+**Status:** separate from `flatpak.yml`. The workflow above puts a bundle on GitHub Releases; getting `flatpak install flathub io.github.remcostoeten.dora` working requires a Flathub submission and review using the in-repo manifest as source.
+
+### Not implemented (no recovery steps)
+
+Scoop, Chocolatey, and a hosted RPM repository (COPR etc.) were considered but have no workflows or packaging manifests in this repo. Linux RPM users install from the `.rpm` on GitHub Releases.
+
+### Optional: VM lab
+
+If you need isolated OS environments for debugging packaging (not for normal releases):
+
+```bash
+bun run vm:lab
+# or: bash tools/scripts/vm-lab.sh
+```
+
+Managed VMs live under `.cache/dora-vm-lab/`. See `tools/scripts/vm-lab.sh --help` for subcommands.
