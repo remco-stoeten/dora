@@ -104,7 +104,10 @@ pub fn stop_managed_server() {
     }
 }
 
-fn apply_platform_env(command: &mut Command, _binary: &PathBuf) {
+fn apply_platform_env(command: &mut Command, binary: &PathBuf) {
+    #[cfg(target_os = "linux")]
+    let _ = binary;
+
     #[cfg(target_os = "linux")]
     if let Some(lib) = lib_dir() {
         let existing = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
