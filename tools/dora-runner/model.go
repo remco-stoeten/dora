@@ -291,6 +291,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 			m.subMenu = []subdir{
 				{label: "Desktop (Tauri)", command: "bun", args: []string{"run", "desktop:dev"}},
 				{label: "Web (mock mode)", command: "bun", args: []string{"run", "web:dev"}},
+				{label: "Marketing (Next.js)", command: "bun", args: []string{"--cwd", "apps/marketing", "run", "dev"}},
 				{label: "All (turbo)", command: "bun", args: []string{"run", "turbo", "dev"}},
 			}
 
