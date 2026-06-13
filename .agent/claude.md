@@ -3,7 +3,7 @@
 ## Project Structure
 
 - **Root**: `/home/remco-stoeten/dora`
-- **CLI**: `tools/dora-runner` (Go) — replaces legacy `tools/dora-cli`
+- **CLI**: `tools/dora-runner` (Go)
 - **Scripts**: `tools/scripts` (TypeScript)
 - **Docs**: `docs/` (Release notes, changelogs)
 

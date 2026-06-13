@@ -136,7 +136,7 @@ Add to `tauri.conf.json`:
 }
 ```
 
-Generate a keypair with `tauri signer generate`. Add the update manifest (`latest.json`) to the release pipeline. The `dora-manager-executor` directory in the repo root suggests this was partially planned.
+Generate a keypair with `tauri signer generate`. Add the update manifest (`latest.json`) to the release pipeline.
 
 ---
 
