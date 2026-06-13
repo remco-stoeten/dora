@@ -2,8 +2,6 @@ module dora-runner
 
 go 1.24.0
 
-toolchain go1.24.7
-
 require (
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10

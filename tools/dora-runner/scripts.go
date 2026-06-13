@@ -344,7 +344,7 @@ var seoScripts = []scriptDef{
 		label:       "Build + Audit",
 		description: "Next.js build then post-build SEO audit",
 		command:     "bash",
-		args:        []string{"-c", "bun --cwd apps/marketing run build"},
+		args:        []string{"-c", "bun --cwd apps/marketing run build && bun --cwd apps/marketing run seo"},
 	},
 }
 

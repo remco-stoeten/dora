@@ -449,6 +449,9 @@ func guestExec(cfg vmConfig, command string) (int, error) {
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
 		return 0, err
 	}
+	if errObj, ok := resp["error"]; ok {
+		return 0, qemuAgentError(errObj)
+	}
 	ret, ok := resp["return"]
 	if !ok {
 		return 0, errors.New("missing return object in guest-exec response")
@@ -483,11 +486,29 @@ func guestExecStatus(cfg vmConfig, pid int) (map[string]any, error) {
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
 		return nil, err
 	}
+	if errObj, ok := resp["error"]; ok {
+		return nil, qemuAgentError(errObj)
+	}
 	ret, ok := resp["return"]
 	if !ok {
 		return nil, errors.New("missing return object in guest-exec-status response")
 	}
 	return ret, nil
+}
+
+func qemuAgentError(errObj map[string]any) error {
+	class, _ := errObj["class"].(string)
+	desc, _ := errObj["desc"].(string)
+	switch {
+	case class != "" && desc != "":
+		return fmt.Errorf("qemu-guest-agent error (%s): %s", class, desc)
+	case desc != "":
+		return fmt.Errorf("qemu-guest-agent error: %s", desc)
+	case class != "":
+		return fmt.Errorf("qemu-guest-agent error (%s)", class)
+	default:
+		return errors.New("qemu-guest-agent error")
+	}
 }
 
 func decodeGuestOutput(raw any) (string, error) {

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -52,6 +53,10 @@ func runCICommand(args []string) error {
 		return err
 	}
 
+	if _, err := exec.LookPath("gh"); err != nil {
+		return fmt.Errorf("GitHub CLI (gh) not found — install from https://cli.github.com/")
+	}
+
 	ghArgs := []string{"workflow", "run", *workflow, "--ref", *ref}
 	if strings.TrimSpace(*repo) != "" {
 		ghArgs = append(ghArgs, "--repo", *repo)
@@ -65,7 +70,7 @@ func printCLIUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  dora-runner              # interactive TUI")
 	fmt.Println("  dora-runner vm <subcommand> [flags]")
-  fmt.Println("  dora-runner ci dispatch [--workflow ci.yml] [--ref main]")
+	fmt.Println("  dora-runner ci dispatch [--workflow ci.yml] [--ref main]")
 	fmt.Println("  dora-runner ci mac [--ref main]  (shorthand for ci dispatch --workflow ci-mac.yml)")
 	fmt.Println("")
 	fmt.Println("VM subcommands:")

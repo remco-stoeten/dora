@@ -60,3 +60,4 @@ prime/
 *.snap
 *.snap-build
 tools/dora-runner/dora-runner
+/dora-runner

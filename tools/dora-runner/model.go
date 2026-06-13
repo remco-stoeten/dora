@@ -304,7 +304,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 
 		switch label {
 		case "Run all":
-			return m, executeCommand("bun", "run", "turbo", "dev")
+			return m.startExec(executeCommand("bun", "run", "turbo", "dev"))
 
 		case "Run app...":
 			m.currentSection = sectionRunApp
@@ -320,7 +320,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 			}
 
 		case "Build all":
-			return m, executeCommand("bun", "run", "turbo", "build")
+			return m.startExec(executeCommand("bun", "run", "turbo", "build"))
 
 		case "Build specific platform...":
 			m.currentSection = sectionBuildPlatform
@@ -361,10 +361,10 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 
 		case "Uninstall Dora":
 			if runtime.GOOS == "windows" {
-				return m, runShellScript("echo Uninstall via Settings > Apps > Installed apps.")
+				return m.startExec(runShellScript("echo Uninstall via Settings > Apps > Installed apps."))
 			}
 			script := "if dpkg -l | grep -q dora; then echo 'Uninstalling...'; sudo DEBIAN_FRONTEND=noninteractive apt-get remove -y dora; else echo 'Dora is not installed.'; fi"
-			return m, runShellScript(script)
+			return m.startExec(runShellScript(script))
 
 		case "Check Build Sizes":
 			m.currentSection = sectionCheckSizes
@@ -420,7 +420,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 			m.scriptCursor = 0
 
 		case "Update/Rebuild Runner":
-			return m, runShellScript(rebuildRunnerScript())
+			return m.startExec(runShellScript(rebuildRunnerScript()))
 
 		case "VM Testing...":
 			m.currentSection = sectionVM
@@ -443,29 +443,29 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 			m.ciCursor = 0
 
 		case "Visit GitHub Repo":
-			return m, openURL("https://github.com/remcostoeten/dora")
+			return m.startExec(openURL("https://github.com/remcostoeten/dora"))
 
 		case "Go to Releases":
-			return m, openURL("https://github.com/remcostoeten/dora/releases")
+			return m.startExec(openURL("https://github.com/remcostoeten/dora/releases"))
 		}
 
 	// ------------------------------------------------------------------
 	case sectionRunApp, sectionBuildPlatform, sectionVM:
 		choice := m.subMenu[m.subCursor]
-		return m, executeCommand(choice.command, choice.args...)
+		return m.startExec(executeCommand(choice.command, choice.args...))
 
 	// ------------------------------------------------------------------
 	case sectionBuilds:
 		if len(m.buildFiles) > 0 {
-			return m, executeCommand(m.buildFiles[m.buildCursor].Path)
+			return m.startExec(executeCommand(m.buildFiles[m.buildCursor].Path))
 		}
 
 	// ------------------------------------------------------------------
 	case sectionInstallBuild:
 		if len(m.buildFiles) > 0 {
 			f := m.buildFiles[m.buildCursor]
-			script := fmt.Sprintf("sudo -v && sudo DEBIAN_FRONTEND=noninteractive dpkg -i %s", f.Path)
-			return m, runShellScript(script)
+			script := fmt.Sprintf("sudo -v && sudo DEBIAN_FRONTEND=noninteractive dpkg -i '%s'", shellEscape(f.Path))
+			return m.startExec(runShellScript(script))
 		}
 
 	// ------------------------------------------------------------------
@@ -473,10 +473,10 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 		if len(m.buildFiles) > 0 {
 			f := m.buildFiles[m.buildCursor]
 			script := fmt.Sprintf(
-				"sudo -v && sudo DEBIAN_FRONTEND=noninteractive apt-get remove -y dora || true && sudo DEBIAN_FRONTEND=noninteractive dpkg -i %s",
-				f.Path,
+				"sudo -v && sudo DEBIAN_FRONTEND=noninteractive apt-get remove -y dora || true && sudo DEBIAN_FRONTEND=noninteractive dpkg -i '%s'",
+				shellEscape(f.Path),
 			)
-			return m, runShellScript(script)
+			return m.startExec(runShellScript(script))
 		}
 
 	// ------------------------------------------------------------------
@@ -499,7 +499,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 				m.optionCursor = 0
 			}
 		} else {
-			return m, executeCommand(script.command, script.args...)
+			return m.startExec(executeCommand(script.command, script.args...))
 		}
 
 	// ------------------------------------------------------------------
@@ -507,7 +507,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 		if len(m.ciMenu) > 0 {
 			wf := m.ciMenu[m.ciCursor]
 			self := os.Args[0]
-			return m, executeCommand(self, "ci", "dispatch", "--workflow", wf.workflow, "--ref", "main")
+			return m.startExec(executeCommand(self, "ci", "dispatch", "--workflow", wf.workflow, "--ref", "main"))
 		}
 
 	// ------------------------------------------------------------------
@@ -515,8 +515,19 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 		if m.pendingScript != nil {
 			option := m.optionMenu[m.optionCursor]
 			args := append([]string{}, m.pendingScript.args...)
-			args[len(args)-1] = args[len(args)-1] + option
-			return m, executeCommand(m.pendingScript.command, args...)
+			const prefix = "--version-bump="
+			updated := false
+			for i, a := range args {
+				if strings.HasPrefix(a, prefix) {
+					args[i] = prefix + option
+					updated = true
+					break
+				}
+			}
+			if !updated {
+				args = append(args, prefix+option)
+			}
+			return m.startExec(executeCommand(m.pendingScript.command, args...))
 		}
 
 	// ------------------------------------------------------------------
@@ -525,7 +536,7 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 			option := m.optionMenu[m.optionCursor]
 			args := append([]string{}, m.pendingScript.args...)
 			args = append(args, option)
-			return m, executeCommand(m.pendingScript.command, args...)
+			return m.startExec(executeCommand(m.pendingScript.command, args...))
 		}
 	}
 
@@ -537,6 +548,19 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 // ---------------------------------------------------------------------------
 
 type execFinishedMsg struct{ err error }
+
+// shellEscape wraps s in single quotes and escapes any internal single quotes.
+func shellEscape(s string) string {
+	return strings.ReplaceAll(s, "'", "'\\''")
+}
+
+// startCmd marks the model as executing and returns the command to run.
+// Call as: return m.startCmd(executeCommand(...)) or m.startCmd(runShellScript(...))
+func (m *model) startExec(cmd tea.Cmd) (tea.Model, tea.Cmd) {
+	m.executing = true
+	m.outputCmd = ""
+	return m, cmd
+}
 
 func executeCommand(name string, args ...string) tea.Cmd {
 	cmd := exec.Command(name, args...)
