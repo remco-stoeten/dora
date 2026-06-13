@@ -8,6 +8,7 @@ type TSeoInput = {
     description: string
     index?: boolean
     image?: string
+    keywords?: string[]
 }
 
 export function absoluteUrl(path = '/') {
@@ -22,7 +23,8 @@ export function createMetadata({
     title,
     description,
     index = true,
-    image = siteConfig.assets.ogImage
+    image = siteConfig.assets.ogImage,
+    keywords
 }: TSeoInput): Metadata {
     const fullTitle =
         title === siteConfig.name ? title : `${title} | ${siteConfig.name}`
@@ -30,9 +32,14 @@ export function createMetadata({
     const imageUrl = absoluteUrl(image)
 
     return {
-        title: fullTitle,
+        // `absolute` bypasses the root layout's `%s | Dora` title template.
+        // Without it, createMetadata's own suffix is applied twice
+        // (e.g. "Download Dora | Dora | Dora").
+        title: { absolute: fullTitle },
         description,
-        keywords: [...siteConfig.keywords],
+        keywords: keywords
+            ? [...siteConfig.keywords, ...keywords]
+            : [...siteConfig.keywords],
         authors: [{ name: siteConfig.author.name, url: siteConfig.author.url }],
         creator: siteConfig.author.name,
         publisher: siteConfig.name,

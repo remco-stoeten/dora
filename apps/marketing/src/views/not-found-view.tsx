@@ -1,16 +1,20 @@
 import Link from 'next/link'
 
+import { ResourcesPageShell } from '@/components/resources-page-shell'
+
 export default function NotFound() {
     return (
-        <main className="page-shell content-page">
-            <p className="eyebrow">404</p>
-            <h1>Page not found</h1>
-            <p className="lead">This Dora page does not exist.</p>
-            <div className="actions">
-                <Link className="button" href="/">
-                    Go home
-                </Link>
-            </div>
-        </main>
+        <ResourcesPageShell
+            eyebrow="404"
+            title="Page not found"
+            lead="This Dora page does not exist."
+        >
+            <Link
+                className="inline-flex min-h-10 items-center border border-[#f5c0c0]/50 px-5 text-[13px] text-[#f5c0c0] transition-colors hover:bg-[rgba(245,192,192,0.06)]"
+                href="/"
+            >
+                Go home
+            </Link>
+        </ResourcesPageShell>
     )
 }

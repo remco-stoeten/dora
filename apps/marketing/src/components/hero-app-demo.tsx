@@ -15,7 +15,12 @@ export function AppDemo() {
             <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
             <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
             <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
+            <div className="hero-app-demo__bottom-seal" aria-hidden="true" />
             <div className="hero-app-demo__viewport">
+                <div
+                    className="hero-app-demo__fade hero-app-demo__fade--sidebar"
+                    aria-hidden="true"
+                />
                 <div className="hero-app-demo__camera">
                     <div className="hero-app-demo__window">
                         <DemoSidebar

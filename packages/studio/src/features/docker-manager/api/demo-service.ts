@@ -2,6 +2,7 @@ import { MANAGED_LABEL_KEY, MANAGED_LABEL_VALUE } from '../constants'
 import type {
 	DockerContainer,
 	DockerAvailability,
+	DatabaseContainerConfig,
 	PostgresContainerConfig,
 	CreateContainerResult,
 	ContainerActionResult,
@@ -17,6 +18,7 @@ let demoContainers: DockerContainer[] = [
 		name: 'analytics_db',
 		image: 'postgres',
 		imageTag: '16',
+		provider: 'postgres',
 		state: 'running',
 		health: 'healthy',
 		origin: 'managed',
@@ -37,6 +39,7 @@ let demoContainers: DockerContainer[] = [
 		name: 'dev_postgres',
 		image: 'postgres',
 		imageTag: '17',
+		provider: 'postgres',
 		state: 'running',
 		health: 'healthy',
 		origin: 'managed',
@@ -57,6 +60,7 @@ let demoContainers: DockerContainer[] = [
 		name: 'test_ephemeral',
 		image: 'postgres',
 		imageTag: '16',
+		provider: 'postgres',
 		state: 'exited',
 		health: 'none',
 		origin: 'managed',
@@ -151,34 +155,82 @@ export async function getContainer(containerId: string): Promise<DockerContainer
 export async function createPostgresContainer(
 	config: PostgresContainerConfig
 ): Promise<CreateContainerResult> {
+	return createDatabaseContainer(config)
+}
+
+export async function createDatabaseContainer(
+	config: DatabaseContainerConfig
+): Promise<CreateContainerResult> {
 	await delay(800)
 
 	const containerId = `demo_${nextId++}`
+	const provider = config.provider
+	const image =
+		provider === 'mariadb' ? 'mariadb' : provider === 'cockroach' ? 'cockroachdb/cockroach' : 'postgres'
+	const imageTag =
+		provider === 'mariadb'
+			? config.mariadbVersion
+			: provider === 'cockroach'
+				? config.cockroachVersion
+				: config.postgresVersion
+
 	const container: DockerContainer = {
 		id: containerId,
 		name: config.name,
-		image: 'postgres',
-		imageTag: config.postgresVersion || '16',
+		image,
+		imageTag: imageTag || (provider === 'mariadb' ? '11.4' : provider === 'cockroach' ? '25.1.1' : '16'),
+		provider,
 		state: 'running',
 		health: 'healthy',
 		origin: 'managed',
 		createdAt: Date.now(),
-		ports: [{ hostPort: config.hostPort, containerPort: 5432, protocol: 'tcp' }],
+		ports: [
+			{
+				hostPort: config.hostPort,
+				containerPort: provider === 'mariadb' ? 3306 : provider === 'cockroach' ? 26257 : 5432,
+				protocol: 'tcp'
+			},
+			...(provider === 'cockroach'
+				? [
+						{
+							hostPort: config.hostPort + 1,
+							containerPort: 8080,
+							protocol: 'tcp' as const
+						}
+					]
+				: [])
+		],
 		labels: { [MANAGED_LABEL_KEY]: MANAGED_LABEL_VALUE },
 		volumes: config.ephemeral
 			? []
 			: [
 					{
 						name: config.volumeName || generateVolumeName(config.name),
-						mountPath: '/var/lib/postgresql/data',
+						mountPath:
+							provider === 'mariadb'
+								? '/var/lib/mysql'
+								: provider === 'cockroach'
+									? '/cockroach-data'
+									: '/var/lib/postgresql/data',
 						isEphemeral: false
 					}
 				],
-		env: [
-			`POSTGRES_USER=${config.user}`,
-			`POSTGRES_DB=${config.database}`,
-			'POSTGRES_PASSWORD=***'
-		]
+		env:
+			provider === 'mariadb'
+				? [
+						...(config.user && config.user !== 'root'
+							? [`MARIADB_USER=${config.user}`, 'MARIADB_PASSWORD=***']
+							: []),
+						'MARIADB_ROOT_PASSWORD=***',
+						`MARIADB_DATABASE=${config.database}`
+					]
+				: provider === 'cockroach'
+					? [`COCKROACH_USER=${config.user || 'root'}`, `COCKROACH_DATABASE=${config.database}`]
+					: [
+							`POSTGRES_USER=${config.user}`,
+							`POSTGRES_DB=${config.database}`,
+							'POSTGRES_PASSWORD=***'
+						]
 	}
 
 	demoContainers = [...demoContainers, container]
@@ -318,7 +370,12 @@ export async function openContainerTerminal(
 export async function seedDatabase(
 	_containerId: string,
 	_filePath: string,
-	_connectionConfig: { user: string; database: string }
+	_connectionConfig: {
+		provider?: DatabaseContainerConfig['provider']
+		user: string
+		password?: string
+		database: string
+	}
 ): Promise<{ success: boolean; error?: string }> {
 	await delay(1500)
 	return { success: true }

@@ -144,11 +144,11 @@ export function NativePerformanceCard({
             </div>
             <div className="relative px-5 pb-5">
                 <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
-                    Rust-Native
+                    SSH Tunneling
                 </h3>
                 <p className="text-xs text-[#8a8a8a] leading-relaxed">
-                    Edge-optimized engine. Instant queries. Orchestrated
-                    container management.
+                    Reach private databases behind firewalls through encrypted
+                    SSH tunnels, no VPN required.
                 </p>
             </div>
         </div>

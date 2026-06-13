@@ -20,6 +20,7 @@ import {
 import { CommitGraph, type CommitDetail } from './commit-graph'
 import { GraphTooltip } from './graph-tooltip'
 import { CommitDetailsModal } from './commit-details-modal'
+import { AnimatedFrame } from '@/components/animated-frame'
 import { CornerTick } from '@/components/corner-tick'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 import { ACCENT_COLOR } from './constants'
@@ -107,6 +108,49 @@ function PlatformIcon({
         default:
             return <Download className={className} />
     }
+}
+
+function SyntaxHighlight({ command }: { command: string }) {
+    const tokens = command.split(' ')
+    return (
+        <>
+            {tokens.map((token, i) => {
+                const isCmd = i === 0
+                const isFlag = token.startsWith('-')
+                const isSubcmd = i === 1 && !isFlag
+
+                const color = isCmd
+                    ? '#e3b2b3'
+                    : isFlag
+                    ? '#8ab4c9'
+                    : isSubcmd
+                    ? '#a89ab6'
+                    : '#8aab8a'
+
+                const parts = !isCmd && !isFlag && !isSubcmd && token.includes('/')
+                    ? token.split('/')
+                    : null
+
+                return (
+                    <span key={i}>
+                        {i > 0 && ' '}
+                        {parts ? (
+                            parts.map((part, j) => (
+                                <span key={j}>
+                                    <span style={{ color }}>{part}</span>
+                                    {j < parts.length - 1 && (
+                                        <span style={{ color: '#5a5252' }}>/</span>
+                                    )}
+                                </span>
+                            ))
+                        ) : (
+                            <span style={{ color }}>{token}</span>
+                        )}
+                    </span>
+                )
+            })}
+        </>
+    )
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -356,11 +400,7 @@ export function GitHubStats({
     return (
         <>
             <div className="w-full bg-[#0a0a0a]">
-                <div className="relative overflow-hidden border border-[#3a3138]">
-                    <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
-                    <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
-                    <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
-                    <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
+                <AnimatedFrame className="overflow-hidden">
                     {/* Top row: Info + Commits */}
                     <div className="flex flex-col sm:flex-row">
                         {/* Left info section: Version + Timeline — 1/3 width so
@@ -506,13 +546,13 @@ export function GitHubStats({
                         </div>
 
                         <div
-                            className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6 ${revealClass}`}
+                            className={`flex flex-col gap-3 ${revealClass}`}
                             style={revealStyle(220)}
                         >
                             {/* Platform tabs with gooey indicator */}
                             <div
                                 ref={tabsContainerRef}
-                                className="relative -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1 overflow-x-auto px-1 py-1 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0 sm:py-0"
+                                className="install-tabs-scroll relative -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto px-1 py-1 sm:mx-0 sm:px-0 sm:py-0"
                             >
                                 <TabIndicator activeRect={indicatorRect} />
                                 {packages.map((pkg) => (
@@ -571,6 +611,10 @@ export function GitHubStats({
                                             <CyclingLabel
                                                 words={['AUR', 'yay']}
                                             />
+                                        ) : pkg.platform === 'github' ? (
+                                            <CyclingLabel
+                                                words={['GitHub', 'AppImg', 'deb', 'dmg', 'exe', 'msi', 'rpm', 'tar.gz']}
+                                            />
                                         ) : (
                                             <span>{pkg.name}</span>
                                         )}
@@ -578,8 +622,9 @@ export function GitHubStats({
                                 ))}
                             </div>
 
-                            {/* Command box */}
-                            <div className="w-full flex-1 sm:max-w-xl">
+                            {/* Command box + downloads */}
+                            <div className="flex min-w-0 items-center gap-3">
+                            <div className="min-w-0 flex-1">
                                 {activePackage && (
                                     <a
                                         key={activePackage.platform}
@@ -592,10 +637,11 @@ export function GitHubStats({
                                         <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
                                         <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
                                         <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
-                                        <code className="min-w-0 flex-1 font-mono text-sm text-[#6a6a6a] transition-colors group-hover/cmd:text-[#8a8a8a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                        <code className="min-w-0 flex-1 font-mono text-sm [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                             <CommandSwap>
-                                                {activePackage.command ||
-                                                    `Download from ${activePackage.name}`}
+                                                {activePackage.command
+                                                    ? <SyntaxHighlight command={activePackage.command} />
+                                                    : <span className="text-[#6a6a6a]">{`Download from ${activePackage.name}`}</span>}
                                             </CommandSwap>
                                         </code>
                                         {activePackage.command && (
@@ -610,16 +656,17 @@ export function GitHubStats({
                             {/* Downloads indicator */}
                             {activePackage?.downloads !== undefined &&
                                 activePackage.downloads > 0 && (
-                                    <span className="text-[10px] text-[#8a8a8a] whitespace-nowrap">
+                                    <span className="shrink-0 text-[10px] text-[#8a8a8a] whitespace-nowrap">
                                         {formatDownloads(
                                             activePackage.downloads
                                         )}{' '}
                                         downloads
                                     </span>
                                 )}
+                            </div>
                         </div>
                     </div>
-                </div>
+                </AnimatedFrame>
             </div>
 
             <CommitDetailsModal

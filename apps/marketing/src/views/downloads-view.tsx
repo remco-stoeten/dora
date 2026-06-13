@@ -1,3 +1,4 @@
+import { ResourcesPageShell } from '@/components/resources-page-shell'
 import {
     findAsset,
     getHref,
@@ -10,6 +11,9 @@ import {
     type TGroup
 } from '@/core/github/release-downloads'
 
+const DOWNLOAD_LINK_CLASS =
+    'inline-flex min-h-9 items-center justify-center border border-[#3a3138] px-3.5 text-[13px] text-foreground transition-colors hover:border-[#ad8eb6]/50 hover:bg-[rgba(173,142,182,0.06)]'
+
 function renderDownload(
     download: TDownload,
     assets: TAsset[],
@@ -19,7 +23,7 @@ function renderDownload(
 
     return (
         <a
-            className="button secondary"
+            className={DOWNLOAD_LINK_CLASS}
             href={getHref(asset, download, releaseUrl)}
             key={download.label}
             rel="noreferrer"
@@ -42,10 +46,17 @@ function renderDownloads(group: TGroup, assets: TAsset[], releaseUrl: string) {
 
 function renderGroup(group: TGroup, assets: TAsset[], releaseUrl: string) {
     return (
-        <article className="tile" key={group.title}>
-            <h2>{group.title}</h2>
-            <p>{group.description}</p>
-            <div className="actions">
+        <article
+            className="flex min-h-[160px] flex-col border border-[#2b252c] bg-background/40 p-5"
+            key={group.title}
+        >
+            <h2 className="font-pixel text-lg font-medium text-foreground">
+                {group.title}
+            </h2>
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {group.description}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
                 {renderDownloads(group, assets, releaseUrl)}
             </div>
         </article>
@@ -70,13 +81,17 @@ export default async function DownloadsView() {
         : LATEST_RELEASE_URL
 
     return (
-        <main className="content-page">
-            <p className="eyebrow">Downloads</p>
-            <h1>Download Dora</h1>
-            <p className="lead">{getLead(latestRelease)}</p>
-            <section aria-label="Download targets" className="section-grid">
+        <ResourcesPageShell
+            eyebrow="Downloads"
+            title="Download Dora"
+            lead={getLead(latestRelease)}
+        >
+            <section
+                aria-label="Download targets"
+                className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+            >
                 {renderGroups(assets, releaseUrl)}
             </section>
-        </main>
+        </ResourcesPageShell>
     )
 }

@@ -140,7 +140,9 @@ pub fn run() {
                 }
             }
 
+            log::info!("Creating main window");
             init::build_window(app)?;
+            log::info!("Main window setup complete");
             init::build_menu(app)?;
 
             let handle = app.handle();
@@ -259,6 +261,8 @@ pub fn run() {
             window::commands::open_sqlite_db,
             window::commands::save_sqlite_db,
             window::commands::open_file,
+            window::commands::open_data_files,
+            window::commands::probe_database_file,
             // Commands system
             commands_system::get_all_commands,
             commands_system::get_command,

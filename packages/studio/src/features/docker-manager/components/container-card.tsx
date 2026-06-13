@@ -8,7 +8,8 @@ import {
 	Copy,
 	Check,
 	Database,
-	MousePointerClick
+	MousePointerClick,
+	Trash2
 } from 'lucide-react'
 import { useState } from 'react'
 import type { DockerContainer } from '../types'
@@ -30,6 +31,7 @@ type Props = {
 	onStop?: (id: string) => void
 	onRestart?: (id: string) => void
 	onOpenInDataViewer?: (container: DockerContainer) => void
+	onRemove?: (id: string) => void
 	isActionPending?: boolean
 }
 
@@ -41,6 +43,7 @@ export function ContainerCard({
 	onStop,
 	onRestart,
 	onOpenInDataViewer,
+	onRemove,
 	isActionPending = false
 }: Props) {
 	const primaryPort = container.ports[0]
@@ -242,6 +245,16 @@ export function ContainerCard({
 					Copy host:port
 				</ContextMenuItem>
 				<ContextMenuSeparator />
+				<ContextMenuItem
+					variant='destructive'
+					disabled={!onRemove}
+					onClick={function () {
+						if (onRemove) onRemove(container.id)
+					}}
+				>
+					<Trash2 />
+					Remove Container
+				</ContextMenuItem>
 				<ContextMenuItem
 					disabled={!isRunning || !onOpenInDataViewer}
 					onClick={handleOpenInDataViewer}

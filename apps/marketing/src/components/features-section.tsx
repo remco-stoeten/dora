@@ -1,8 +1,10 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRef, useEffect, useState, type ReactNode } from 'react'
 
 import { CornerTick } from '@/components/corner-tick'
+import { SectionFrame } from '@/components/section-frame'
 import { useScrollMotion } from '@/components/features/use-scroll-motion'
 import { DatabaseConnectionCard } from '@/components/features/database-connection-card'
 import { RegionGlobeCard } from '@/components/features/region-globe-card'
@@ -11,12 +13,41 @@ import { QueryHistoryCard } from '@/components/features/query-history-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
 import { ScrollReveal } from '@/components/scroll-reveal'
+import { getFeaturePath } from '@/core/config/features'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
 const FEATURE_CELL_CLASS =
-    'min-h-[300px] border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]'
+    'relative min-h-[300px] scroll-mt-28 border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]'
 const FEATURE_REVEAL_CLASS = 'flex h-full w-full'
+
+function FeatureCell({
+    id,
+    href,
+    delay,
+    children
+}: {
+    id: string
+    href?: string
+    delay: number
+    children: ReactNode
+}) {
+    return (
+        <div id={id} className={FEATURE_CELL_CLASS}>
+            <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={delay}>
+                {children}
+            </ScrollReveal>
+            {href ? (
+                <Link
+                    className="absolute bottom-4 right-4 z-10 text-[11px] text-[#ad8eb6] transition-colors hover:text-[#f5c0c0]"
+                    href={href}
+                >
+                    Learn more →
+                </Link>
+            ) : null}
+        </div>
+    )
+}
 
 export function FeaturesSection() {
     const sectionRef = useRef<HTMLElement>(null)
@@ -40,68 +71,69 @@ export function FeaturesSection() {
 
     return (
         <section
+            id="features"
             ref={sectionRef}
-            className="relative w-full border-l border-t border-[#3a3138]"
+            className="relative w-full"
         >
-            <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
-            <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
-            <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
-            <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
-            {/* Heading */}
-            <div className="px-6 sm:px-8 py-12 border-b border-r border-[#2b252c]">
+            <SectionFrame />
+            <div className="border-b border-r border-[#2b252c] px-6 py-12 sm:px-8">
                 <ScrollReveal delay={40}>
-                    <h2 className="text-2xl text-[#7a7a7a] font-light italic mb-1 font-[family-name:var(--font-pixel)]">
+                    <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-[#7a7a7a]">
                         More Than a GUI.
                     </h2>
-                    <h3 className="text-3xl text-[#f0f0f0] font-semibold font-[family-name:var(--font-pixel)]">
+                    <h3 className="font-[family-name:var(--font-pixel)] text-3xl font-semibold text-[#f0f0f0]">
                         The Interface Databases Deserve.
                     </h3>
                 </ScrollReveal>
             </div>
 
-            {/* Feature cards — collapsed bordered grid */}
             <div className="relative grid grid-cols-2 md:grid-cols-3 md:grid-rows-2">
-                {/* squares along the divider between the top and bottom three */}
                 <CornerTick className="hidden md:block left-0 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-2/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={0}>
-                        <DatabaseConnectionCard
-                            animate={animate}
-                            motion={motion}
-                        />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={55}>
-                        <RegionGlobeCard animate={animate} motion={motion} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={110}>
-                        <DockerContainersCard animate={animate} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={165}>
-                        <SchemaDiagramCard animate={animate} />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={220}>
-                        <NativePerformanceCard
-                            animate={animate}
-                            motion={motion}
-                        />
-                    </ScrollReveal>
-                </div>
-                <div className={FEATURE_CELL_CLASS}>
-                    <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={275}>
-                        <QueryHistoryCard animate={animate} />
-                    </ScrollReveal>
-                </div>
+                <FeatureCell
+                    id="feature-multi-database"
+                    href={getFeaturePath('multi-database')}
+                    delay={0}
+                >
+                    <DatabaseConnectionCard animate={animate} motion={motion} />
+                </FeatureCell>
+                <FeatureCell
+                    id="feature-regions"
+                    href={getFeaturePath('multi-database')}
+                    delay={55}
+                >
+                    <RegionGlobeCard animate={animate} motion={motion} />
+                </FeatureCell>
+                <FeatureCell
+                    id="feature-docker"
+                    href={getFeaturePath('docker-containers')}
+                    delay={110}
+                >
+                    <DockerContainersCard animate={animate} />
+                </FeatureCell>
+                <FeatureCell
+                    id="feature-schema"
+                    href={getFeaturePath('schema-visualization')}
+                    delay={165}
+                >
+                    <SchemaDiagramCard animate={animate} />
+                </FeatureCell>
+                <FeatureCell
+                    id="feature-performance"
+                    href={getFeaturePath('ssh-tunneling')}
+                    delay={220}
+                >
+                    <NativePerformanceCard animate={animate} motion={motion} />
+                </FeatureCell>
+                <FeatureCell
+                    id="feature-query-history"
+                    href={getFeaturePath('query-history')}
+                    delay={275}
+                >
+                    <QueryHistoryCard animate={animate} />
+                </FeatureCell>
             </div>
         </section>
     )

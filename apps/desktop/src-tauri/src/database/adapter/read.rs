@@ -62,6 +62,7 @@ pub enum DatabaseType {
     Postgres,
     MySQL,
     SQLite,
+    DuckDB,
     LibSQL,
 }
 
@@ -71,6 +72,7 @@ impl std::fmt::Display for DatabaseType {
             DatabaseType::Postgres => write!(f, "PostgreSQL"),
             DatabaseType::MySQL => write!(f, "MySQL"),
             DatabaseType::SQLite => write!(f, "SQLite"),
+            DatabaseType::DuckDB => write!(f, "DuckDB"),
             DatabaseType::LibSQL => write!(f, "libSQL"),
         }
     }
@@ -172,6 +174,73 @@ impl DatabaseAdapter for SqliteAdapter {
     }
 }
 
+/// DuckDB adapter implementation.
+pub struct DuckDbAdapter {
+    connection: Arc<Mutex<duckdb::Connection>>,
+    /// True for file-source connections (CSV/Parquet/JSON views): the write
+    /// path refuses mutations with a friendly error.
+    read_only: bool,
+}
+
+impl DuckDbAdapter {
+    pub fn new(connection: Arc<Mutex<duckdb::Connection>>) -> Self {
+        Self {
+            connection,
+            read_only: false,
+        }
+    }
+
+    pub fn new_with_read_only(
+        connection: Arc<Mutex<duckdb::Connection>>,
+        read_only: bool,
+    ) -> Self {
+        Self {
+            connection,
+            read_only,
+        }
+    }
+
+    pub fn connection(&self) -> &Arc<Mutex<duckdb::Connection>> {
+        &self.connection
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
+}
+
+#[async_trait]
+impl DatabaseAdapter for DuckDbAdapter {
+    fn parse_statements(&self, query: &str) -> Result<Vec<ParsedStatement>, Error> {
+        crate::database::duckdb::parser::parse_statements(query).map_err(Into::into)
+    }
+
+    async fn execute_query(&self, stmt: ParsedStatement, sender: &ExecSender) -> Result<(), Error> {
+        // DuckDB operations are blocking, so we use spawn_blocking
+        let conn = self.connection.clone();
+        let sender = sender.clone();
+
+        tauri::async_runtime::spawn_blocking(move || {
+            let conn = conn.lock().expect("Mutex poisoned");
+            crate::database::duckdb::execute::execute_query(&conn, stmt, &sender)
+        })
+        .await
+        .map_err(|e| Error::Any(anyhow::anyhow!("DuckDB execution task failed: {}", e)))?
+    }
+
+    async fn get_schema(&self) -> Result<DatabaseSchema, Error> {
+        crate::database::duckdb::schema::get_database_schema(self.connection.clone()).await
+    }
+
+    fn is_connected(&self) -> bool {
+        self.connection.lock().is_ok()
+    }
+
+    fn database_type(&self) -> DatabaseType {
+        DatabaseType::DuckDB
+    }
+}
+
 pub struct LibSqlAdapter {
     connection: Arc<libsql::Connection>,
 }
@@ -260,6 +329,9 @@ pub fn adapter_from_client(client: &crate::database::types::DatabaseClient) -> B
         crate::database::types::DatabaseClient::SQLite { connection } => {
             Box::new(SqliteAdapter::new(connection.clone()))
         }
+        crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
+            Box::new(DuckDbAdapter::new(connection.clone()))
+        }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))
         }
@@ -275,6 +347,7 @@ mod tests {
         assert_eq!(DatabaseType::Postgres.to_string(), "PostgreSQL");
         assert_eq!(DatabaseType::MySQL.to_string(), "MySQL");
         assert_eq!(DatabaseType::SQLite.to_string(), "SQLite");
+        assert_eq!(DatabaseType::DuckDB.to_string(), "DuckDB");
         assert_eq!(DatabaseType::LibSQL.to_string(), "libSQL");
     }
 

@@ -8,14 +8,15 @@
 pub mod read;
 pub mod watch;
 pub mod write;
+mod write_duckdb;
 mod write_libsql;
 mod write_mysql;
 mod write_postgres;
 mod write_sqlite;
 
 pub use read::{
-    adapter_from_client, BoxedAdapter, DatabaseAdapter, DatabaseType, LibSqlAdapter, MySqlAdapter,
-    PostgresAdapter, SqliteAdapter,
+    adapter_from_client, BoxedAdapter, DatabaseAdapter, DatabaseType, DuckDbAdapter, LibSqlAdapter,
+    MySqlAdapter, PostgresAdapter, SqliteAdapter,
 };
 pub use watch::{watch_adapter_from_client, BoxedWatchAdapter, WatchAdapter};
 pub use write::{write_adapter_from_client, BoxedWriteAdapter, WriteAdapter};

@@ -2,6 +2,11 @@
 
 import dynamic from 'next/dynamic'
 
+function isCaptureSession() {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('capture') === '1'
+}
+
 /**
  * Loads the studio app client-side only.
  *
@@ -13,6 +18,15 @@ import dynamic from 'next/dynamic'
 const AppClient = dynamic(() => import('./app-client').then((m) => m.AppClient), {
     ssr: false,
     loading: function Loading() {
+        if (isCaptureSession()) {
+            return (
+                <div
+                    className="h-screen w-full bg-background"
+                    aria-hidden="true"
+                />
+            )
+        }
+
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background text-sm text-muted-foreground">
                 Loading Dora…

@@ -19,21 +19,33 @@ const CONNECTION_STRINGS = [
         conn: 'mysql://user:pass@localhost:3306/mydb',
         color: '#e3b2b3'
     },
+    {
+        db: 'MariaDB',
+        conn: 'mysql://user:pass@mariadb.internal:3306/mydb',
+        color: '#d9a6b0'
+    },
     { db: 'SQLite', conn: 'file:///path/to/database.db', color: '#c9a3b5' },
     {
         db: 'libSQL',
         conn: 'libsql://database.turso.io?authToken=token',
         color: '#ad8eb6'
+    },
+    {
+        db: 'CockroachDB',
+        conn: 'postgresql://user:pass@cockroach.internal:26257/defaultdb',
+        color: '#f0b9a4'
     }
 ]
 
-// Hub at the centre; the four providers orbit it on the diagonals.
+// Hub at the centre; the compatibility targets orbit it in a loose hexagon.
 const HUB = { x: 50, y: 46 }
 const NODE_POS = [
-    { x: 27, y: 22 },
-    { x: 73, y: 22 },
-    { x: 73, y: 70 },
-    { x: 27, y: 70 }
+    { x: 50, y: 18 },
+    { x: 74, y: 32 },
+    { x: 74, y: 60 },
+    { x: 50, y: 74 },
+    { x: 26, y: 60 },
+    { x: 26, y: 32 }
 ]
 
 // Character-by-character reveal of a string; restarts whenever `resetKey` flips.
@@ -66,7 +78,7 @@ function useTypewriter(
 
 /* ---------------------------------------------------------------------------
  * Multi-Database — an interactive "connection constellation". A rose core sits
- * at the centre with the four supported providers orbiting it; links flow with
+ * at the centre with the six supported providers orbiting it; links flow with
  * animated dashes and a data packet streams along the active link. Hovering a
  * provider (or its dot) focuses it, pausing the auto-cycle, and types that
  * provider's connection string in below. The cluster drifts with the pointer.
@@ -320,7 +332,7 @@ export function DatabaseConnectionCard({
 
             {/* typing connection string */}
             <div className="px-5 pb-1">
-                <div className="relative flex items-center gap-2 overflow-hidden border border-[#2b252c] bg-[#100d12]/80 px-3 py-2 font-mono text-[11px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                <div className="relative flex w-full items-center gap-2 overflow-hidden border border-[#2b252c] bg-[#100d12]/80 px-3 py-2 font-mono text-[11px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                     <span
                         className="h-1.5 w-1.5 shrink-0 rounded-full transition-colors duration-300"
                         style={{

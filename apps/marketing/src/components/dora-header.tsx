@@ -3,123 +3,30 @@
 import {
     ArrowRight,
     BookOpen,
-    Boxes,
     ChevronDown,
     ChevronRight,
-    Code,
-    Database,
-    GitBranch,
-    History,
     Map,
     Menu,
-    Network,
     Sparkles,
-    X,
-    Zap
+    X
 } from 'lucide-react'
 import type { Route } from 'next'
 import Link from 'next/link'
 import { useShortcut } from '@remcostoeten/use-shortcut/react'
-import type { ComponentType, CSSProperties, RefObject } from 'react'
+import type { ComponentType } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { CornerTick } from '@/components/corner-tick'
+import { getFeaturePath, getNavFeatures } from '@/core/config/features'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
 /**
  * Marketing top bar — recreated from the hex.tech-style Figma design.
- * A scrolling announcement marquee sits above a centered primary nav that
- * collapses into a full-screen menu on small screens.
+ * A centered primary nav that collapses into a full-screen menu on small
+ * screens.
  */
 
 const APP_PATH = '/app'
-
-// rose-fog #e3b2b3 = reality / punchline, white/70 = the skeptic's guess.
-const MARQUEE_ITEMS: { guess: string; reality: string }[] = [
-    {
-        guess: 'Let me guess, AI bloat',
-        reality: 'Disabled by default, opt-in yourself'
-    },
-    {
-        guess: 'Probably another ancient DB manager',
-        reality: "Huh, a DB manager that's actually aesthetic???"
-    },
-    {
-        guess: 'Probably slow Electron',
-        reality: 'What! roughly 10mb, <1s startup'
-    },
-    {
-        guess: 'Probably way overpriced',
-        reality: 'Free for life, and self-hostable'
-    }
-]
-
-const MARQUEE_REPEATS = 6
-
-function getLoop(repeats: number) {
-    return Array.from({ length: repeats * 2 }, function getItems() {
-        return MARQUEE_ITEMS
-    }).flat()
-}
-
-function renderItem(item: { guess: string; reality: string }, i: number) {
-    return <MarqueeItem key={i} guess={item.guess} reality={item.reality} />
-}
-
-function getClass(scrolled: boolean) {
-    const stateClass = scrolled
-        ? 'border-transparent bg-background/55'
-        : 'border-[#2b252c] bg-background'
-
-    return `dora-marquee relative flex items-center overflow-hidden border-b backdrop-blur-xl ${stateClass}`
-}
-
-function getStyle(scrolled: boolean, reduced: boolean): CSSProperties {
-    const transition = reduced
-        ? 'opacity 200ms ease, background-color 300ms ease'
-        : 'height 420ms cubic-bezier(0.32,0.72,0,1), opacity 280ms ease-out, background-color 300ms ease, border-color 300ms ease'
-
-    return {
-        height: scrolled ? 0 : 30,
-        opacity: scrolled ? 0 : 1,
-        transition
-    }
-}
-
-function useRepeats(baseRef: RefObject<HTMLDivElement | null>) {
-    const [repeats, setRepeats] = useState(MARQUEE_REPEATS)
-
-    useEffect(
-        function watchRepeats() {
-            function syncRepeats() {
-                const baseWidth = baseRef.current?.scrollWidth ?? 0
-                if (!baseWidth) return
-
-                const nextRepeats = Math.max(
-                    2,
-                    Math.ceil((window.innerWidth + 80) / baseWidth) + 1
-                )
-                setRepeats(function keepStable(current) {
-                    return current === nextRepeats ? current : nextRepeats
-                })
-            }
-
-            syncRepeats()
-
-            const observer = new ResizeObserver(syncRepeats)
-            if (baseRef.current) observer.observe(baseRef.current)
-            window.addEventListener('resize', syncRepeats)
-
-            return function cleanupRepeats() {
-                observer.disconnect()
-                window.removeEventListener('resize', syncRepeats)
-            }
-        },
-        [baseRef]
-    )
-
-    return repeats
-}
 
 type TMenuLink = {
     label: string
@@ -136,83 +43,31 @@ type TNavItem = {
     menu?: TMenuLink[]
 }
 
-const FEATURES_MENU: TMenuLink[] = [
-    {
-        label: 'Multi-Database',
-        description: 'PostgreSQL, MySQL, SQLite & libSQL',
-        href: '/#features',
-        icon: Database
-    },
-    {
-        label: 'Query History',
-        description: 'Search, replay and analyze every query',
-        href: '/#features',
-        icon: History
-    },
-    {
-        label: 'Schema Visualization',
-        description: 'Live ER diagrams of your relationships',
-        href: '/#features',
-        icon: Network
-    },
-    {
-        label: 'Docker Containers',
-        description: 'Spin up and manage local databases',
-        href: '/#features',
-        icon: Boxes
-    },
-    {
-        label: 'Rust-Native',
-        description: 'Edge-optimized engine, instant queries',
-        href: '/#features',
-        icon: Zap
+const FEATURES_MENU: TMenuLink[] = getNavFeatures().map(function (feature) {
+    return {
+        label: feature.menuLabel,
+        description: feature.menuDescription,
+        href: getFeaturePath(feature.slug),
+        icon: feature.icon
     }
-]
-
-const RESOURCES_MENU: TMenuLink[] = [
-    {
-        label: 'Documentation',
-        description: 'Guides, API reference and recipes',
-        href: '/docs',
-        icon: BookOpen
-    },
-    {
-        label: 'Roadmap & Changelog',
-        description: "See what's shipping next",
-        href: '/changelog',
-        icon: Map
-    },
-    {
-        label: 'Open Source',
-        description: 'Star and contribute on GitHub',
-        href: 'https://github.com/remcostoeten',
-        icon: GitBranch
-    }
-]
+})
 
 const NAV_LEFT: TNavItem[] = [
     {
         label: 'Features',
-        href: '/#features',
+        href: '/features',
         chevron: true,
         icon: Sparkles,
         menu: FEATURES_MENU
     },
-    { label: 'Roadmap', href: '/changelog', icon: Map }
+    { label: 'Changelog', href: '/changelog', icon: Map }
 ]
 
 const NAV_RIGHT: TNavItem[] = [
     {
-        label: 'Resources',
+        label: 'Documentation',
         href: '/docs',
-        chevron: true,
-        icon: BookOpen,
-        menu: RESOURCES_MENU
-    },
-    {
-        label: 'Open source',
-        href: 'https://github.com/remcostoeten',
-        icon: Code
+        icon: BookOpen
     }
 ]
 
@@ -234,113 +89,6 @@ function useScrolled(threshold = 8) {
     }, [threshold])
 
     return scrolled
-}
-
-function MarqueeItem({ guess, reality }: { guess: string; reality: string }) {
-    return (
-        <div className="flex shrink-0 items-center gap-2.5 whitespace-nowrap border-l border-[#2b252c] px-5 text-[12px] leading-none">
-            <span className="text-white/70">{guess}</span>
-            <ArrowRight
-                aria-hidden
-                className="h-3 w-3 shrink-0 text-[#e3b2b3]"
-            />
-            <span className="text-[#e3b2b3]">{reality}</span>
-        </div>
-    )
-}
-
-function Marquee({
-    scrolled,
-    reduced
-}: {
-    scrolled: boolean
-    reduced: boolean
-}) {
-    const baseRef = useRef<HTMLDivElement>(null)
-    const repeats = useRepeats(baseRef)
-    const loop = getLoop(repeats)
-    const trackRef = useRef<HTMLDivElement>(null)
-    const animRef = useRef<Animation | null>(null)
-    const rateRef = useRef(1)
-    const rafRef = useRef(0)
-    const [hovered, setHovered] = useState(false)
-
-    useEffect(() => {
-        const track = trackRef.current
-        if (!track) return
-
-        animRef.current?.cancel()
-
-        if (reduced) return
-
-        const anim = track.animate(
-            [{ transform: 'translateX(-50%)' }, { transform: 'translateX(0)' }],
-            { duration: 38000, iterations: Infinity }
-        )
-        animRef.current = anim
-        rateRef.current = 1
-        return () => anim.cancel()
-    }, [reduced, repeats])
-
-    useEffect(() => {
-        const anim = animRef.current
-        if (!anim) return
-
-        const target = hovered ? 0 : 1
-        const startRate = rateRef.current
-        const startTime = performance.now()
-        const duration = 1200
-
-        function cubicBezier(t: number): number {
-            return 1 - Math.pow(1 - t, 3)
-        }
-
-        function tick(now: number) {
-            const elapsed = now - startTime
-            const progress = Math.min(elapsed / duration, 1)
-            const eased = cubicBezier(progress)
-            const rate = startRate + (target - startRate) * eased
-            rateRef.current = rate
-            animRef.current!.playbackRate = rate
-            if (progress < 1) {
-                rafRef.current = requestAnimationFrame(tick)
-            }
-        }
-
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = requestAnimationFrame(tick)
-
-        return () => cancelAnimationFrame(rafRef.current)
-    }, [hovered])
-
-    return (
-        <div
-            className={getClass(scrolled)}
-            style={getStyle(scrolled, reduced)}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-        >
-            <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#252128,#201d25_50%,#252128)] opacity-20"
-            />
-            <div
-                ref={baseRef}
-                aria-hidden
-                className="pointer-events-none absolute left-0 top-0 flex shrink-0 items-center opacity-0"
-                style={{ visibility: 'hidden' }}
-            >
-                {MARQUEE_ITEMS.map(renderItem)}
-            </div>
-            <div
-                ref={trackRef}
-                className="relative flex w-max shrink-0 items-center"
-            >
-                {loop.map(renderItem)}
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[rgba(245,192,192,0.17)]" />
-        </div>
-    )
 }
 
 function NavLink({
@@ -651,9 +399,37 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
 
 export function DoraHeader() {
     const [menuOpen, setMenuOpen] = useState(false)
+    const [mounted, setMounted] = useState(false)
     const scrolled = useScrolled()
     const reduced = usePrefersReducedMotion()
     const $ = useShortcut()
+
+    // Slide + fade the bar in on first paint so the header doesn't pop in.
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setMounted(true))
+        return () => cancelAnimationFrame(id)
+    }, [])
+
+    // Frame borders draw outward from their center once the bar has slid into
+    // place — horizontal lines scale on X, vertical lines on Y.
+    const borderEase = 'cubic-bezier(0.32,0.72,0,1)'
+    function growIn(axis: 'x' | 'y') {
+        const shown = reduced || mounted
+        const collapsed = axis === 'x' ? 'scaleX(0)' : 'scaleY(0)'
+        const full = axis === 'x' ? 'scaleX(1)' : 'scaleY(1)'
+        return {
+            transformOrigin: 'center',
+            transform: shown ? full : collapsed,
+            // start once the bar has finished sliding/fading in (~650ms)
+            transition: reduced ? 'none' : `transform 600ms ${borderEase} 700ms`
+        }
+    }
+
+    // Corner brackets fade in last, after the lines have reached the corners.
+    const cornerFade = {
+        opacity: reduced || mounted ? 1 : 0,
+        transition: reduced ? 'none' : 'opacity 240ms ease 1250ms'
+    }
 
     function renderNavItem(item: TNavItem) {
         return item.menu ? (
@@ -683,12 +459,22 @@ export function DoraHeader() {
     }, [menuOpen])
 
     return (
-        <header className="sticky top-0 z-50 w-full">
+        <header
+            className="sticky top-0 z-50 w-full"
+            style={{
+                opacity: reduced || mounted ? 1 : 0,
+                transform:
+                    reduced || mounted ? 'translateY(0)' : 'translateY(-100%)',
+                transition: reduced
+                    ? 'opacity 200ms ease'
+                    : 'opacity 500ms ease, transform 650ms cubic-bezier(0.32,0.72,0,1)'
+            }}
+        >
             <div
                 aria-hidden
                 className="h-px w-full bg-[linear-gradient(90deg,transparent,rgba(227,178,179,0.4),transparent)]"
+                style={growIn('x')}
             />
-            <Marquee scrolled={scrolled} reduced={reduced} />
             <nav
                 className={`relative backdrop-blur-xl transition-colors duration-300 ${
                     scrolled ? 'bg-background/55' : 'bg-background'
@@ -708,7 +494,7 @@ export function DoraHeader() {
                     style={{ opacity: scrolled ? 1 : 0 }}
                 />
                 <div
-                    className="marketing-container relative flex items-center border-x border-t border-[#3a3138] px-4"
+                    className="marketing-container relative flex items-center px-4"
                     style={{
                         height: scrolled ? 54 : 62,
                         transition: reduced
@@ -716,10 +502,39 @@ export function DoraHeader() {
                             : 'height 420ms cubic-bezier(0.32,0.72,0,1)'
                     }}
                 >
-                    <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
-                    <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
-                    <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
-                    <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
+                    {/* Frame borders, drawn outward from center on load */}
+                    <span
+                        aria-hidden
+                        className="pointer-events-none absolute left-0 top-0 h-px w-full bg-[#3a3138]"
+                        style={growIn('x')}
+                    />
+                    <span
+                        aria-hidden
+                        className="pointer-events-none absolute left-0 top-0 h-full w-px bg-[#3a3138]"
+                        style={growIn('y')}
+                    />
+                    <span
+                        aria-hidden
+                        className="pointer-events-none absolute right-0 top-0 h-full w-px bg-[#3a3138]"
+                        style={growIn('y')}
+                    />
+
+                    <CornerTick
+                        className="-left-px -top-px -translate-x-1/2 -translate-y-1/2"
+                        style={cornerFade}
+                    />
+                    <CornerTick
+                        className="-right-px -top-px translate-x-1/2 -translate-y-1/2"
+                        style={cornerFade}
+                    />
+                    <CornerTick
+                        className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2"
+                        style={cornerFade}
+                    />
+                    <CornerTick
+                        className="-bottom-px -right-px translate-x-1/2 translate-y-1/2"
+                        style={cornerFade}
+                    />
 
                     {/* Mobile: logo + hamburger */}
                     <div className="flex w-full items-center justify-between md:hidden">

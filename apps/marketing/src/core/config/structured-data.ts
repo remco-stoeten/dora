@@ -7,6 +7,11 @@ export const organizationSchema = {
     name: siteConfig.name,
     url: siteConfig.url,
     logo: absoluteUrl(siteConfig.assets.icon),
+    sameAs: [
+        'https://github.com/remcostoeten/dora',
+        'https://github.com/remcostoeten',
+        siteConfig.author.url
+    ],
     founder: {
         '@type': 'Person',
         name: siteConfig.author.name,
@@ -22,15 +27,27 @@ export const websiteSchema = {
     description: siteConfig.description
 }
 
-export const softwareSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: siteConfig.name,
-    applicationCategory: 'DeveloperApplication',
-    operatingSystem: 'macOS, Windows, Linux',
-    description: siteConfig.description,
-    author: {
-        '@type': 'Person',
-        name: siteConfig.author.name
+export function softwareSchema(version?: string) {
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: siteConfig.name,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'macOS, Windows, Linux',
+        description: siteConfig.description,
+        url: siteConfig.url,
+        downloadUrl: absoluteUrl('/downloads'),
+        screenshot: absoluteUrl(siteConfig.assets.ogImage),
+        ...(version ? { softwareVersion: version } : {}),
+        offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'USD'
+        },
+        author: {
+            '@type': 'Person',
+            name: siteConfig.author.name,
+            url: siteConfig.author.url
+        }
     }
 }

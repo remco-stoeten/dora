@@ -4,6 +4,7 @@ import { useToast } from '@studio/shared/ui/use-toast'
 import { Button } from '@studio/shared/ui/button'
 import { useSeedDatabase } from '../api/mutations/use-seed-database'
 import type { DockerContainer } from '../types'
+import { getContainerConnectionDetails } from '../utilities/container-connection'
 
 type Props = {
 	container: DockerContainer
@@ -18,9 +19,7 @@ export function SeedView({ container }: Props) {
 	const seedMutation = useSeedDatabase()
 
 	// Determine connection config (fallbacking to defaults if labels missing)
-	const user =
-		container.env.find((e) => e.startsWith('POSTGRES_USER='))?.split('=')[1] || 'postgres'
-	const db = container.env.find((e) => e.startsWith('POSTGRES_DB='))?.split('=')[1] || 'postgres'
+	const connection = getContainerConnectionDetails(container)
 
 	function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
 		if (e.target.files && e.target.files[0]) {
@@ -114,7 +113,12 @@ export function SeedView({ container }: Props) {
 		seedMutation.mutate({
 			containerId: container.id,
 			filePath: filePath,
-			connectionConfig: { user, database: db }
+			connectionConfig: {
+				provider: connection.provider,
+				user: connection.user,
+				password: connection.password,
+				database: connection.database
+			}
 		})
 	}
 

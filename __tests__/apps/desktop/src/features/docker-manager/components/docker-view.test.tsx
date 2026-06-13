@@ -41,6 +41,10 @@ vi.mock('@/features/docker-manager/api/mutations/use-container-actions', () => (
 		useContainerActions: () => ({
 			mutate: vi.fn(),
 			isPending: false
+		}),
+		useRemoveContainer: () => ({
+			mutate: vi.fn(),
+			isPending: false
 		})
 	})
 )

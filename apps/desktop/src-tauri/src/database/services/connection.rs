@@ -79,7 +79,7 @@ impl<'a> ConnectionService<'a> {
         if let Some(mut connection_entry) = self.connections.get_mut(&conn_id) {
             let connection = connection_entry.value_mut();
 
-            let config_changed = password_changed
+                let config_changed = password_changed
                 || match (&connection.database, &database_info) {
                     (
                         Database::Postgres {
@@ -88,6 +88,17 @@ impl<'a> ConnectionService<'a> {
                             ..
                         },
                         DatabaseInfo::Postgres {
+                            connection_string: new,
+                            ssh_config: new_ssh,
+                        },
+                    ) => old != new || old_ssh != new_ssh,
+                    (
+                        Database::CockroachDB {
+                            connection_string: old,
+                            ssh_config: old_ssh,
+                            ..
+                        },
+                        DatabaseInfo::CockroachDB {
                             connection_string: new,
                             ssh_config: new_ssh,
                         },
@@ -104,9 +115,31 @@ impl<'a> ConnectionService<'a> {
                         },
                     ) => old != new || old_ssh != new_ssh,
                     (
+                        Database::MariaDB {
+                            connection_string: old,
+                            ssh_config: old_ssh,
+                            ..
+                        },
+                        DatabaseInfo::MariaDB {
+                            connection_string: new,
+                            ssh_config: new_ssh,
+                        },
+                    ) => old != new || old_ssh != new_ssh,
+                    (
                         Database::SQLite { db_path: old, .. },
                         DatabaseInfo::SQLite { db_path: new },
                     ) => old != new,
+                    (
+                        Database::DuckDB {
+                            db_path: old,
+                            file_sources: old_sources,
+                            ..
+                        },
+                        DatabaseInfo::DuckDB {
+                            db_path: new,
+                            file_sources: new_sources,
+                        },
+                    ) => old != new || old_sources != new_sources,
                     (
                         Database::LibSQL {
                             url: old_url,
@@ -127,11 +160,22 @@ impl<'a> ConnectionService<'a> {
                         *client = None;
                         *tunnel = None;
                     }
+                    Database::CockroachDB { client, tunnel, .. } => {
+                        *client = None;
+                        *tunnel = None;
+                    }
                     Database::MySQL { pool, tunnel, .. } => {
                         *pool = None;
                         *tunnel = None;
                     }
+                    Database::MariaDB { pool, tunnel, .. } => {
+                        *pool = None;
+                        *tunnel = None;
+                    }
                     Database::SQLite {
+                        connection: conn, ..
+                    } => *conn = None,
+                    Database::DuckDB {
                         connection: conn, ..
                     } => *conn = None,
                     Database::LibSQL {
@@ -152,6 +196,16 @@ impl<'a> ConnectionService<'a> {
                         client: None,
                         tunnel: None,
                     },
+                    DatabaseInfo::CockroachDB {
+                        connection_string,
+                        ssh_config,
+                    } => Database::CockroachDB {
+                        use_simple_query: false,
+                        connection_string,
+                        ssh_config,
+                        client: None,
+                        tunnel: None,
+                    },
                     DatabaseInfo::MySQL {
                         connection_string,
                         ssh_config,
@@ -161,8 +215,25 @@ impl<'a> ConnectionService<'a> {
                         pool: None,
                         tunnel: None,
                     },
+                    DatabaseInfo::MariaDB {
+                        connection_string,
+                        ssh_config,
+                    } => Database::MariaDB {
+                        connection_string,
+                        ssh_config,
+                        pool: None,
+                        tunnel: None,
+                    },
                     DatabaseInfo::SQLite { db_path } => Database::SQLite {
                         db_path,
+                        connection: None,
+                    },
+                    DatabaseInfo::DuckDB {
+                        db_path,
+                        file_sources,
+                    } => Database::DuckDB {
+                        db_path,
+                        file_sources,
                         connection: None,
                     },
                     DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
@@ -188,6 +259,20 @@ impl<'a> ConnectionService<'a> {
                         *ssh_config = new_ssh_config;
                     }
                     (
+                        Database::CockroachDB {
+                            connection_string,
+                            ssh_config,
+                            ..
+                        },
+                        DatabaseInfo::CockroachDB {
+                            connection_string: new_connection_string,
+                            ssh_config: new_ssh_config,
+                        },
+                    ) => {
+                        *connection_string = new_connection_string;
+                        *ssh_config = new_ssh_config;
+                    }
+                    (
                         Database::MySQL {
                             connection_string,
                             ssh_config,
@@ -202,12 +287,40 @@ impl<'a> ConnectionService<'a> {
                         *ssh_config = new_ssh_config;
                     }
                     (
+                        Database::MariaDB {
+                            connection_string,
+                            ssh_config,
+                            ..
+                        },
+                        DatabaseInfo::MariaDB {
+                            connection_string: new_connection_string,
+                            ssh_config: new_ssh_config,
+                        },
+                    ) => {
+                        *connection_string = new_connection_string;
+                        *ssh_config = new_ssh_config;
+                    }
+                    (
                         Database::SQLite { db_path, .. },
                         DatabaseInfo::SQLite {
                             db_path: new_db_path,
                         },
                     ) => {
                         *db_path = new_db_path;
+                    }
+                    (
+                        Database::DuckDB {
+                            db_path,
+                            file_sources,
+                            ..
+                        },
+                        DatabaseInfo::DuckDB {
+                            db_path: new_db_path,
+                            file_sources: new_file_sources,
+                        },
+                    ) => {
+                        *db_path = new_db_path;
+                        *file_sources = new_file_sources;
                     }
                     (
                         Database::LibSQL {
@@ -300,7 +413,14 @@ impl<'a> ConnectionService<'a> {
         let connection = connection_entry.value_mut();
 
         match &mut connection.database {
-            Database::Postgres {
+            Database::CockroachDB {
+                connection_string,
+                ssh_config,
+                client,
+                tunnel,
+                ..
+            }
+            | Database::Postgres {
                 connection_string,
                 ssh_config,
                 client,
@@ -394,7 +514,13 @@ impl<'a> ConnectionService<'a> {
                     }
                 }
             }
-            Database::MySQL {
+            Database::MariaDB {
+                connection_string,
+                ssh_config,
+                pool,
+                tunnel,
+            }
+            | Database::MySQL {
                 connection_string,
                 ssh_config,
                 pool,
@@ -486,6 +612,60 @@ impl<'a> ConnectionService<'a> {
                     Ok(false)
                 }
             },
+            Database::DuckDB {
+                db_path,
+                file_sources,
+                connection: duckdb_conn,
+            } => {
+                // File-source connections live entirely in memory; a real
+                // `.duckdb` file connection opens the file directly.
+                let open_result = if file_sources.is_empty() {
+                    duckdb::Connection::open(&db_path)
+                } else {
+                    duckdb::Connection::open_in_memory()
+                };
+
+                match open_result {
+                    Ok(conn) => {
+                        if !file_sources.is_empty() {
+                            let report =
+                                crate::database::duckdb::file_source::register_sources(
+                                    &conn,
+                                    file_sources,
+                                );
+                            for path in &report.missing {
+                                log::warn!("DuckDB data file no longer exists: {}", path);
+                            }
+                            for (path, err) in &report.failed {
+                                log::warn!("Failed to register DuckDB data file {}: {}", path, err);
+                            }
+                            if report.registered.is_empty() {
+                                log::error!(
+                                    "No DuckDB data files could be opened from {} source(s)",
+                                    file_sources.len()
+                                );
+                                connection.connected = false;
+                                return Ok(false);
+                            }
+                        }
+
+                        *duckdb_conn = Some(Arc::new(Mutex::new(conn)));
+                        connection.connected = true;
+
+                        if let Err(e) = self.storage.update_last_connected(&connection_id) {
+                            log::warn!("Failed to update last connected timestamp: {}", e);
+                        }
+
+                        log::info!("Successfully connected to DuckDB database: {}", db_path);
+                        Ok(true)
+                    }
+                    Err(e) => {
+                        log::error!("Failed to connect to DuckDB database {}: {}", db_path, e);
+                        connection.connected = false;
+                        Ok(false)
+                    }
+                }
+            }
             Database::LibSQL {
                 url,
                 auth_token,
@@ -549,7 +729,15 @@ impl<'a> ConnectionService<'a> {
                 *client = None;
                 *tunnel = None;
             }
+            Database::CockroachDB { client, tunnel, .. } => {
+                *client = None;
+                *tunnel = None;
+            }
             Database::MySQL { pool, tunnel, .. } => {
+                *pool = None;
+                *tunnel = None;
+            }
+            Database::MariaDB { pool, tunnel, .. } => {
                 *pool = None;
                 *tunnel = None;
             }
@@ -557,6 +745,10 @@ impl<'a> ConnectionService<'a> {
                 connection: sqlite_conn,
                 ..
             } => *sqlite_conn = None,
+            Database::DuckDB {
+                connection: duckdb_conn,
+                ..
+            } => *duckdb_conn = None,
             Database::LibSQL {
                 connection: libsql_conn,
                 ..
@@ -700,7 +892,11 @@ impl ConnectionService<'_> {
         certificates: &Certificates,
     ) -> Result<bool, Error> {
         match database_info {
-            DatabaseInfo::Postgres {
+            DatabaseInfo::CockroachDB {
+                connection_string,
+                ssh_config,
+            }
+            | DatabaseInfo::Postgres {
                 connection_string,
                 ssh_config,
             } => {
@@ -782,6 +978,48 @@ impl ConnectionService<'_> {
                     Err(Error::from(e))
                 }
             },
+            DatabaseInfo::DuckDB {
+                db_path,
+                file_sources,
+            } => {
+                if file_sources.is_empty() {
+                    match duckdb::Connection::open(db_path) {
+                        Ok(_) => Ok(true),
+                        Err(e) => {
+                            log::error!("DuckDB connection test failed: {}", e);
+                            Err(Error::Any(anyhow::anyhow!(
+                                "DuckDB connection failed: {}",
+                                e
+                            )))
+                        }
+                    }
+                } else {
+                    // Verify the in-memory engine opens and at least one source
+                    // registers; report missing files clearly.
+                    let conn = duckdb::Connection::open_in_memory().map_err(|e| {
+                        Error::Any(anyhow::anyhow!("DuckDB connection failed: {}", e))
+                    })?;
+                    let report = crate::database::duckdb::file_source::register_sources(
+                        &conn,
+                        &file_sources,
+                    );
+                    if report.registered.is_empty() {
+                        let detail = if !report.missing.is_empty() {
+                            format!("file(s) not found: {}", report.missing.join(", "))
+                        } else if let Some((path, err)) = report.failed.first() {
+                            format!("{}: {}", path, err)
+                        } else {
+                            "no data files provided".to_string()
+                        };
+                        Err(Error::Any(anyhow::anyhow!(
+                            "Could not open data file source — {}",
+                            detail
+                        )))
+                    } else {
+                        Ok(true)
+                    }
+                }
+            }
             DatabaseInfo::LibSQL { url, auth_token } => {
                 log::info!("Testing LibSQL connection: {}", url);
 
@@ -815,7 +1053,11 @@ impl ConnectionService<'_> {
                     }
                 }
             }
-            DatabaseInfo::MySQL {
+            DatabaseInfo::MariaDB {
+                connection_string,
+                ssh_config,
+            }
+            | DatabaseInfo::MySQL {
                 connection_string,
                 ssh_config,
             } => {

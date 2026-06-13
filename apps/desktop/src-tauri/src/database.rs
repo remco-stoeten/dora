@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod connection_repository;
+pub mod duckdb;
 pub mod libsql;
 pub mod mysql;
 pub mod postgres;

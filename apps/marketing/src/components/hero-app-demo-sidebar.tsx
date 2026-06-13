@@ -32,7 +32,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type TTable = { name: string; base: number };
 type TRailItem = { icon: LucideIcon; label: string };
-type TDbType = "libsql" | "postgres" | "sqlite" | "mysql";
+type TDbType = "libsql" | "postgres" | "sqlite" | "mysql" | "mariadb" | "cockroach";
 type TConnection = { id: string; name: string; type: TDbType; date: string };
 
 /** Tables from the e-commerce demo schema that `/app` loads by default; `base`
@@ -88,7 +88,19 @@ const connections: TConnection[] = [
     type: "postgres",
     date: "May 28, 2026",
   },
+  {
+    id: "mariadb",
+    name: "MariaDB Replica",
+    type: "mariadb",
+    date: "Jun 3, 2026",
+  },
   { id: "staging", name: "Staging", type: "mysql", date: "Jun 1, 2026" },
+  {
+    id: "cockroach",
+    name: "CockroachDB Cluster",
+    type: "cockroach",
+    date: "Jun 2, 2026",
+  },
   { id: "local", name: "Local Dev", type: "sqlite", date: "Jun 5, 2026" },
 ];
 
@@ -102,6 +114,10 @@ function formatDatabaseType(type: TDbType): string {
       return "SQLite";
     case "mysql":
       return "MySQL";
+    case "mariadb":
+      return "MariaDB";
+    case "cockroach":
+      return "CockroachDB";
     default:
       return "Database";
   }
@@ -125,12 +141,10 @@ function RailButton({
   icon: Icon,
   label,
   active,
-  bottom,
 }: {
   icon: LucideIcon;
   label: string;
   active?: boolean;
-  bottom?: boolean;
 }) {
   const state = active
     ? "bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-white/8 shadow-sm"
@@ -138,20 +152,12 @@ function RailButton({
   return (
     <div
       className={
-        bottom
-          ? "mt-auto flex w-full items-center justify-center"
-          : "flex w-full items-center justify-center"
+        "group/tip relative mx-auto flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[7px] transition-colors " +
+        state
       }
     >
-      <div
-        className={
-          "group/tip relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-[7px] transition-colors " +
-          state
-        }
-      >
-        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-        <Tip label={label} />
-      </div>
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <Tip label={label} />
     </div>
   );
 }
@@ -448,32 +454,33 @@ export function DemoSidebar({
   return (
     <>
       {/* Navigation rail */}
-      <aside className="z-50 flex h-full w-16 flex-col bg-sidebar border-r border-sidebar-border">
+      <aside className="relative z-0 flex h-full w-16 shrink-0 flex-col items-center bg-sidebar">
         {/* Logo header — fixed h-10 + bottom border so the rail's top
                     divider continues the connection-switcher / tab-bar line
                     straight across all three columns. */}
-        <div className="flex h-10 items-center justify-center border-b border-sidebar-border shrink-0">
-          <div className="group/tip relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-opacity hover:opacity-80">
+        <div className="flex h-10 w-full items-center justify-center border-b border-sidebar-border shrink-0">
+          <div className="group/tip relative mx-auto flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-opacity hover:opacity-80">
             <img
               src="/icons/logo.svg"
               alt=""
-              className="h-6 w-6"
+              className="mx-auto h-6 w-6 shrink-0"
               draggable={false}
             />
             <Tip label="Go to Home" />
           </div>
         </div>
-        <nav className="flex flex-1 flex-col items-center gap-1.5 p-2">
-          <div className="flex w-full flex-col items-center gap-1.5">
+        <nav className="flex w-full flex-1 flex-col gap-1 p-2">
+          <div className="mx-auto flex flex-col gap-1">
             {railItems.map(renderRail)}
           </div>
-          <RailButton icon={Settings} label="Settings" bottom />
+          <div className="mx-auto mt-auto flex flex-col gap-1">
+            <RailButton icon={Settings} label="Settings" />
+          </div>
         </nav>
       </aside>
 
-      {/* Database sidebar keeps the same base color as the rail; the
-                border and active states carry the separation. */}
-      <div className="relative flex flex-col h-full w-[244px] bg-sidebar border-r border-sidebar-border select-none">
+      {/* Database sidebar — border-l divides the rail; border-r divides main. */}
+      <div className="relative flex flex-col h-full w-[244px] bg-sidebar border-l border-r border-sidebar-border select-none">
         <ConnectionSwitcher />
 
         {/* Search row: fixed h-9 + bottom border to align with the

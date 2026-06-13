@@ -64,6 +64,8 @@ type Props = {
   onViewConnection?: (id: string) => void;
   onEditConnection?: (id: string) => void;
   onDeleteConnection?: (id: string) => void;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
 };
 
 export function DatabaseSidebar({
@@ -81,6 +83,8 @@ export function DatabaseSidebar({
   onViewConnection,
   onEditConnection,
   onDeleteConnection,
+  onToggleSidebar,
+  isSidebarOpen = true,
 }: Props = {}) {
   const { toast } = useToast();
   const adapter = useAdapter();
@@ -947,6 +951,8 @@ export function DatabaseSidebar({
       )}
 
       <BottomToolbar
+        onToggleSidebar={onToggleSidebar}
+        isSidebarOpen={isSidebarOpen}
         onAction={function (action) {
           if (action === "settings") {
             handleNavSelect("settings");

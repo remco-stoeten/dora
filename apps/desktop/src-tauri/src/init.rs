@@ -16,7 +16,7 @@ fn init_script() -> String {
         }}
     "#,
         if cfg!(debug_assertions) {
-            "http://localhost:42069"
+            "http://localhost:1420"
         } else {
             "tauri://localhost"
         },
@@ -59,7 +59,12 @@ pub fn build_window(app: &tauri::App) -> tauri::Result<()> {
     #[cfg(target_os = "linux")]
     let window_builder = window_builder.transparent(false);
 
-    let _main_window = window_builder.build()?;
+    let main_window = window_builder.build()?;
+    // Config sets visible=false so we can paint the inline boot screen first.
+    // Show here instead of waiting for frontend JS — WebKit can finish loading
+    // while the window is hidden, which looks like a hang after startup logs.
+    main_window.show()?;
+    log::info!("Main window created and shown");
 
     Ok(())
 }

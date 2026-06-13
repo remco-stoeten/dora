@@ -40,7 +40,7 @@ export type TableQueryParams = {
 	filters?: FilterDescriptor[]
 }
 
-export type ViewMode = 'content' | 'structure'
+export type ViewMode = 'content' | 'structure' | 'chart'
 
 export type PaginationState = {
 	limit: number

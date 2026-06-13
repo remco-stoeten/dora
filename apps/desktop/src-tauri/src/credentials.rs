@@ -22,7 +22,10 @@ pub fn extract_sensitive_data(
     mut database_info: DatabaseInfo,
 ) -> Result<(DatabaseInfo, Option<String>), Error> {
     match &mut database_info {
-        DatabaseInfo::Postgres {
+        DatabaseInfo::CockroachDB {
+            connection_string, ..
+        }
+        | DatabaseInfo::Postgres {
             connection_string, ..
         } => {
             let mut url =
@@ -40,8 +43,12 @@ pub fn extract_sensitive_data(
             Ok((database_info, password))
         }
         DatabaseInfo::SQLite { .. } => Ok((database_info, None)),
+        DatabaseInfo::DuckDB { .. } => Ok((database_info, None)),
         DatabaseInfo::LibSQL { .. } => Ok((database_info, None)),
-        DatabaseInfo::MySQL {
+        DatabaseInfo::MariaDB {
+            connection_string, ..
+        }
+        | DatabaseInfo::MySQL {
             connection_string, ..
         } => {
             let mut url =

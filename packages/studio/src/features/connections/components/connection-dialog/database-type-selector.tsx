@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { cn } from '@studio/shared/utils/cn'
 import { DatabaseType } from '../../types'
 import { DatabaseIcon, DATABASE_META } from '../database-icons'
@@ -8,22 +9,54 @@ type Props = {
 	disabled?: boolean
 }
 
-const DATABASE_TYPES: DatabaseType[] = ['postgres', 'mysql', 'sqlite', 'libsql']
+const DATABASE_TYPES: DatabaseType[] = [
+	'postgres',
+	'cockroach',
+	'mysql',
+	'mariadb',
+	'sqlite',
+	'duckdb',
+	'libsql'
+]
 
-const TYPE_ACCENT: Record<DatabaseType, string> = {
-	postgres: 'hsl(214 100% 60%)',
-	mysql:    'hsl(36 100% 55%)',
-	sqlite:   'hsl(142 71% 45%)',
-	libsql:   'hsl(260 80% 65%)',
+const TYPE_THEME: Record<DatabaseType, { accent: string; wash: string }> = {
+	postgres: {
+		accent: 'hsl(207 72% 58%)',
+		wash: 'color-mix(in srgb, hsl(207 72% 58%) 9%, hsl(var(--card)))',
+	},
+	cockroach: {
+		accent: 'hsl(32 58% 54%)',
+		wash: 'color-mix(in srgb, hsl(32 58% 54%) 10%, hsl(var(--card)))',
+	},
+	mysql: {
+		accent: 'hsl(193 55% 52%)',
+		wash: 'color-mix(in srgb, hsl(193 55% 52%) 9%, hsl(var(--card)))',
+	},
+	mariadb: {
+		accent: 'hsl(158 42% 50%)',
+		wash: 'color-mix(in srgb, hsl(158 42% 50%) 9%, hsl(var(--card)))',
+	},
+	sqlite: {
+		accent: 'hsl(218 28% 58%)',
+		wash: 'color-mix(in srgb, hsl(218 28% 58%) 10%, hsl(var(--card)))',
+	},
+	duckdb: {
+		accent: 'hsl(48 72% 52%)',
+		wash: 'color-mix(in srgb, hsl(48 72% 52%) 9%, hsl(var(--card)))',
+	},
+	libsql: {
+		accent: 'hsl(169 62% 45%)',
+		wash: 'color-mix(in srgb, hsl(169 62% 45%) 9%, hsl(var(--card)))',
+	},
 }
 
 export function DatabaseTypeSelector({ selectedType, onSelect, disabled }: Props) {
 	return (
-		<div className='grid grid-cols-2 gap-2'>
+		<div className='grid grid-cols-2 gap-2 sm:grid-cols-3'>
 			{DATABASE_TYPES.map(function (type) {
 				const meta = DATABASE_META[type]
 				const isActive = selectedType === type
-				const accent = TYPE_ACCENT[type]
+				const theme = TYPE_THEME[type]
 
 				return (
 					<button
@@ -33,50 +66,66 @@ export function DatabaseTypeSelector({ selectedType, onSelect, disabled }: Props
 							onSelect(type)
 						}}
 						disabled={disabled}
-						style={isActive ? { '--db-accent': accent } as React.CSSProperties : undefined}
+						style={
+							{
+								'--db-accent': theme.accent,
+								background: isActive ? theme.wash : undefined,
+								borderColor: isActive ? theme.accent : undefined,
+								boxShadow: isActive ? `0 14px 34px -28px ${theme.accent}` : undefined,
+							} as React.CSSProperties
+						}
 						className={cn(
-							'db-type-btn group relative text-left overflow-hidden rounded-lg transition-all duration-200',
-							'border bg-card/60 hover:bg-card',
+							'db-type-btn group relative overflow-hidden border p-3 text-left',
+							'bg-card/55 transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out',
+							'hover:border-border/90 hover:bg-card active:scale-[0.985]',
+							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
 							isActive
-								? 'border-[var(--db-accent)]/50 bg-card shadow-md ring-1 ring-[var(--db-accent)]/30'
-								: 'border-border/50 hover:border-border',
+								? 'ring-1 ring-inset ring-white/10'
+								: 'border-border/55',
 							disabled && 'opacity-50 cursor-not-allowed'
 						)}
 					>
-						{/* Active accent glow strip */}
 						{isActive && (
 							<div
-								className='absolute inset-x-0 top-0 h-[2px]'
-								style={{ background: `var(--db-accent)` }}
+								className='pointer-events-none absolute inset-x-0 top-0 h-px'
+								style={{ background: theme.accent }}
 							/>
 						)}
 
-						<div className='flex items-center gap-3 px-3 py-3'>
+						<div className='flex items-start gap-3'>
 							<div
 								className={cn(
-									'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
-									isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-90'
+									'flex h-9 w-9 shrink-0 items-center justify-center border transition-colors duration-200',
+									isActive
+										? 'border-white/15 text-[var(--db-accent)]'
+										: 'border-border/55 bg-background/55 text-muted-foreground group-hover:text-foreground'
 								)}
-								style={isActive ? { background: `color-mix(in srgb, ${accent} 14%, transparent)` } : undefined}
+								style={
+									isActive
+										? { background: `color-mix(in srgb, ${theme.accent} 14%, transparent)` }
+										: undefined
+								}
 							>
-								<DatabaseIcon type={type} className='h-5 w-5' />
+								<DatabaseIcon type={type} className='h-[18px] w-[18px]' />
 							</div>
-							<div className='min-w-0 flex-1'>
+							<div className='min-w-0 flex-1 pt-0.5'>
 								<span className={cn(
-									'block text-sm font-medium truncate',
-									isActive ? 'text-foreground' : 'text-foreground/80'
+									'block truncate text-sm font-medium tracking-tight',
+									isActive ? 'text-foreground' : 'text-foreground/85'
 								)}>
 									{meta.name}
 								</span>
-								<span className='block text-xs text-muted-foreground/70 truncate'>
+								<span className='mt-0.5 block truncate text-[11px] leading-4 text-muted-foreground/75'>
 									{meta.description}
 								</span>
 							</div>
 							{isActive && (
 								<div
-									className='h-1.5 w-1.5 shrink-0 rounded-full'
-									style={{ background: accent }}
-								/>
+									className='mt-1 flex h-5 w-5 shrink-0 items-center justify-center border bg-background/60'
+									style={{ borderColor: `color-mix(in srgb, ${theme.accent} 38%, transparent)` }}
+								>
+									<Check className='h-3 w-3 text-[var(--db-accent)]' strokeWidth={2.4} />
+								</div>
 							)}
 						</div>
 					</button>

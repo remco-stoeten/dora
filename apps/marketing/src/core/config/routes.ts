@@ -1,3 +1,6 @@
+import { getFeatureRouteEntries } from '@/core/config/features'
+import { getGuideRouteEntries } from '@/core/config/guides'
+
 export type TRouteConfig = {
     path: string
     title: string
@@ -49,7 +52,7 @@ export const routeConfig = [
         path: '/docs',
         title: 'Dora docs',
         description:
-            'Read Dora documentation for setup, workflows, and support.',
+            'Connection guides and setup docs for Dora — connect Supabase, Neon, Turso, and any Postgres or libSQL database to the desktop app.',
         sitemap: true,
         index: true,
         priority: 0.7,
@@ -72,7 +75,9 @@ export const routeConfig = [
         index: false,
         priority: 0,
         changeFrequency: 'never'
-    }
+    },
+    ...getFeatureRouteEntries(),
+    ...getGuideRouteEntries()
 ] satisfies TRouteConfig[]
 
 export function getRoute(path: string) {

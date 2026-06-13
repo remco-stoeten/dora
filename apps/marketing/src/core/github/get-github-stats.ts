@@ -163,8 +163,8 @@ export async function getGitHubStats(): Promise<GitHubStatsData | null> {
             {
                 name: 'Homebrew',
                 platform: 'brew',
-                command: 'brew install remcostoeten/tap/dora',
-                url: 'https://github.com/remcostoeten/homebrew-tap'
+    command: 'brew install --cask remcostoeten/dora/dora',
+    url: 'https://github.com/remcostoeten/homebrew-dora'
             },
             // Snap Store (Linux)
             {
@@ -177,8 +177,8 @@ export async function getGitHubStats(): Promise<GitHubStatsData | null> {
             {
                 name: 'AUR',
                 platform: 'aur',
-                command: 'yay -S dora-bin',
-                url: 'https://aur.archlinux.org/packages/dora-bin'
+                command: 'yay -S dora',
+                url: 'https://aur.archlinux.org/packages/dora'
             },
             // APT (Debian/Ubuntu)
             {
@@ -191,7 +191,7 @@ export async function getGitHubStats(): Promise<GitHubStatsData | null> {
             {
                 name: 'Winget',
                 platform: 'winget',
-                command: 'winget install remcostoeten.dora',
+                command: 'winget install RemcoStoeten.Dora',
                 url: 'https://github.com/microsoft/winget-pkgs'
             },
             // GitHub Releases (all platforms)

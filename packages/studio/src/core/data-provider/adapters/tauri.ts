@@ -23,7 +23,10 @@ import type { Connection } from '@studio/features/connections/types'
 
 function databaseInfoToDialect(databaseType: DatabaseInfo): TableDialect {
 	if ('Postgres' in databaseType) return 'postgres'
+	if ('CockroachDB' in databaseType) return 'cockroach'
 	if ('MySQL' in databaseType) return 'mysql'
+	if ('MariaDB' in databaseType) return 'mariadb'
+	if ('DuckDB' in databaseType) return 'duckdb'
 	if ('LibSQL' in databaseType) return 'libsql'
 	return 'sqlite'
 }

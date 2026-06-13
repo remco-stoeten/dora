@@ -5,7 +5,9 @@ type SeedDatabaseOptions = {
 	containerId: string
 	filePath: string
 	connectionConfig: {
+		provider?: 'postgres' | 'mariadb' | 'cockroach'
 		user: string
+		password?: string
 		database: string
 	}
 }

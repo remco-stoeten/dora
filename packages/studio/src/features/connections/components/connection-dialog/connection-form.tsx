@@ -6,6 +6,8 @@ import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
 import { toast } from "@studio/shared/ui/notifier";
 import { Connection, DatabaseType } from "../../types";
+import { getSourceCaps } from "../../source-caps";
+import { isUiActionVisible } from "../../ui-actions";
 import { PROVIDER_CONFIGS, sanitizeConnectionUrl } from "../../utils/providers";
 import { SshTunnelConfigForm } from "./ssh-tunnel-config-form";
 
@@ -17,6 +19,14 @@ type Props = {
   setUseConnectionString: (use: boolean) => void;
 };
 
+function capsFromForm(formData: Partial<Connection>) {
+  return getSourceCaps({
+    type: formData.type ?? "postgres",
+    fileSources: formData.fileSources,
+    url: formData.url,
+  });
+}
+
 export function ConnectionForm({
   formData,
   updateField,
@@ -24,9 +34,15 @@ export function ConnectionForm({
   useConnectionString,
   setUseConnectionString,
 }: Props) {
+  const caps = capsFromForm(formData);
+  const engine = formData.type ?? "postgres";
+
   async function handleBrowseFile() {
     try {
-      const result = await commands.openSqliteDb();
+      const result =
+        engine === "duckdb"
+          ? await commands.openFile("Pick a DuckDB database file")
+          : await commands.openSqliteDb();
       if (result.status === "ok" && result.data) {
         updateField("url", result.data);
       }
@@ -38,43 +54,7 @@ export function ConnectionForm({
     }
   }
 
-  if (formData.type === "sqlite") {
-    return (
-      <div className="form-section space-y-2">
-        <Label
-          htmlFor="sqlite-path"
-          className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-        >
-          Database File
-        </Label>
-        <div className="flex gap-2">
-          <Input
-            id="sqlite-path"
-            placeholder="/path/to/database.db"
-            value={formData.url || ""}
-            onChange={function (e) {
-              updateField("url", e.target.value);
-            }}
-            className="flex-1 input-glow font-mono text-sm"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleBrowseFile}
-            className="shrink-0"
-            title="Browse for file"
-          >
-            <FolderOpen className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Select or enter the path to your SQLite database file
-        </p>
-      </div>
-    );
-  }
-
-  if (formData.type === "libsql") {
+  if (engine === "libsql") {
     return (
       <div className="form-section space-y-4">
         <div className="space-y-2">
@@ -117,7 +97,46 @@ export function ConnectionForm({
     );
   }
 
-  if (formData.type === "postgres" || formData.type === "mysql") {
+  if (isUiActionVisible("local-file", caps) && (engine === "sqlite" || engine === "duckdb")) {
+    const isDuckDb = engine === "duckdb";
+    return (
+      <div className="form-section space-y-2">
+        <Label
+          htmlFor="sqlite-path"
+          className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+        >
+          Database File
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="sqlite-path"
+            placeholder={isDuckDb ? "/path/to/database.duckdb" : "/path/to/database.db"}
+            value={formData.url || ""}
+            onChange={function (e) {
+              updateField("url", e.target.value);
+            }}
+            className="flex-1 input-glow font-mono text-sm"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleBrowseFile}
+            className="shrink-0"
+            title="Browse for file"
+          >
+            <FolderOpen className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {isDuckDb
+            ? "Select or enter the path to your DuckDB database file"
+            : "Select or enter the path to your SQLite database file"}
+        </p>
+      </div>
+    );
+  }
+
+  if (isUiActionVisible("remote-url", caps) && isUiActionVisible("ssh-tunnel", caps)) {
     return (
       <div className="form-section space-y-4">
         <div className="flex items-center gap-2 py-1">
@@ -306,47 +325,45 @@ export function ConnectionForm({
               </div>
             )}
 
-            {(formData.type === "postgres" || formData.type === "mysql") && (
-              <div className="border-t border-border/50 pt-4 mt-4 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="ssh-tunnel"
-                    checked={formData.sshConfig?.enabled ?? false}
-                    onCheckedChange={function (checked) {
-                      setFormData(function (prev) {
-                        return {
-                          ...prev,
-                          sshConfig: {
-                            enabled: !!checked,
-                            host: prev.sshConfig?.host || "",
-                            port: prev.sshConfig?.port || 22,
-                            username: prev.sshConfig?.username || "",
-                            authMethod: prev.sshConfig?.authMethod || "password",
-                            password: prev.sshConfig?.password || "",
-                            privateKeyPath: prev.sshConfig?.privateKeyPath || "",
-                          },
-                        };
-                      });
-                    }}
-                  />
-                  <Label
-                    htmlFor="ssh-tunnel"
-                    className="text-sm flex items-center gap-2 cursor-pointer"
-                  >
-                    <Key className="h-4 w-4 text-muted-foreground" />
-                    Connect via SSH Tunnel
-                  </Label>
-                </div>
-                {formData.sshConfig?.enabled && (
-                  <SshTunnelConfigForm
-                    config={formData.sshConfig}
-                    onChange={function (sshConfig) {
-                      updateField("sshConfig", sshConfig);
-                    }}
-                  />
-                )}
+            <div className="border-t border-border/50 pt-4 mt-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="ssh-tunnel"
+                  checked={formData.sshConfig?.enabled ?? false}
+                  onCheckedChange={function (checked) {
+                    setFormData(function (prev) {
+                      return {
+                        ...prev,
+                        sshConfig: {
+                          enabled: !!checked,
+                          host: prev.sshConfig?.host || "",
+                          port: prev.sshConfig?.port || 22,
+                          username: prev.sshConfig?.username || "",
+                          authMethod: prev.sshConfig?.authMethod || "password",
+                          password: prev.sshConfig?.password || "",
+                          privateKeyPath: prev.sshConfig?.privateKeyPath || "",
+                        },
+                      };
+                    });
+                  }}
+                />
+                <Label
+                  htmlFor="ssh-tunnel"
+                  className="text-sm flex items-center gap-2 cursor-pointer"
+                >
+                  <Key className="h-4 w-4 text-muted-foreground" />
+                  Connect via SSH Tunnel
+                </Label>
               </div>
-            )}
+              {formData.sshConfig?.enabled && (
+                <SshTunnelConfigForm
+                  config={formData.sshConfig}
+                  onChange={function (sshConfig) {
+                    updateField("sshConfig", sshConfig);
+                  }}
+                />
+              )}
+            </div>
           </>
         )}
       </div>

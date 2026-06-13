@@ -23,13 +23,13 @@ import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
 import { Switch } from "@studio/shared/ui/switch";
 import { useCreateContainer } from "../api/mutations/use-create-container";
-import { useContainerActions } from "../api/mutations/use-container-actions";
+import { useContainerActions, useRemoveContainer } from "../api/mutations/use-container-actions";
 import {
   useContainers,
   useContainerSearch,
   useDockerAvailability,
 } from "../api/queries/use-containers";
-import type { PostgresContainerConfig, DockerContainer } from "../types";
+import type { DatabaseContainerConfig, DatabaseProvider, DockerContainer, RemoveContainerOptions } from "../types";
 import { ContainerDetailsPanel } from "./container-details-panel";
 import { ContainerList } from "./container-list";
 import { ContainerTerminal } from "./container-terminal";
@@ -37,6 +37,7 @@ import { LogsViewer } from "./logs-viewer";
 import { useContainerLogs } from "../api/queries/use-container-logs";
 import { DEFAULT_LOG_TAIL } from "../constants";
 import { CreateContainerDialog } from "./create-container-dialog";
+import { RemoveContainerDialog } from "./remove-container-dialog";
 import {
   Select,
   SelectContent,
@@ -67,15 +68,21 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
   const [showExternal, setShowExternal] = useState(true);
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createProviderPreset, setCreateProviderPreset] = useState<DatabaseProvider>("postgres");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [terminalContainerId, setTerminalContainerId] = useState<string | null>(null);
   const [isTerminalPanelOpen, setIsTerminalPanelOpen] = useState(false);
   const [activeBottomTab, setActiveBottomTab] = useState<"logs" | "terminal">("logs");
-  const [tailLines, setTailLines] = useState(DEFAULT_LOG_TAIL);
+	const [tailLines, setTailLines] = useState(DEFAULT_LOG_TAIL);
+	const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+	const [containerToRemove, setContainerToRemove] = useState<{
+		id: string
+		name: string
+	} | null>(null);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -229,13 +236,17 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
   );
 
   const createContainer = useCreateContainer({
-    onSuccess: function (result) {
+    onSuccess: function (result, config) {
       if (result.success && result.containerId) {
         setIsCreateDialogOpen(false);
         setSelectedContainerId(result.containerId);
         toast({
           title: "Container Created",
-          description: "PostgreSQL container is starting up...",
+          description: `${config?.provider === "mariadb"
+            ? "MariaDB"
+            : config?.provider === "cockroach"
+              ? "CockroachDB"
+              : "PostgreSQL"} container is starting up...`,
           variant: "success",
         });
       } else if (!result.success) {
@@ -255,10 +266,22 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     },
   });
 
-  const containerActions = useContainerActions();
+	const containerActions = useContainerActions();
+	const removeContainer = useRemoveContainer({
+		onSuccess: function () {
+			setShowRemoveDialog(false);
+			setContainerToRemove(null);
+			setSelectedContainerId(null);
+		}
+	});
 
-  function handleCreateContainer(config: PostgresContainerConfig) {
+	function handleCreateContainer(config: DatabaseContainerConfig) {
     createContainer.mutate(config);
+  }
+
+  function handleOpenCreateDialog(provider: DatabaseProvider) {
+    setCreateProviderPreset(provider);
+    setIsCreateDialogOpen(true);
   }
 
   function handleQuickStart(id: string) {
@@ -280,11 +303,29 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     }
   }
 
-  function handleSelectContainer(id: string) {
-    setSelectedContainerId(id);
-    setActiveBottomTab("logs");
-    setIsTerminalPanelOpen(false);
-  }
+	function handleSelectContainer(id: string) {
+		setSelectedContainerId(id);
+		setActiveBottomTab("logs");
+		setIsTerminalPanelOpen(false);
+	}
+
+	function handleRemoveContainer(id: string) {
+		const container = visibleContainers.find(function (c) {
+			return c.id === id
+		})
+		if (container) {
+			setContainerToRemove({ id: container.id, name: container.name })
+			setShowRemoveDialog(true)
+		}
+	}
+
+	function handleConfirmRemoveContainer(options: RemoveContainerOptions) {
+		if (!containerToRemove) return
+		removeContainer.mutate({
+			containerId: containerToRemove.id,
+			options
+		})
+	}
 
   function handleOpenTerminal(container: DockerContainer) {
     setSelectedContainerId(container.id);
@@ -452,7 +493,7 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
             <div className="min-w-0">
               <h1 className="text-lg font-semibold">Docker Containers</h1>
               <p className="text-xs text-muted-foreground">
-                Local PostgreSQL containers with one-click controls.
+                Local database containers with one-click controls.
               </p>
             </div>
           </div>
@@ -595,12 +636,45 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
           size="sm"
           className="gap-1.5"
           onClick={function () {
-            setIsCreateDialogOpen(true);
+            handleOpenCreateDialog("postgres");
           }}
         >
           <Plus className="h-4 w-4" />
           New Container
         </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={function () {
+              handleOpenCreateDialog("postgres");
+            }}
+          >
+            PostgreSQL
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={function () {
+              handleOpenCreateDialog("mariadb");
+            }}
+          >
+            MariaDB
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={function () {
+              handleOpenCreateDialog("cockroach");
+            }}
+          >
+            CockroachDB
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -613,6 +687,7 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
             onStopContainer={handleQuickStop}
             onRestartContainer={handleQuickRestart}
             onOpenContainerInDataViewer={handleOpenContainerInDataViewer}
+            onRemoveContainer={handleRemoveContainer}
             isActionPending={containerActions.isPending}
             isLoading={isLoadingContainers}
             searchQuery={searchQuery}
@@ -714,6 +789,18 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         onSubmit={handleCreateContainer}
         existingContainers={allContainers}
         isSubmitting={createContainer.isPending}
+        initialProvider={createProviderPreset}
+      />
+
+      <RemoveContainerDialog
+        containerName={containerToRemove?.name ?? ''}
+        open={showRemoveDialog}
+        onOpenChange={function (open) {
+          setShowRemoveDialog(open)
+          if (!open) setContainerToRemove(null)
+        }}
+        onConfirm={handleConfirmRemoveContainer}
+        isRemoving={removeContainer.isPending}
       />
     </div>
   );

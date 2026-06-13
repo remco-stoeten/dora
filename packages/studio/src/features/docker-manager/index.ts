@@ -25,14 +25,21 @@ export {
 
 export {
 	CONTAINER_PREFIX,
+	DATABASE_PROVIDERS,
 	POSTGRES_VERSIONS,
+	MARIADB_VERSIONS,
+	COCKROACH_VERSIONS,
 	GENERATOR_PROFILES,
 	GENERATOR_SCALES
 } from './constants'
 
 export type {
 	DockerContainer,
+	DatabaseContainerConfig,
+	DatabaseProvider,
 	PostgresContainerConfig,
+	MariaDBContainerConfig,
+	CockroachContainerConfig,
 	ContainerState,
 	ContainerHealth,
 	ContainerOrigin,

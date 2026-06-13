@@ -93,8 +93,11 @@ fn engine_for_connection(state: &AppState, conn_id: Uuid) -> String {
         .get(&conn_id)
         .map(|entry| match entry.value().database {
             Database::Postgres { .. } => "postgres",
+            Database::CockroachDB { .. } => "cockroach",
             Database::MySQL { .. } => "mysql",
+            Database::MariaDB { .. } => "mariadb",
             Database::SQLite { .. } => "sqlite",
+            Database::DuckDB { .. } => "duckdb",
             Database::LibSQL { .. } => "libsql",
         })
         .unwrap_or("sql")

@@ -14,8 +14,16 @@ describe('getTableSqlIdentifier', function () {
 		expect(getTableSqlIdentifier('public.user', 'libsql')).toBe('"user"')
 	})
 
+	it('keeps schema qualification for cockroach', function () {
+		expect(getTableSqlIdentifier('public.user', 'cockroach')).toBe('"public"."user"')
+	})
+
 	it('uses mysql backticks with schema', function () {
 		expect(getTableSqlIdentifier('public.user', 'mysql')).toBe('`public`.`user`')
+	})
+
+	it('uses mysql backticks for mariadb', function () {
+		expect(getTableSqlIdentifier('public.user', 'mariadb')).toBe('`public`.`user`')
 	})
 
 	it('preserves quoted schema and table names for postgres', function () {

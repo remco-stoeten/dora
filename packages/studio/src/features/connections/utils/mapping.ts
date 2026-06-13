@@ -27,7 +27,13 @@ function backendToFrontendSshConfig(
 }
 
 export function frontendToBackendSshConfig(conn: FrontendConnection) {
-	if ((conn.type !== 'postgres' && conn.type !== 'mysql') || !conn.sshConfig?.enabled) {
+	if (
+		(conn.type !== 'postgres' &&
+			conn.type !== 'cockroach' &&
+			conn.type !== 'mysql' &&
+			conn.type !== 'mariadb') ||
+		!conn.sshConfig?.enabled
+	) {
 		return null
 	}
 
@@ -42,8 +48,9 @@ export function frontendToBackendSshConfig(conn: FrontendConnection) {
 }
 
 export function backendToFrontendConnection(conn: BackendConnection): FrontendConnection {
-	let type: 'postgres' | 'mysql' | 'sqlite' | 'libsql' = 'sqlite'
+	let type: 'postgres' | 'cockroach' | 'mysql' | 'mariadb' | 'sqlite' | 'duckdb' | 'libsql' = 'sqlite'
 	let host, port, user, database, url, authToken, sshConfig, poolerMode
+	let fileSources: string[] | undefined
 
 	if ('Postgres' in conn.database_type) {
 		type = 'postgres'
@@ -58,6 +65,22 @@ export function backendToFrontendConnection(conn: BackendConnection): FrontendCo
 		} catch {
 			host = 'localhost'
 			port = 5432
+		}
+		url = connString
+		poolerMode = hasPostgresPoolerMode(connString)
+	} else if ('CockroachDB' in conn.database_type) {
+		type = 'cockroach'
+		const connString = conn.database_type.CockroachDB.connection_string
+		sshConfig = backendToFrontendSshConfig(conn.database_type.CockroachDB.ssh_config)
+		try {
+			const urlObj = new URL(connString)
+			host = urlObj.hostname
+			port = urlObj.port ? parseInt(urlObj.port) : 26257
+			user = urlObj.username
+			database = urlObj.pathname.slice(1)
+		} catch {
+			host = 'localhost'
+			port = 26257
 		}
 		url = connString
 		poolerMode = hasPostgresPoolerMode(connString)
@@ -76,9 +99,29 @@ export function backendToFrontendConnection(conn: BackendConnection): FrontendCo
 			port = 3306
 		}
 		url = connString
+	} else if ('MariaDB' in conn.database_type) {
+		type = 'mariadb'
+		const connString = conn.database_type.MariaDB.connection_string
+		sshConfig = backendToFrontendSshConfig(conn.database_type.MariaDB.ssh_config)
+		try {
+			const urlObj = new URL(connString)
+			host = urlObj.hostname
+			port = urlObj.port ? parseInt(urlObj.port) : 3306
+			user = urlObj.username
+			database = urlObj.pathname.slice(1)
+		} catch {
+			host = 'localhost'
+			port = 3306
+		}
+		url = connString
 	} else if ('SQLite' in conn.database_type) {
 		type = 'sqlite'
 		url = conn.database_type.SQLite.db_path
+	} else if ('DuckDB' in conn.database_type) {
+		type = 'duckdb'
+		url = conn.database_type.DuckDB.db_path
+		const sources = conn.database_type.DuckDB.file_sources
+		fileSources = sources && sources.length > 0 ? sources : undefined
 	} else if ('LibSQL' in conn.database_type) {
 		type = 'libsql'
 		url = conn.database_type.LibSQL.url
@@ -95,6 +138,7 @@ export function backendToFrontendConnection(conn: BackendConnection): FrontendCo
 		database,
 		url,
 		authToken,
+		fileSources,
 		sshConfig,
 		poolerMode,
 		status: conn.connected ? 'connected' : 'idle',
@@ -104,29 +148,50 @@ export function backendToFrontendConnection(conn: BackendConnection): FrontendCo
 }
 
 export function frontendToBackendDatabaseInfo(conn: FrontendConnection): DatabaseInfo {
-	if (conn.type === 'postgres' || conn.type === 'mysql') {
+	if (conn.type === 'postgres' || conn.type === 'cockroach' || conn.type === 'mysql' || conn.type === 'mariadb') {
 		let connectionString: string
 		if (conn.url) {
 			connectionString = conn.url
 		} else {
-			const user = conn.user || (conn.type === 'mysql' ? 'root' : 'postgres')
+			const isMySqlLike = conn.type === 'mysql' || conn.type === 'mariadb'
+			const user = conn.user || (isMySqlLike ? 'root' : conn.type === 'cockroach' ? 'root' : 'postgres')
 			const password = conn.password || ''
 			const host = conn.host || 'localhost'
-			const port = conn.port || (conn.type === 'mysql' ? 3306 : 5432)
-			const database = conn.database || (conn.type === 'mysql' ? 'mysql' : 'postgres')
+			const port =
+				conn.port ||
+				(conn.type === 'cockroach' ? 26257 : isMySqlLike ? 3306 : 5432)
+			const database =
+				conn.database ||
+				(conn.type === 'cockroach' ? 'defaultdb' : isMySqlLike ? 'mysql' : 'postgres')
 			const ssl = conn.ssl ? '?sslmode=require' : ''
-			const protocol = conn.type === 'mysql' ? 'mysql' : 'postgresql'
+			const protocol = isMySqlLike ? 'mysql' : 'postgresql'
 			const encodedUser = encodeURIComponent(user)
 			const encodedPassword = encodeURIComponent(password)
 			const encodedDatabase = encodeURIComponent(database)
 			connectionString = `${protocol}://${encodedUser}:${encodedPassword}@${host}:${port}/${encodedDatabase}${ssl}`
 		}
-		if (conn.type === 'postgres') {
+		if (conn.type === 'postgres' || conn.type === 'cockroach') {
 			connectionString = setPostgresPoolerMode(connectionString, conn.poolerMode ?? false)
 		}
 		if (conn.type === 'mysql') {
 			return {
 				MySQL: {
+					connection_string: connectionString,
+					ssh_config: frontendToBackendSshConfig(conn)
+				}
+			}
+		}
+		if (conn.type === 'mariadb') {
+			return {
+				MariaDB: {
+					connection_string: connectionString,
+					ssh_config: frontendToBackendSshConfig(conn)
+				}
+			}
+		}
+		if (conn.type === 'cockroach') {
+			return {
+				CockroachDB: {
 					connection_string: connectionString,
 					ssh_config: frontendToBackendSshConfig(conn)
 				}
@@ -141,6 +206,11 @@ export function frontendToBackendDatabaseInfo(conn: FrontendConnection): Databas
 		}
 	} else if (conn.type === 'sqlite') {
 		return { SQLite: { db_path: conn.url || ':memory:' } }
+	} else if (conn.type === 'duckdb') {
+		if (conn.fileSources && conn.fileSources.length > 0) {
+			return { DuckDB: { db_path: ':memory:', file_sources: conn.fileSources } }
+		}
+		return { DuckDB: { db_path: conn.url || ':memory:' } }
 	} else if (conn.type === 'libsql') {
 		return { LibSQL: { url: conn.url || 'file:local.db', auth_token: conn.authToken ?? null } }
 	}

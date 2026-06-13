@@ -62,9 +62,6 @@ export function ContainerDetailsPanel({
 
 	const isRunning = container.state === 'running'
 
-	const passwordEnv = container.env.find((e) => e.startsWith('POSTGRES_PASSWORD='))
-	const password = passwordEnv ? passwordEnv.split('=')[1] : 'postgres'
-
 	function handleStart() {
 		containerActions.mutate({ containerId: container.id, action: 'start' })
 	}
@@ -110,7 +107,7 @@ export function ContainerDetailsPanel({
 			</div>
 
 			<div className='p-4 border-b border-border'>
-				<ConnectionDetails container={container} password={password} />
+				<ConnectionDetails container={container} />
 			</div>
 
 			<div className='p-4 border-b border-border'>

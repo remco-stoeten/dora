@@ -13,9 +13,50 @@ export type ChangelogRelease = {
 	groups: ChangelogReleaseGroup[]
 }
 
-export const CURRENT_VERSION = "0.26.7"
+export const CURRENT_VERSION = "0.27.0"
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
+	{
+		version: "0.27.0",
+		date: "2026-06-07",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.27.0",
+		groups: [
+			{
+				name: "Features",
+				items: [
+				"add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
+				"add encrypted API key storage, provider/model selection, and usage history",
+				"add in-app Ollama setup flow with installer, runtime helpers, and model management",
+				"feed live table indexes into assistant schema context",
+				"extract Dora Studio into `@dora/studio` for desktop and marketing web demo",
+				"render shared Studio at `/app` and refresh marketing landing with live demos and release-aware downloads",
+				"add `Ctrl+Shift+B` to toggle the AI assistant from the Studio keyboard flow",
+				]
+			},
+			{
+				name: "Bug Fixes",
+				items: [
+				"preserve high-precision numeric values and BIGINTs during cell editing",
+				"fix typed Postgres/SQLite cell edit and add-record binding behavior",
+				"improve credential-store recovery with OS-aware keyring install actions",
+				]
+			},
+			{
+				name: "Refactoring",
+				items: [
+				"move reusable Studio experience into `packages/studio`",
+				"rebuild marketing app-demo framing, theme polish, and deployment metadata",
+				]
+			},
+			{
+				name: "CI/CD",
+				items: [
+				"harden release automation with generated notes, post-release changelog sync, and package-manager fan-out",
+				"bump release line to 0.27.0 across root, desktop, Tauri, and Cargo manifests",
+				]
+			}
+		]
+	},
 	{
 		version: "0.26.5",
 		date: "2026-05-28",

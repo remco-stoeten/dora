@@ -3,16 +3,23 @@ import { useCallback, useRef, KeyboardEvent } from 'react'
 import { DoraLogo } from '@studio/components/dora-logo'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
+import { SidebarPanelToggle } from '@studio/features/sidebar/components/sidebar-panel-toggle'
 import { SidebarProvider, useSidebar } from './context'
 import { SidebarNavItem } from './nav-item'
 import type { NavItem, SidebarVariant } from './types'
 
+type DatabasePanelToggle = {
+	isOpen: boolean
+	onToggle: () => void
+}
+
 type ContentProps = {
 	activeNavId?: string
 	onNavSelect?: (id: string) => void
+	databasePanelToggle?: DatabasePanelToggle
 }
 
-function SidebarContent({ activeNavId, onNavSelect }: ContentProps) {
+function SidebarContent({ activeNavId, onNavSelect, databasePanelToggle }: ContentProps) {
 	const { variant } = useSidebar()
 	const isFloating = false
 	const navRef = useRef<HTMLElement>(null)
@@ -146,7 +153,22 @@ function SidebarContent({ activeNavId, onNavSelect }: ContentProps) {
 					))}
 				</div>
 
-				<div role='group' aria-label='Settings' className='mx-auto mt-auto flex flex-col gap-1'>
+				<div role='group' aria-label='Settings' className='mx-auto mt-auto flex flex-col items-center gap-1'>
+					{databasePanelToggle && !databasePanelToggle.isOpen && (
+						<>
+							<SidebarPanelToggle
+								isOpen={databasePanelToggle.isOpen}
+								onToggle={databasePanelToggle.onToggle}
+								buttonClassName='h-10 w-10'
+								className='h-5 w-5'
+							/>
+							<div
+								className='w-8 h-px bg-sidebar-border'
+								role='separator'
+								aria-orientation='horizontal'
+							/>
+						</>
+					)}
 					<SidebarNavItem
 						item={settingsNavItem}
 						isActive={activeNavId === settingsNavItem.id}
@@ -162,16 +184,22 @@ export type AppSidebarProps = {
 	variant?: SidebarVariant
 	activeNavId?: string
 	onNavSelect?: (id: string) => void
+	databasePanelToggle?: DatabasePanelToggle
 }
 
 export function NavigationSidebar({
 	variant = 'default',
 	activeNavId,
-	onNavSelect
+	onNavSelect,
+	databasePanelToggle
 }: AppSidebarProps) {
 	return (
 		<SidebarProvider defaultVariant={variant}>
-			<SidebarContent activeNavId={activeNavId} onNavSelect={onNavSelect} />
+			<SidebarContent
+				activeNavId={activeNavId}
+				onNavSelect={onNavSelect}
+				databasePanelToggle={databasePanelToggle}
+			/>
 		</SidebarProvider>
 	)
 }

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 
-import { CornerTick } from '@/components/corner-tick'
+import { AnimatedFrame } from '@/components/animated-frame'
 import { useInView } from '@/shared/hooks/use-in-view'
 import type { GitHubStatsData } from '@/core/github/get-github-stats'
 
@@ -14,17 +14,13 @@ const GitHubStats = dynamic(
 function GitHubStatsFrame() {
     return (
         <div className="w-full bg-[#0a0a0a]">
-            <div className="relative overflow-hidden border border-[#3a3138]">
-                <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
-                <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
-                <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
+            <AnimatedFrame className="overflow-hidden">
                 <div className="flex flex-col sm:flex-row">
                     <div className="min-h-[150px] w-full flex-shrink-0 border-b border-[#1a1a1a] sm:min-h-[120px] sm:w-1/3 sm:border-b-0 sm:border-r" />
                     <div className="min-h-[150px] flex-1 sm:min-h-[120px]" />
                 </div>
                 <div className="min-h-[112px] border-t border-[#1a1a1a]" />
-            </div>
+            </AnimatedFrame>
         </div>
     )
 }

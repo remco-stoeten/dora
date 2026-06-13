@@ -91,7 +91,7 @@ export function SshTunnelConfigForm({ config, onChange }: Props) {
               updateConfig({ authMethod: "password" });
             }}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-all duration-150",
+              "flex items-center gap-2 px-3 py-2 border text-sm transition-all duration-150",
               config.authMethod === "password"
                 ? "bg-muted border-border text-foreground"
                 : "bg-transparent border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
@@ -106,7 +106,7 @@ export function SshTunnelConfigForm({ config, onChange }: Props) {
               updateConfig({ authMethod: "keyfile" });
             }}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-all duration-150",
+              "flex items-center gap-2 px-3 py-2 border text-sm transition-all duration-150",
               config.authMethod === "keyfile"
                 ? "bg-muted border-border text-foreground"
                 : "bg-transparent border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground",

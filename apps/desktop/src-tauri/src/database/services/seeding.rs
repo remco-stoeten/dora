@@ -110,6 +110,13 @@ impl<'a> SeedingService<'a> {
                     conn.execute(&sql, [])
                         .map_err(|e| Error::Any(anyhow::anyhow!("SQLite insert failed: {}", e)))?;
                 }
+                crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
+                    let conn = connection
+                        .lock()
+                        .map_err(|e| Error::Any(anyhow::anyhow!("DuckDB lock failed: {}", e)))?;
+                    conn.execute(&sql, [])
+                        .map_err(|e| Error::Any(anyhow::anyhow!("DuckDB insert failed: {}", e)))?;
+                }
                 crate::database::types::DatabaseClient::LibSQL { connection } => {
                     connection
                         .execute(&sql, ())

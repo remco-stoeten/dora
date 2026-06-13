@@ -10,6 +10,8 @@ export type PortMapping = {
 	protocol: 'tcp' | 'udp'
 }
 
+export type DatabaseProvider = 'postgres' | 'mariadb' | 'cockroach'
+
 export type VolumeMount = {
 	name: string
 	mountPath: string
@@ -21,6 +23,7 @@ export type DockerContainer = {
 	name: string
 	image: string
 	imageTag: string
+	provider?: DatabaseProvider
 	state: ContainerState
 	health: ContainerHealth
 	origin: ContainerOrigin
@@ -31,13 +34,10 @@ export type DockerContainer = {
 	env: string[]
 }
 
-export type PostgresContainerConfig = {
+export type DatabaseContainerBaseConfig = {
+	provider: DatabaseProvider
 	name: string
-	postgresVersion: string
 	hostPort: number
-	user: string
-	password: string
-	database: string
 	ephemeral: boolean
 	volumeName?: string
 	cpuLimit?: number
@@ -45,6 +45,35 @@ export type PostgresContainerConfig = {
 	projectName?: string
 	composePath?: string
 }
+
+export type PostgresContainerConfig = DatabaseContainerBaseConfig & {
+	provider: 'postgres'
+	postgresVersion: string
+	user: string
+	password: string
+	database: string
+}
+
+export type MariaDBContainerConfig = DatabaseContainerBaseConfig & {
+	provider: 'mariadb'
+	mariadbVersion: string
+	user: string
+	password: string
+	database: string
+}
+
+export type CockroachContainerConfig = DatabaseContainerBaseConfig & {
+	provider: 'cockroach'
+	cockroachVersion: string
+	database: string
+	user?: string
+	password?: string
+}
+
+export type DatabaseContainerConfig =
+	| PostgresContainerConfig
+	| MariaDBContainerConfig
+	| CockroachContainerConfig
 
 export type SeedStrategy =
 	| { type: 'sql_file'; paths: string[] }

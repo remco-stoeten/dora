@@ -52,14 +52,17 @@ impl ConnectionRepository for AppState {
             .ok_or(Error::ConnectionNotFound(connection_id))?;
 
         match &connection_entry.value().database {
-            Database::Postgres { .. } => {
+            Database::Postgres { .. } | Database::CockroachDB { .. } => {
                 crate::database::postgres::parser::parse_statements(query).map_err(Into::into)
             }
-            Database::MySQL { .. } => {
+            Database::MySQL { .. } | Database::MariaDB { .. } => {
                 crate::database::mysql::parser::parse_statements(query).map_err(Into::into)
             }
             Database::SQLite { .. } => {
                 crate::database::sqlite::parser::parse_statements(query).map_err(Into::into)
+            }
+            Database::DuckDB { .. } => {
+                crate::database::duckdb::parser::parse_statements(query).map_err(Into::into)
             }
             Database::LibSQL { .. } => {
                 crate::database::libsql::parser::parse_statements(query).map_err(Into::into)

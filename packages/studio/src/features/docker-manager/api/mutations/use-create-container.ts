@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { PostgresContainerConfig, CreateContainerResult } from '../../types'
-import { createPostgresContainer, waitForHealthy } from '../container-service'
+import type { DatabaseContainerConfig, CreateContainerResult } from '../../types'
+import { createDatabaseContainer, waitForHealthy } from '../container-service'
 import { useDockerManagerStore } from '../../stores/docker-manager-store'
 
 type UseCreateContainerOptions = {
-	onSuccess?: (result: CreateContainerResult) => void
+	onSuccess?: (result: CreateContainerResult, config: DatabaseContainerConfig) => void
 	onError?: (error: Error) => void
 	waitForHealth?: boolean
 }
@@ -16,9 +16,9 @@ export function useCreateContainer(options: UseCreateContainerOptions = {}) {
 		return s.addEvent
 	})
 
-	return useMutation<CreateContainerResult, Error, PostgresContainerConfig>({
+	return useMutation<CreateContainerResult, Error, DatabaseContainerConfig>({
 		mutationFn: async function (config) {
-			const result = await createPostgresContainer(config)
+			const result = await createDatabaseContainer(config)
 
 			if (result.success && result.containerId && waitForHealth) {
 				const isHealthy = await waitForHealthy(result.containerId, 30000, 1000)
@@ -43,7 +43,7 @@ export function useCreateContainer(options: UseCreateContainerOptions = {}) {
 				})
 			}
 			if (onSuccess) {
-				onSuccess(result)
+				onSuccess(result, config)
 			}
 		},
 		onError: function (error) {

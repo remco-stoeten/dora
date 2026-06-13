@@ -1,11 +1,19 @@
 import { z } from 'zod'
 
+import { getSourceCaps } from './source-caps'
+import type { DatabaseType } from './types'
+
 const baseConnectionSchema = z.object({
 	name: z.string().min(1, 'Connection name is required').max(100, 'Name is too long')
 })
 
 export const sqliteConnectionSchema = baseConnectionSchema.extend({
 	type: z.literal('sqlite'),
+	url: z.string().min(1, 'Database file path is required')
+})
+
+export const duckdbConnectionSchema = baseConnectionSchema.extend({
+	type: z.literal('duckdb'),
 	url: z.string().min(1, 'Database file path is required')
 })
 
@@ -35,6 +43,17 @@ export const postgresConnectionStringSchema = baseConnectionSchema.extend({
 		)
 })
 
+export const cockroachConnectionStringSchema = baseConnectionSchema.extend({
+	type: z.literal('cockroach'),
+	url: z
+		.string()
+		.min(1, 'Connection string is required')
+		.refine(
+			(val) => val.startsWith('postgres://') || val.startsWith('postgresql://'),
+			'Invalid connection string format'
+		)
+})
+
 export const mysqlConnectionStringSchema = baseConnectionSchema.extend({
 	type: z.literal('mysql'),
 	url: z
@@ -46,8 +65,16 @@ export const mysqlConnectionStringSchema = baseConnectionSchema.extend({
 		)
 })
 
+export const mariadbConnectionStringSchema = baseConnectionSchema.extend({
+	type: z.literal('mariadb'),
+	url: z
+		.string()
+		.min(1, 'Connection string is required')
+		.refine((val) => val.startsWith('mysql://'), 'Invalid connection string format')
+})
+
 export const connectionFieldsSchema = baseConnectionSchema.extend({
-	type: z.enum(['postgres', 'mysql']),
+	type: z.enum(['postgres', 'cockroach', 'mysql', 'mariadb']),
 	host: z.string().min(1, 'Host is required'),
 	port: z
 		.number()
@@ -100,7 +127,11 @@ export function validateConnection(
 ): ValidationResult {
 	try {
 		const type = formData.type as string
-		const supportsSshTunnel = type === 'postgres' || type === 'mysql'
+		const supportsSshTunnel = getSourceCaps({
+			type: (type as DatabaseType) || 'postgres',
+			fileSources: formData.fileSources as string[] | undefined,
+			url: formData.url as string | undefined
+		}).supportsSshTunnel
 
 		// Validate name first
 		if (!formData.name || (formData.name as string).trim() === '') {
@@ -109,14 +140,22 @@ export function validateConnection(
 
 		if (type === 'sqlite') {
 			sqliteConnectionSchema.parse(formData)
+		} else if (type === 'duckdb') {
+			duckdbConnectionSchema.parse(formData)
 		} else if (type === 'libsql') {
 			libsqlConnectionSchema.parse(formData)
-		} else if (type === 'postgres' || type === 'mysql') {
+		} else if (type === 'postgres' || type === 'cockroach' || type === 'mysql' || type === 'mariadb') {
 			if (useConnectionString) {
 				if (type === 'postgres') {
 					postgresConnectionStringSchema.parse(formData)
+				} else if (type === 'cockroach') {
+					cockroachConnectionStringSchema.parse(formData)
 				} else {
-					mysqlConnectionStringSchema.parse(formData)
+					if (type === 'mysql') {
+						mysqlConnectionStringSchema.parse(formData)
+					} else {
+						mariadbConnectionStringSchema.parse(formData)
+					}
 				}
 			} else {
 				connectionFieldsSchema.parse(formData)

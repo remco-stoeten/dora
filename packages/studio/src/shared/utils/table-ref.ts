@@ -3,7 +3,7 @@ type TableRefLike = {
 	schema?: string | null
 }
 
-export type TableDialect = 'postgres' | 'mysql' | 'sqlite' | 'libsql'
+export type TableDialect = 'postgres' | 'cockroach' | 'mysql' | 'mariadb' | 'sqlite' | 'duckdb' | 'libsql'
 
 export type TableRefParts = {
 	schemaName: string | null
@@ -11,7 +11,13 @@ export type TableRefParts = {
 }
 
 function dialectUsesSchemas(dialect?: TableDialect): boolean {
-	return dialect === 'postgres' || dialect === 'mysql'
+	return (
+		dialect === 'postgres' ||
+		dialect === 'cockroach' ||
+		dialect === 'mysql' ||
+		dialect === 'mariadb' ||
+		dialect === 'duckdb'
+	)
 }
 
 export function getTableRefParts(value: string): TableRefParts {
@@ -49,7 +55,7 @@ export function getTableSqlIdentifier(
 					tableName: table.name
 				}
 
-	if (dialect === 'mysql') {
+	if (dialect === 'mysql' || dialect === 'mariadb') {
 		if (parts.schemaName) {
 			return `\`${parts.schemaName}\`.\`${parts.tableName}\``
 		}

@@ -293,7 +293,12 @@ async fn create_postgres_notification_receiver(
 
     let connection_entry = state.connections.get(&connection_id)?;
     let (mut connection_string, tunnel_local_port) = match &connection_entry.value().database {
-        Database::Postgres {
+        Database::CockroachDB {
+            connection_string,
+            tunnel,
+            ..
+        }
+        | Database::Postgres {
             connection_string,
             tunnel,
             ..
@@ -380,7 +385,11 @@ fn resolve_stored_postgres_connection_string(
         .ok_or_else(|| Error::Internal("App state unavailable".to_string()))?;
 
     if let Some(stored) = state.storage.get_connection(&connection_id)? {
-        if let DatabaseInfo::Postgres {
+        if let DatabaseInfo::CockroachDB {
+            connection_string: stored_connection_string,
+            ..
+        }
+        | DatabaseInfo::Postgres {
             connection_string: stored_connection_string,
             ..
         } = stored.database_type
@@ -625,6 +634,9 @@ async fn fetch_table_snapshot(
         DatabaseClient::SQLite { connection } => {
             fetch_sqlite_snapshot(connection, table_name).await
         }
+        DatabaseClient::DuckDB { connection, .. } => {
+            fetch_duckdb_snapshot(connection, table_name).await
+        }
         DatabaseClient::LibSQL { connection } => {
             fetch_libsql_snapshot(connection, table_name).await
         }
@@ -764,6 +776,83 @@ fn sqlite_primary_key_columns(
 
     primary_keys.sort_by_key(|(order, _)| *order);
     Ok(primary_keys.into_iter().map(|(_, name)| name).collect())
+}
+
+async fn fetch_duckdb_snapshot(
+    connection: Arc<std::sync::Mutex<duckdb::Connection>>,
+    table_name: &str,
+) -> Result<TableSnapshot, Error> {
+    let table_name_owned = table_name.to_string();
+    let handle = tokio::task::spawn_blocking(move || {
+        let conn = connection
+            .lock()
+            .map_err(|_| Error::Any(anyhow::anyhow!("DuckDB connection lock poisoned")))?;
+        duckdb_snapshot_blocking(&conn, &table_name_owned)
+    });
+
+    handle
+        .await
+        .map_err(|err| Error::Any(anyhow::anyhow!("DuckDB snapshot task failed: {}", err)))?
+}
+
+fn duckdb_snapshot_blocking(
+    conn: &duckdb::Connection,
+    table_name: &str,
+) -> Result<TableSnapshot, Error> {
+    let (schema, table) = split_table_reference(table_name)?;
+    let quoted_table = quote_identifier(&table);
+    let qualified_table = if let Some(ref schema_name) = schema {
+        format!("{}.{}", quote_identifier(schema_name), quoted_table)
+    } else {
+        quoted_table.clone()
+    };
+
+    let pk_columns = duckdb_primary_key_columns(conn, &qualified_table)?;
+
+    let query = format!("SELECT * FROM {}", qualified_table);
+    let mut statement = conn.prepare(&query)?;
+    let mut rows = statement.query([])?;
+    let column_names: Vec<String> = rows
+        .as_ref()
+        .map(|stmt| stmt.column_names())
+        .unwrap_or_default();
+
+    let mut row_values = Vec::new();
+    while let Some(row) = rows.next()? {
+        let mut values = Vec::with_capacity(column_names.len());
+        for index in 0..column_names.len() {
+            values.push(crate::database::duckdb::row_writer::value_ref_to_json(
+                row.get_ref(index)?,
+            ));
+        }
+        row_values.push(values);
+    }
+
+    Ok(build_snapshot(column_names, pk_columns, row_values))
+}
+
+fn duckdb_primary_key_columns(
+    conn: &duckdb::Connection,
+    qualified_table: &str,
+) -> Result<Vec<String>, Error> {
+    let pragma_query = format!(
+        "PRAGMA table_info('{}')",
+        qualified_table.replace('\'', "''")
+    );
+
+    let mut pragma_statement = conn.prepare(&pragma_query)?;
+    let mut pragma_rows = pragma_statement.query([])?;
+    let mut primary_keys = Vec::new();
+
+    while let Some(row) = pragma_rows.next()? {
+        let name: String = row.get(1)?;
+        let is_pk: bool = row.get(5)?;
+        if is_pk {
+            primary_keys.push(name);
+        }
+    }
+
+    Ok(primary_keys)
 }
 
 async fn fetch_libsql_snapshot(

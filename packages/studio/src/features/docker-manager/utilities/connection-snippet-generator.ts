@@ -1,30 +1,42 @@
 import type { DockerContainer } from '../types'
-import { buildConnectionEnvVars } from './connection-string-builder'
+import { getContainerConnectionDetails } from './container-connection'
 
 export type SnippetLanguage = 'terminal' | 'nodejs' | 'python' | 'prisma'
 
 export function generateSnippet(container: DockerContainer, language: SnippetLanguage): string {
-	const passwordEnv = container.env.find((e) => e.startsWith('POSTGRES_PASSWORD='))
-	const password = passwordEnv
-		? passwordEnv.split('=')[1]
-		: container.labels['POSTGRES_PASSWORD'] || 'postgres'
-
-	const primaryPort = container.ports.find((p) => p.containerPort === 5432)
-	const host = 'localhost'
-	const port = primaryPort?.hostPort ?? 5432
-	const user =
-		container.env.find((e) => e.startsWith('POSTGRES_USER='))?.split('=')[1] || 'postgres'
-	const database =
-		container.env.find((e) => e.startsWith('POSTGRES_DB='))?.split('=')[1] || 'postgres'
-
-	const envVars = buildConnectionEnvVars(host, port, user, password, database)
-	const url = envVars.DATABASE_URL
+	const connection = getContainerConnectionDetails(container)
+	const url = connection.connectionUrl
 
 	switch (language) {
 		case 'terminal':
-			return `PGPASSWORD='${password}' psql -h ${host} -p ${port} -U ${user} -d ${database}`
+			if (connection.provider === 'mariadb') {
+				return connection.password
+					? `mysql -h ${connection.host} -P ${connection.port} -u ${connection.user} -p${connection.password} ${connection.database}`
+					: `mysql -h ${connection.host} -P ${connection.port} -u ${connection.user} ${connection.database}`
+			}
+
+			if (connection.provider === 'cockroach') {
+				return `cockroach sql --insecure --host=${connection.host}:${connection.port} --database ${connection.database}`
+			}
+
+			return `PGPASSWORD='${connection.password}' psql -h ${connection.host} -p ${connection.port} -U ${connection.user} -d ${connection.database}`
 
 		case 'nodejs':
+			if (connection.provider === 'mariadb') {
+				return `import mysql from 'mysql2/promise';
+
+const connection = await mysql.createConnection({
+  host: '${connection.host}',
+  port: ${connection.port},
+  user: '${connection.user}',
+  password: '${connection.password}',
+  database: '${connection.database}'
+});
+
+await connection.connect();
+console.log('Connected!');`
+			}
+
 			return `import { Client } from 'pg';
 
 const client = new Client({
@@ -35,6 +47,20 @@ await client.connect();
 console.log('Connected!');`
 
 		case 'python':
+			if (connection.provider === 'mariadb') {
+				return `import mysql.connector
+
+conn = mysql.connector.connect(
+    host="${connection.host}",
+    port=${connection.port},
+    user="${connection.user}",
+    password="${connection.password}",
+    database="${connection.database}",
+)
+cur = conn.cursor()
+print("Connected!")`
+			}
+
 			return `import psycopg2
 
 conn = psycopg2.connect("${url}")
@@ -43,7 +69,7 @@ print("Connected!")`
 
 		case 'prisma':
 			return `datasource db {
-  provider = "postgresql"
+  provider = "${connection.provider === 'mariadb' ? 'mysql' : 'postgresql'}"
   url      = "${url}"
 }`
 

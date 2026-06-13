@@ -234,7 +234,7 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
         >
             <CardAura active={active} />
 
-            <div className="relative flex-1 px-4 pt-5">
+            <div className="relative px-4 pt-5 pb-4">
                 {/* prompt row — the user's question */}
                 <div className="flex items-center gap-2 border border-[#2b252c] bg-[#100d12]/80 px-3 py-2">
                     <span className="shrink-0 font-mono text-[12px] leading-none text-[#ad8eb6]/70 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
@@ -260,7 +260,7 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
                 </div>
             </div>
 
-            <div className="relative px-5 pb-5 pt-4">
+            <div className="relative px-5 pt-3 pb-10">
                 <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Ask in English
                 </h3>

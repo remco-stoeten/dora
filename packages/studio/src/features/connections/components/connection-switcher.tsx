@@ -37,13 +37,19 @@ function formatDatabaseType(type: DatabaseType | undefined): string {
 		case 'postgres':
 		case 'postgresql':
 			return 'PostgreSQL'
+		case 'cockroach':
+			return 'CockroachDB'
 		case 'sqlite':
 			return 'SQLite'
+		case 'duckdb':
+			return 'DuckDB'
 		case 'libsql':
 		case 'turso':
 			return 'Turso'
 		case 'mysql':
 			return 'MySQL'
+		case 'mariadb':
+			return 'MariaDB'
 		default:
 			return type.charAt(0).toUpperCase() + type.slice(1)
 	}

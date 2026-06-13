@@ -1,0 +1,9 @@
+id,name,email,region,plan,signup_date
+1,Maya Chen,maya@dora.dev,EMEA,pro,2024-01-15
+2,Ravi Patel,ravi@dora.dev,APAC,free,2024-02-03
+3,Lina Novak,lina@dora.dev,EMEA,pro,2024-02-28
+4,Tom Becker,tom@dora.dev,AMER,enterprise,2024-03-12
+5,Sofia Rossi,sofia@dora.dev,EMEA,free,2024-04-01
+6,Kenji Tanaka,kenji@dora.dev,APAC,pro,2024-04-22
+7,Grace Adeyemi,grace@dora.dev,AMER,pro,2024-05-09
+8,Oliver Smith,oliver@dora.dev,AMER,free,2024-06-17

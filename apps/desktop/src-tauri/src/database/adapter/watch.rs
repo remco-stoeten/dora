@@ -13,7 +13,7 @@ use base64::Engine;
 use mysql_async::{prelude::Queryable, Row as MySqlRow, Value as MySqlValue};
 use rusqlite::types::ValueRef;
 
-use super::read::{LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter};
+use super::read::{DuckDbAdapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter};
 use crate::{database::postgres::row_writer::RowWriter as PostgresRowWriter, Error};
 
 #[async_trait]
@@ -78,6 +78,46 @@ impl WatchAdapter for SqliteAdapter {
         })
         .await
         .map_err(|err| Error::Internal(format!("SQLite watch task failed: {err}")))?
+    }
+}
+
+#[async_trait]
+impl WatchAdapter for DuckDbAdapter {
+    async fn poll_table_hash(&self, table: &str, schema: Option<&str>) -> Result<u64, Error> {
+        let connection = self.connection().clone();
+        let table = table.to_string();
+        let schema = schema.map(str::to_string);
+
+        tauri::async_runtime::spawn_blocking(move || {
+            let conn = connection
+                .lock()
+                .map_err(|_| Error::Internal("DuckDB connection lock poisoned".to_string()))?;
+            let query = format!(
+                "SELECT * FROM {}",
+                qualified_table(schema.as_deref(), &table)
+            );
+            let mut statement = conn.prepare(&query)?;
+            let mut rows = statement.query([])?;
+            let column_count = rows
+                .as_ref()
+                .map(|stmt| stmt.column_count())
+                .unwrap_or_default();
+            let mut row_values = Vec::new();
+
+            while let Some(row) = rows.next()? {
+                let mut values = Vec::with_capacity(column_count);
+                for index in 0..column_count {
+                    values.push(crate::database::duckdb::row_writer::value_ref_to_json(
+                        row.get_ref(index)?,
+                    ));
+                }
+                row_values.push(serde_json::to_string(&values)?);
+            }
+
+            Ok(stable_hash_rows(row_values))
+        })
+        .await
+        .map_err(|err| Error::Internal(format!("DuckDB watch task failed: {err}")))?
     }
 }
 
@@ -147,6 +187,9 @@ pub fn watch_adapter_from_client(
         }
         crate::database::types::DatabaseClient::SQLite { connection } => {
             Box::new(SqliteAdapter::new(connection.clone()))
+        }
+        crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
+            Box::new(DuckDbAdapter::new(connection.clone()))
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))

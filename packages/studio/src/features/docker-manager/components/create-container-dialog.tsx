@@ -1,5 +1,5 @@
 import { RefreshCw, Loader2, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@studio/shared/ui/button";
 import {
   Dialog,
@@ -21,13 +21,28 @@ import {
 import { Switch } from "@studio/shared/ui/switch";
 import { toast } from "@studio/shared/ui/notifier";
 import {
+  DATABASE_PROVIDERS,
   POSTGRES_VERSIONS,
+  MARIADB_VERSIONS,
+  COCKROACH_VERSIONS,
   DEFAULT_POSTGRES_VERSION,
   DEFAULT_POSTGRES_USER,
   DEFAULT_POSTGRES_PASSWORD,
   DEFAULT_POSTGRES_DATABASE,
+  DEFAULT_MARIADB_VERSION,
+  DEFAULT_MARIADB_USER,
+  DEFAULT_MARIADB_PASSWORD,
+  DEFAULT_MARIADB_DATABASE,
+  DEFAULT_COCKROACH_VERSION,
+  DEFAULT_COCKROACH_USER,
+  DEFAULT_COCKROACH_DATABASE,
+  DEFAULT_HOST_PORT_START,
 } from "../constants";
-import type { PostgresContainerConfig, DockerContainer } from "../types";
+import type {
+  DatabaseContainerConfig,
+  DatabaseProvider,
+  DockerContainer,
+} from "../types";
 import {
   suggestContainerName,
   validateContainerName,
@@ -36,12 +51,55 @@ import {
 import { findFreePort } from "../utilities/port-utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@studio/shared/ui/collapsible";
 
+function getProviderDefaults(provider: DatabaseProvider) {
+  switch (provider) {
+    case "mariadb":
+      return {
+        version: DEFAULT_MARIADB_VERSION,
+        user: DEFAULT_MARIADB_USER,
+        password: DEFAULT_MARIADB_PASSWORD,
+        database: DEFAULT_MARIADB_DATABASE,
+        port: 3306,
+      };
+    case "cockroach":
+      return {
+        version: DEFAULT_COCKROACH_VERSION,
+        user: DEFAULT_COCKROACH_USER,
+        password: "",
+        database: DEFAULT_COCKROACH_DATABASE,
+        port: 26257,
+      };
+    case "postgres":
+    default:
+      return {
+        version: DEFAULT_POSTGRES_VERSION,
+        user: DEFAULT_POSTGRES_USER,
+        password: DEFAULT_POSTGRES_PASSWORD,
+        database: DEFAULT_POSTGRES_DATABASE,
+        port: 5433,
+      };
+  }
+}
+
+function getVersionOptions(provider: DatabaseProvider) {
+  switch (provider) {
+    case "mariadb":
+      return MARIADB_VERSIONS;
+    case "cockroach":
+      return COCKROACH_VERSIONS;
+    case "postgres":
+    default:
+      return POSTGRES_VERSIONS;
+  }
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (config: PostgresContainerConfig) => void;
+  onSubmit: (config: DatabaseContainerConfig) => void;
   existingContainers: DockerContainer[];
   isSubmitting?: boolean;
+  initialProvider?: DatabaseProvider;
 };
 
 export function CreateContainerDialog({
@@ -50,10 +108,12 @@ export function CreateContainerDialog({
   onSubmit,
   existingContainers,
   isSubmitting = false,
+  initialProvider = "postgres",
 }: Props) {
   const [name, setName] = useState("");
-  const [postgresVersion, setPostgresVersion] = useState(DEFAULT_POSTGRES_VERSION);
-  const [hostPort, setHostPort] = useState(5433);
+  const [provider, setProvider] = useState<DatabaseProvider>("postgres");
+  const [version, setVersion] = useState(DEFAULT_POSTGRES_VERSION);
+  const [hostPort, setHostPort] = useState(DEFAULT_HOST_PORT_START);
   const [user, setUser] = useState(DEFAULT_POSTGRES_USER);
   const [password, setPassword] = useState(DEFAULT_POSTGRES_PASSWORD);
   const [database, setDatabase] = useState(DEFAULT_POSTGRES_DATABASE);
@@ -65,36 +125,50 @@ export function CreateContainerDialog({
   const [cpuLimit, setCpuLimit] = useState<number | undefined>(undefined);
   const [memoryLimit, setMemoryLimit] = useState<number | undefined>(undefined);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const wasOpenRef = useRef(false);
 
   useEffect(
     function initializeDefaults() {
-      if (open) {
+      if (open && !wasOpenRef.current) {
         const existingNames = existingContainers.map(function (c) {
           return c.name;
         });
         setName(suggestContainerName(existingNames));
-        initFreePort();
+        applyProviderDefaults(initialProvider);
       }
+
+      wasOpenRef.current = open;
     },
-    [open, existingContainers],
+    [open, existingContainers, initialProvider],
   );
 
-  async function initFreePort() {
+  async function initFreePort(preferredPort: number) {
     setIsFindingPort(true);
     try {
-      const port = await findFreePort();
+      const port = await findFreePort(preferredPort, preferredPort, preferredPort + 100);
       setHostPort(port);
     } catch {
-      setHostPort(5433);
+      setHostPort(preferredPort);
     } finally {
       setIsFindingPort(false);
     }
   }
 
+  function applyProviderDefaults(nextProvider: DatabaseProvider) {
+    const defaults = getProviderDefaults(nextProvider);
+    setProvider(nextProvider);
+    setVersion(defaults.version);
+    setUser(defaults.user);
+    setPassword(defaults.password);
+    setDatabase(defaults.database);
+    void initFreePort(defaults.port);
+  }
+
   async function handleFindFreePort() {
     setIsFindingPort(true);
     try {
-      const port = await findFreePort();
+      const defaults = getProviderDefaults(provider);
+      const port = await findFreePort(defaults.port, defaults.port, defaults.port + 100);
       setHostPort(port);
     } catch (error) {
       console.error("Failed to find free port:", error);
@@ -121,18 +195,43 @@ export function CreateContainerDialog({
       return;
     }
 
-    const config: PostgresContainerConfig = {
+    const baseConfig = {
+      provider,
       name,
-      postgresVersion,
       hostPort,
-      user,
-      password,
-      database,
       ephemeral,
       volumeName: ephemeral ? undefined : generateVolumeName(name),
       cpuLimit,
       memoryLimitMb: memoryLimit,
     };
+
+    const config: DatabaseContainerConfig =
+      provider === "mariadb"
+        ? {
+            ...baseConfig,
+            provider,
+            mariadbVersion: version,
+            user,
+            password,
+            database,
+          }
+        : provider === "cockroach"
+          ? {
+              ...baseConfig,
+              provider,
+              cockroachVersion: version,
+              user,
+              password: "",
+              database,
+            }
+          : {
+              ...baseConfig,
+              provider,
+              postgresVersion: version,
+              user,
+              password,
+              database,
+            };
 
     onOpenChange(false);
     resetForm();
@@ -146,11 +245,7 @@ export function CreateContainerDialog({
 
   function resetForm() {
     setName("");
-    setPostgresVersion(DEFAULT_POSTGRES_VERSION);
-    setHostPort(5433);
-    setUser(DEFAULT_POSTGRES_USER);
-    setPassword(DEFAULT_POSTGRES_PASSWORD);
-    setDatabase(DEFAULT_POSTGRES_DATABASE);
+    applyProviderDefaults(initialProvider);
     setEphemeral(true);
     setShowPassword(false);
     setNameError(null);
@@ -163,9 +258,9 @@ export function CreateContainerDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create PostgreSQL Container</DialogTitle>
+          <DialogTitle>Create Database Container</DialogTitle>
           <DialogDescription>
-            Configure a new PostgreSQL container for local development.
+            Configure a new local database container for development.
           </DialogDescription>
         </DialogHeader>
 
@@ -187,13 +282,42 @@ export function CreateContainerDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="version">PostgreSQL Version</Label>
-            <Select value={postgresVersion} onValueChange={setPostgresVersion}>
+            <Label htmlFor="provider">Database Provider</Label>
+            <Select
+              value={provider}
+              onValueChange={function (value) {
+                applyProviderDefaults(value as DatabaseProvider);
+              }}
+            >
+              <SelectTrigger id="provider">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATABASE_PROVIDERS.map(function (item) {
+                  return (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="version">
+              {provider === "mariadb"
+                ? "MariaDB Version"
+                : provider === "cockroach"
+                  ? "CockroachDB Version"
+                  : "PostgreSQL Version"}
+            </Label>
+            <Select value={version} onValueChange={setVersion}>
               <SelectTrigger id="version">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {POSTGRES_VERSIONS.map(function (version) {
+                {getVersionOptions(provider).map(function (version) {
                   return (
                     <SelectItem key={version.value} value={version.value}>
                       {version.label}
@@ -214,7 +338,7 @@ export function CreateContainerDialog({
                 max={65535}
                 value={hostPort}
                 onChange={function (e) {
-                  setHostPort(parseInt(e.target.value, 10) || 5433);
+                  setHostPort(parseInt(e.target.value, 10) || getProviderDefaults(provider).port);
                 }}
                 className="flex-1"
               />
@@ -245,30 +369,39 @@ export function CreateContainerDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={function (e) {
-                    setPassword(e.target.value);
-                  }}
-                  className="pr-9"
-                />
-                <button
-                  type="button"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  onClick={function () {
-                    setShowPassword(function (p) {
-                      return !p;
-                    });
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <Label htmlFor="password">
+                {provider === "cockroach" ? "Password (unused)" : "Password"}
+              </Label>
+              {provider === "cockroach" ? (
+                <div className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  CockroachDB runs in insecure mode for local development, so a password is not
+                  required.
+                </div>
+              ) : (
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={function (e) {
+                      setPassword(e.target.value);
+                    }}
+                    className="pr-9"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={function () {
+                      setShowPassword(function (p) {
+                        return !p;
+                      });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -282,6 +415,14 @@ export function CreateContainerDialog({
               }}
             />
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            {provider === "mariadb"
+              ? "MariaDB uses the selected credentials for both the root and app user."
+              : provider === "cockroach"
+                ? "CockroachDB is started as a local single-node cluster for quick testing."
+                : "PostgreSQL uses the selected credentials for the main database role."}
+          </p>
 
           <div className="flex items-center justify-between py-2">
             <div>

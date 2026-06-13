@@ -1,106 +1,179 @@
 import { Button } from '@studio/shared/ui/button'
-import { Database, PanelLeft, Plus } from 'lucide-react'
+import { Database, Loader2, PlugZap, Plus, Table2 } from 'lucide-react'
 
-type EmptyStateFrameProps = {
-	onToggleSidebar?: () => void
-	isSidebarOpen?: boolean
-	children: React.ReactNode
+type NoConnectionProps = {
+	onAddConnection?: () => void
 }
 
-function EmptyStateFrame({ onToggleSidebar, isSidebarOpen, children }: EmptyStateFrameProps) {
+export function DatabaseStudioNoConnection({ onAddConnection }: NoConnectionProps) {
 	return (
-		<div className='flex flex-col h-full bg-background/50'>
-			{onToggleSidebar && (
-				<div className='flex items-center h-10 border-b border-sidebar-border bg-sidebar/50 shrink-0 px-3'>
-					<Button
-						variant='ghost'
-						size='icon'
-						className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
-						onClick={onToggleSidebar}
-						title='Toggle sidebar'
-					>
-						<PanelLeft
-							className={`h-4 w-4 transition-transform duration-300 ${isSidebarOpen ? '' : 'rotate-180'}`}
-						/>
-					</Button>
-					<span className='ml-3 text-xs font-medium text-muted-foreground/70 tracking-wide uppercase'>
-						Database Studio
-					</span>
-				</div>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300'>
+			<div className='w-20 h-20 bg-sidebar-accent/30 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/50 shadow-sm backdrop-blur-sm'>
+				<Database className='w-10 h-10 text-primary/60' strokeWidth={1.5} />
+			</div>
+			<h2 className='text-xl font-semibold mb-2 text-foreground tracking-tight'>
+				No Database Connected
+			</h2>
+			<p className='text-muted-foreground text-center max-w-sm mb-8 leading-relaxed text-sm'>
+				Select a connection from the sidebar to view its tables, or create a new
+				connection to get started.
+			</p>
+
+			{onAddConnection && (
+				<Button
+					onClick={onAddConnection}
+					className='gap-2 shadow-md hover:shadow-lg transition-all'
+				>
+					<Plus className='w-4 h-4' />
+					Add Connection
+				</Button>
 			)}
-			{children}
 		</div>
 	)
 }
 
-type NoConnectionProps = {
-	onToggleSidebar?: () => void
-	isSidebarOpen?: boolean
-	onAddConnection?: () => void
+type ConnectionLoadingProps = {
+	connectionName?: string
 }
 
-export function DatabaseStudioNoConnection({
-	onToggleSidebar,
-	isSidebarOpen,
-	onAddConnection
-}: NoConnectionProps) {
+export function DatabaseStudioConnectionLoading({ connectionName }: ConnectionLoadingProps) {
 	return (
-		<EmptyStateFrame onToggleSidebar={onToggleSidebar} isSidebarOpen={isSidebarOpen}>
-			<div className='flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300'>
-				<div className='w-20 h-20 bg-sidebar-accent/30 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/50 shadow-sm backdrop-blur-sm'>
-					<Database className='w-10 h-10 text-primary/60' strokeWidth={1.5} />
-				</div>
-				<h2 className='text-xl font-semibold mb-2 text-foreground tracking-tight'>
-					No Database Connected
-				</h2>
-				<p className='text-muted-foreground text-center max-w-sm mb-8 leading-relaxed text-sm'>
-					Select a connection from the sidebar to view its tables, or create a new
-					connection to get started.
-				</p>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
+			<Loader2 className='h-8 w-8 animate-spin text-muted-foreground/70 mb-4' />
+			<h2 className='text-lg font-semibold text-foreground mb-1 tracking-tight'>
+				Connecting…
+			</h2>
+			<p className='text-muted-foreground text-sm max-w-sm'>
+				{connectionName
+					? `Loading tables for ${connectionName}.`
+					: 'Loading tables for this connection.'}
+			</p>
+		</div>
+	)
+}
 
-				{onAddConnection && (
-					<Button
-						onClick={onAddConnection}
-						className='gap-2 shadow-md hover:shadow-lg transition-all'
-					>
-						<Plus className='w-4 h-4' />
-						Add Connection
+type ConnectionFailedProps = {
+	connectionName?: string
+	errorMessage?: string
+	onRetry?: () => void
+	onEditConnection?: () => void
+}
+
+export function DatabaseStudioConnectionFailed({
+	connectionName,
+	errorMessage,
+	onRetry,
+	onEditConnection
+}: ConnectionFailedProps) {
+	return (
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+			<div className='w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 ring-1 ring-destructive/20'>
+				<PlugZap className='h-10 w-10 text-destructive/80' strokeWidth={1.5} />
+			</div>
+			<h1 className='text-xl font-semibold text-foreground mb-2 tracking-tight'>
+				Connection Unavailable
+			</h1>
+			<p className='text-muted-foreground text-sm max-w-md leading-relaxed'>
+				{connectionName
+					? `Could not connect to "${connectionName}".`
+					: 'Could not connect to this database.'}{' '}
+				Check that the database is running and your credentials are still valid.
+			</p>
+			{errorMessage ? (
+				<p className='mt-3 max-w-md text-xs leading-relaxed text-muted-foreground/80 border border-border/60 bg-muted/20 px-3 py-2'>
+					{errorMessage}
+				</p>
+			) : null}
+			<div className='mt-6 flex flex-wrap items-center justify-center gap-2'>
+				{onRetry && (
+					<Button variant='outline' onClick={onRetry}>
+						Try Again
 					</Button>
 				)}
+				{onEditConnection && <Button onClick={onEditConnection}>Edit Connection</Button>}
 			</div>
-		</EmptyStateFrame>
+		</div>
 	)
 }
 
 type NoTableProps = {
-	onToggleSidebar?: () => void
-	isSidebarOpen?: boolean
+	connectionName?: string
+	tableCount: number
+	totalRecords: number
 }
 
-export function DatabaseStudioNoTable({ onToggleSidebar, isSidebarOpen }: NoTableProps) {
+function formatRecordTotal(count: number): string {
+	return count.toLocaleString()
+}
+
+export function DatabaseStudioNoTable({
+	connectionName,
+	tableCount,
+	totalRecords
+}: NoTableProps) {
+	const tableLabel = tableCount === 1 ? 'table' : 'tables'
+	const recordLabel = totalRecords === 1 ? 'record' : 'records'
+
 	return (
-		<EmptyStateFrame onToggleSidebar={onToggleSidebar} isSidebarOpen={isSidebarOpen}>
-			<div className='flex-1 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
-				<div className='w-20 h-20 bg-sidebar-accent/20 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/30'>
-					<svg
-						className='h-10 w-10 text-muted-foreground/50'
-						viewBox='0 0 24 24'
-						fill='none'
-						stroke='currentColor'
-						strokeWidth='1.5'
-					>
-						<rect x='3' y='3' width='18' height='18' rx='2' />
-						<line x1='9' y1='3' x2='9' y2='21' />
-					</svg>
-				</div>
-				<h1 className='text-xl font-semibold text-foreground mb-2 tracking-tight'>
-					No Table Selected
-				</h1>
-				<p className='text-muted-foreground text-sm max-w-xs'>
-					Select a table from the sidebar list to browse its records, structure, and
-					relationships.
-				</p>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+			<div className='w-20 h-20 bg-sidebar-accent/20 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/30'>
+				<svg
+					className='h-10 w-10 text-muted-foreground/50'
+					viewBox='0 0 24 24'
+					fill='none'
+					stroke='currentColor'
+					strokeWidth='1.5'
+				>
+					<rect x='3' y='3' width='18' height='18' rx='2' />
+					<line x1='9' y1='3' x2='9' y2='21' />
+				</svg>
 			</div>
-		</EmptyStateFrame>
+			<h1 className='text-xl font-semibold text-foreground mb-2 tracking-tight'>
+				No Table Selected
+			</h1>
+			<p className='text-muted-foreground text-sm max-w-md leading-relaxed'>
+				Select a table from the sidebar to browse its records, structure, and
+				relationships.
+				{connectionName ? (
+					<>
+						{' '}
+						<span className='text-foreground/85'>
+							{connectionName} has {tableCount.toLocaleString()} {tableLabel} totaling
+							an estimated {formatRecordTotal(totalRecords)} {recordLabel}.
+						</span>
+					</>
+				) : (
+					<>
+						{' '}
+						<span className='text-foreground/85'>
+							This connection has {tableCount.toLocaleString()} {tableLabel} totaling an
+							estimated {formatRecordTotal(totalRecords)} {recordLabel}.
+						</span>
+					</>
+				)}
+			</p>
+		</div>
+	)
+}
+
+type NoTablesFoundProps = {
+	connectionName?: string
+}
+
+export function DatabaseStudioNoTablesFound({ connectionName }: NoTablesFoundProps) {
+	return (
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+			<div className='w-20 h-20 bg-sidebar-accent/20 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/30'>
+				<Table2 className='h-10 w-10 text-muted-foreground/50' strokeWidth={1.5} />
+			</div>
+			<h1 className='text-xl font-semibold text-foreground mb-2 tracking-tight'>
+				No Tables Found
+			</h1>
+			<p className='text-muted-foreground text-sm max-w-md leading-relaxed'>
+				{connectionName
+					? `"${connectionName}" connected successfully, but this database has no tables to browse.`
+					: 'This database connected successfully, but it has no tables to browse.'}
+			</p>
+		</div>
 	)
 }

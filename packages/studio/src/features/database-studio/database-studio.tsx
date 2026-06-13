@@ -1,6 +1,6 @@
 import { TableSkeleton } from '@studio/shared/ui/skeleton'
 import { useToast } from '@studio/shared/ui/use-toast'
-import { useAdapter, useDataMutation } from '@studio/core/data-provider'
+import { useAdapter, useDataMutation, useConnections, useSchema } from '@studio/core/data-provider'
 import { tableDataCache } from '@studio/core/table-cache'
 import { usePendingEdits } from '@studio/core/pending-edits'
 import { useTabs } from '@studio/core/tabs'
@@ -8,6 +8,8 @@ import { useSettings } from '@studio/core/settings'
 import { useEffectiveShortcuts, useShortcut, useActiveScope } from '@studio/core/shortcuts'
 import { useUndo } from '@studio/core/undo'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
+import { getSourceCaps } from '@studio/features/connections/source-caps'
+import { isUiActionVisible } from '@studio/features/connections/ui-actions'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -27,7 +29,10 @@ import type { ContextMenuState } from './components/data-grid'
 import { DropTableDialog } from './components/drop-table-dialog'
 import {
 	DatabaseStudioNoConnection,
-	DatabaseStudioNoTable
+	DatabaseStudioNoTable,
+	DatabaseStudioConnectionLoading,
+	DatabaseStudioConnectionFailed,
+	DatabaseStudioNoTablesFound
 } from './components/database-studio-empty-states'
 import { DatabaseStudioStructureView } from './components/database-studio-structure-view'
 import { PendingChangesBar } from './components/pending-changes-bar'
@@ -43,14 +48,15 @@ import { useDatabaseStudioEdits } from './hooks/use-database-studio-edits'
 import { useDatabaseStudioCommands } from './hooks/use-database-studio-commands'
 import { buildTableCacheKey } from './utils/table-cache'
 import { FilterDescriptor, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
+import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
+import type { ResultChartConfig } from '@studio/features/result-charts/types'
 
 type Props = {
 	tableId: string | null
 	tableName: string | null
-	onToggleSidebar?: () => void
 	activeConnectionId?: string
 	onAddConnection?: () => void
-	isSidebarOpen?: boolean
+	onEditConnection?: () => void
 	initialRowPK?: string | number | null
 	onRowSelectionChange?: (pk: string | number | null) => void
 }
@@ -58,10 +64,9 @@ type Props = {
 export function DatabaseStudio({
 	tableId,
 	tableName,
-	onToggleSidebar,
 	activeConnectionId,
 	onAddConnection,
-	isSidebarOpen,
+	onEditConnection,
 	initialRowPK,
 	onRowSelectionChange
 }: Props) {
@@ -72,6 +77,44 @@ export function DatabaseStudio({
 	)
 	const adapter = useAdapter()
 	const { toast } = useToast()
+	const { data: connections = [] } = useConnections()
+	const schemaQuery = useSchema(activeConnectionId)
+	const activeConnection = useMemo(
+		function () {
+			return connections.find(function (connection) {
+				return connection.id === activeConnectionId
+			})
+		},
+		[connections, activeConnectionId]
+	)
+	const sourceCaps = useMemo(
+		function () {
+			return activeConnection ? getSourceCaps(activeConnection) : null
+		},
+		[activeConnection]
+	)
+	const canEditRows = sourceCaps ? isUiActionVisible('edit-rows', sourceCaps) : false
+	const canImportFile = sourceCaps ? isUiActionVisible('import-csv', sourceCaps) : false
+	const canExportFile = sourceCaps ? isUiActionVisible('export-data', sourceCaps) : true
+	const showLiveMonitor = sourceCaps ? isUiActionVisible('live-monitor', sourceCaps) : false
+	const schemaSummary = useMemo(
+		function () {
+			if (!schemaQuery.data) {
+				return { tableCount: 0, totalRecords: 0 }
+			}
+
+			return schemaQuery.data.tables.reduce(
+				function (summary, table) {
+					return {
+						tableCount: summary.tableCount + 1,
+						totalRecords: summary.totalRecords + (table.row_count_estimate ?? 0)
+					}
+				},
+				{ tableCount: 0, totalRecords: 0 }
+			)
+		},
+		[schemaQuery.data]
+	)
 	const { updateCell, deleteRows, insertRow } = useDataMutation()
 	const { settings } = useSettings()
 	const {
@@ -107,6 +150,7 @@ export function DatabaseStudio({
 	const [isLoading, setIsLoading] = useState(false)
 	const [isTableTransitioning, setIsTableTransitioning] = useState(!initialCacheEntry)
 	const [viewMode, setViewMode] = useState<ViewMode>('content')
+	const [chartConfig, setChartConfig] = useState<ResultChartConfig | null>(null)
 	const previousTableRef = useRef<{ columns: number; rows: number } | null>(null)
 	const [pagination, setPagination] = useState<PaginationState>({ limit: 50, offset: 0 })
 	const [sort, setSort] = useState<SortDescriptor | undefined>()
@@ -301,6 +345,13 @@ export function DatabaseStudio({
 			}
 		},
 		[tableData, isLoading]
+	)
+
+	useEffect(
+		function resetChartConfigForTable() {
+			setChartConfig(null)
+		},
+		[tableId]
 	)
 
 	const shortcuts = useEffectiveShortcuts()
@@ -507,20 +558,44 @@ export function DatabaseStudio({
 	// No connection selected
 	if (!activeConnectionId) {
 		return (
-			<DatabaseStudioNoConnection
-				onToggleSidebar={onToggleSidebar}
-				isSidebarOpen={isSidebarOpen}
-				onAddConnection={onAddConnection}
-			/>
+			<DatabaseStudioNoConnection onAddConnection={onAddConnection} />
 		)
 	}
 
 	// No table selected
 	if (!tableId) {
+		if (schemaQuery.isLoading && !schemaQuery.data) {
+			return (
+				<DatabaseStudioConnectionLoading connectionName={activeConnection?.name} />
+			)
+		}
+
+		if (schemaQuery.isError) {
+			return (
+				<DatabaseStudioConnectionFailed
+					connectionName={activeConnection?.name}
+					errorMessage={
+						schemaQuery.error instanceof Error ? schemaQuery.error.message : undefined
+					}
+					onRetry={function () {
+						void schemaQuery.refetch()
+					}}
+					onEditConnection={onEditConnection}
+				/>
+			)
+		}
+
+		if (schemaQuery.data && schemaSummary.tableCount === 0) {
+			return (
+				<DatabaseStudioNoTablesFound connectionName={activeConnection?.name} />
+			)
+		}
+
 		return (
 			<DatabaseStudioNoTable
-				onToggleSidebar={onToggleSidebar}
-				isSidebarOpen={isSidebarOpen}
+				connectionName={activeConnection?.name}
+				tableCount={schemaSummary.tableCount}
+				totalRecords={schemaSummary.totalRecords}
 			/>
 		)
 	}
@@ -533,22 +608,20 @@ export function DatabaseStudio({
 				tableData={tableData}
 				viewMode={viewMode}
 				onViewModeChange={setViewMode}
-				onToggleSidebar={onToggleSidebar}
-				isSidebarOpen={isSidebarOpen}
 				onRefresh={loadTableData}
-				onExport={handleExport}
-				onExportCsv={handleExportCsvAll}
-				onExportSql={handleExportSqlAll}
+				onExport={canExportFile ? handleExport : function () {}}
+				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
+				onExportSql={canExportFile ? handleExportSqlAll : undefined}
 				isLoading={isLoading}
 				onCopySchema={handleCopySchema}
 				onCopyDrizzleSchema={handleCopyDrizzleSchema}
-				liveMonitorConfig={liveMonitor.config}
-				onLiveMonitorConfigChange={liveMonitor.setConfig}
-				isLiveMonitorPolling={liveMonitor.isPolling}
-				changeEvents={liveMonitor.recentEvents}
-				unreadChangeCount={liveMonitor.unreadCount}
-				onClearChangeEvents={liveMonitor.clearEvents}
-				onMarkChangesRead={liveMonitor.markRead}
+				liveMonitorConfig={showLiveMonitor ? liveMonitor.config : undefined}
+				onLiveMonitorConfigChange={showLiveMonitor ? liveMonitor.setConfig : undefined}
+				isLiveMonitorPolling={showLiveMonitor ? liveMonitor.isPolling : false}
+				changeEvents={showLiveMonitor ? liveMonitor.recentEvents : undefined}
+				unreadChangeCount={showLiveMonitor ? liveMonitor.unreadCount : undefined}
+				onClearChangeEvents={showLiveMonitor ? liveMonitor.clearEvents : undefined}
+				onMarkChangesRead={showLiveMonitor ? liveMonitor.markRead : undefined}
 				pagination={pagination}
 				onPaginationChange={setPagination}
 				liveMonitorIntervalMs={liveMonitor.config.intervalMs}
@@ -556,12 +629,56 @@ export function DatabaseStudio({
 				liveMonitorError={liveMonitor.monitorError}
 				showAddColumnDialog={showAddColumnDialog}
 				onShowAddColumnDialogChange={setShowAddColumnDialog}
-				onAddColumn={handleAddColumn}
+				onAddColumn={canEditRows ? handleAddColumn : undefined}
 				showDropTableDialog={showDropTableDialog}
 				onShowDropTableDialogChange={setShowDropTableDialog}
-				onDropTable={handleDropTable}
+				onDropTable={canEditRows ? handleDropTable : undefined}
 				isDdlLoading={isDdlLoading}
 			/>
+		)
+	}
+
+	if (viewMode === 'chart' && tableData) {
+		return (
+			<div className='flex h-full min-h-0 flex-col bg-background relative'>
+				<StudioToolbar
+					tableName={displayTableName}
+					viewMode={viewMode}
+					onViewModeChange={setViewMode}
+					onRefresh={loadTableData}
+					onExport={canExportFile ? handleExport : function () {}}
+					onExportCsv={canExportFile ? handleExportCsvAll : undefined}
+					onExportSql={canExportFile ? handleExportSqlAll : undefined}
+					onAddRecord={canEditRows ? handleAddRecord : undefined}
+					onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
+					isLoading={isLoading}
+					filters={filters}
+					onFiltersChange={setFilters}
+					columns={tableData.columns}
+					visibleColumns={visibleColumns}
+					onToggleColumn={handleToggleColumn}
+					isDryEditMode={isDryEditMode}
+					onDryEditModeChange={canEditRows ? setDryEditMode : undefined}
+					onCopySchema={handleCopySchema}
+					onCopyDrizzleSchema={handleCopyDrizzleSchema}
+					liveMonitorConfig={showLiveMonitor ? liveMonitor.config : undefined}
+					onLiveMonitorConfigChange={showLiveMonitor ? liveMonitor.setConfig : undefined}
+					isLiveMonitorPolling={showLiveMonitor ? liveMonitor.isPolling : false}
+					changeEvents={showLiveMonitor ? liveMonitor.recentEvents : undefined}
+					unreadChangeCount={showLiveMonitor ? liveMonitor.unreadCount : undefined}
+					onClearChangeEvents={showLiveMonitor ? liveMonitor.clearEvents : undefined}
+					onMarkChangesRead={showLiveMonitor ? liveMonitor.markRead : undefined}
+				/>
+				<div className='min-h-0 flex-1'>
+					<ResultChartPanel
+						columns={tableData.columns}
+						rows={tableData.rows}
+						config={chartConfig}
+						onConfigChange={setChartConfig}
+						title={`${displayTableName} chart`}
+					/>
+				</div>
+			</div>
 		)
 	}
 
@@ -575,14 +692,12 @@ export function DatabaseStudio({
 				tableName={displayTableName}
 				viewMode={viewMode}
 				onViewModeChange={setViewMode}
-				onToggleSidebar={onToggleSidebar}
-				isSidebarOpen={isSidebarOpen}
 				onRefresh={loadTableData}
-				onExport={handleExport}
-				onExportCsv={handleExportCsvAll}
-				onExportSql={handleExportSqlAll}
-				onAddRecord={handleAddRecord}
-				onImportCsv={() => setShowImportDialog(true)}
+				onExport={canExportFile ? handleExport : function () {}}
+				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
+				onExportSql={canExportFile ? handleExportSqlAll : undefined}
+				onAddRecord={canEditRows ? handleAddRecord : undefined}
+				onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
 				isLoading={isLoading}
 				filters={filters}
 				onFiltersChange={setFilters}
@@ -590,16 +705,16 @@ export function DatabaseStudio({
 				visibleColumns={visibleColumns}
 				onToggleColumn={handleToggleColumn}
 				isDryEditMode={isDryEditMode}
-				onDryEditModeChange={setDryEditMode}
+				onDryEditModeChange={canEditRows ? setDryEditMode : undefined}
 				onCopySchema={handleCopySchema}
 				onCopyDrizzleSchema={handleCopyDrizzleSchema}
-				liveMonitorConfig={liveMonitor.config}
-				onLiveMonitorConfigChange={liveMonitor.setConfig}
-				isLiveMonitorPolling={liveMonitor.isPolling}
-				changeEvents={liveMonitor.recentEvents}
-				unreadChangeCount={liveMonitor.unreadCount}
-				onClearChangeEvents={liveMonitor.clearEvents}
-				onMarkChangesRead={liveMonitor.markRead}
+				liveMonitorConfig={showLiveMonitor ? liveMonitor.config : undefined}
+				onLiveMonitorConfigChange={showLiveMonitor ? liveMonitor.setConfig : undefined}
+				isLiveMonitorPolling={showLiveMonitor ? liveMonitor.isPolling : false}
+				changeEvents={showLiveMonitor ? liveMonitor.recentEvents : undefined}
+				unreadChangeCount={showLiveMonitor ? liveMonitor.unreadCount : undefined}
+				onClearChangeEvents={showLiveMonitor ? liveMonitor.clearEvents : undefined}
+				onMarkChangesRead={showLiveMonitor ? liveMonitor.markRead : undefined}
 			/>
 
 			<div
@@ -624,10 +739,10 @@ export function DatabaseStudio({
 							sort={sort}
 							onSortChange={setSort}
 							onFilterAdd={handleFilterAdd}
-							onCellEdit={handleCellEdit}
-							onDeleteSelectedRows={handleBulkDelete}
-							onBatchCellEdit={handleBatchCellEdit}
-							onRowAction={handleRowAction}
+							onCellEdit={canEditRows ? handleCellEdit : undefined}
+							onDeleteSelectedRows={canEditRows ? handleBulkDelete : undefined}
+							onBatchCellEdit={canEditRows ? handleBatchCellEdit : undefined}
+							onRowAction={canEditRows ? handleRowAction : undefined}
 							tableName={displayTableName}
 							selectedCells={selectedCells}
 							onCellSelectionChange={setSelectedCells}
@@ -675,14 +790,14 @@ export function DatabaseStudio({
 				<SelectionActionBar
 					ref={toolbarRef}
 					selectedCount={rowsForActions.size}
-					onDelete={handleBulkDelete}
+					onDelete={canEditRows ? handleBulkDelete : undefined}
 					onCopy={handleBulkCopy}
-					onSetNull={handleOpenSetNull}
-					onDuplicate={handleBulkDuplicate}
-					onExportJson={handleExportJson}
-					onExportCsv={handleExportCsv}
-					onBulkEdit={handleOpenBulkEdit}
-					onSave={handleApplyPendingEdits}
+					onSetNull={canEditRows ? handleOpenSetNull : undefined}
+					onDuplicate={canEditRows ? handleBulkDuplicate : undefined}
+					onExportJson={canExportFile ? handleExportJson : undefined}
+					onExportCsv={canExportFile ? handleExportCsv : undefined}
+					onBulkEdit={canEditRows ? handleOpenBulkEdit : undefined}
+					onSave={canEditRows ? handleApplyPendingEdits : undefined}
 					pendingEditCount={tableId ? getEditCount(tableId) : 0}
 					onClearSelection={handleClearSelection}
 					onEscapeToGrid={handleEscapeToGrid}
@@ -697,7 +812,7 @@ export function DatabaseStudio({
 					rowCount={tableData.rows.length}
 					totalCount={tableData.totalCount}
 					executionTime={tableData.executionTime}
-					liveMonitorEnabled={liveMonitor.config.enabled}
+					liveMonitorEnabled={showLiveMonitor ? liveMonitor.config.enabled : undefined}
 					liveMonitorIntervalMs={liveMonitor.config.intervalMs}
 					lastPolledAt={liveMonitor.recentEvents[0]?.timestamp ?? null}
 					changesDetected={liveMonitor.unreadCount}
@@ -712,14 +827,14 @@ export function DatabaseStudio({
 					<SelectionActionBar
 						ref={toolbarRef}
 						selectedCount={rowsForActions.size}
-						onDelete={handleBulkDelete}
+						onDelete={canEditRows ? handleBulkDelete : undefined}
 						onCopy={handleBulkCopy}
-						onDuplicate={handleBulkDuplicate}
-						onExportJson={handleExportJson}
-						onExportCsv={handleExportCsv}
-						onSetNull={handleOpenSetNull}
-						onBulkEdit={handleOpenBulkEdit}
-						onSave={handleApplyPendingEdits}
+						onDuplicate={canEditRows ? handleBulkDuplicate : undefined}
+						onExportJson={canExportFile ? handleExportJson : undefined}
+						onExportCsv={canExportFile ? handleExportCsv : undefined}
+						onSetNull={canEditRows ? handleOpenSetNull : undefined}
+						onBulkEdit={canEditRows ? handleOpenBulkEdit : undefined}
+						onSave={canEditRows ? handleApplyPendingEdits : undefined}
 						pendingEditCount={tableId ? getEditCount(tableId) : 0}
 						onClearSelection={handleClearSelection}
 						onEscapeToGrid={handleEscapeToGrid}
@@ -727,7 +842,7 @@ export function DatabaseStudio({
 					/>
 				)}
 
-			{tableId && hasEdits(tableId) && (
+			{tableId && canEditRows && hasEdits(tableId) && (
 				<PendingChangesBar
 					editCount={getEditCount(tableId)}
 					isApplying={isApplyingEdits}
@@ -930,7 +1045,7 @@ export function DatabaseStudio({
 				/>
 			)}
 
-			{tableData && (
+			{tableData && canImportFile && (
 				<ImportCsvDialog
 					open={showImportDialog}
 					onOpenChange={setShowImportDialog}

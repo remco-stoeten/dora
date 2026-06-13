@@ -17,7 +17,7 @@ import { cn } from '@studio/shared/utils/cn'
 import { useQueryHistory, type QueryHistoryItem } from '../stores/query-history-store'
 
 type Props = {
-	onSelectQuery: (query: string) => void
+	onSelectQuery: (item: QueryHistoryItem) => void
 	currentConnectionId?: string
 	getConnectionName?: (id: string) => string
 }
@@ -122,7 +122,7 @@ export function QueryHistoryPanel({ onSelectQuery, currentConnectionId, getConne
 			<div
 				key={item.id}
 				className='group flex flex-col px-3 py-2 border-b border-sidebar-border/50 hover:bg-sidebar-accent/50 cursor-pointer transition-colors'
-				onClick={function () { onSelectQuery(item.query) }}
+				onClick={function () { onSelectQuery(item) }}
 			>
 				<div className='flex items-start gap-2'>
 					{item.success ? (

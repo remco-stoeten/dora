@@ -1,12 +1,17 @@
 import {
 	POSTGRES_IMAGE,
 	POSTGRES_CONTAINER_PORT,
+	MARIADB_IMAGE,
+	MARIADB_CONTAINER_PORT,
+	COCKROACH_IMAGE,
+	COCKROACH_CONTAINER_PORT,
 	MANAGED_LABEL_KEY,
 	MANAGED_LABEL_VALUE,
 	PROJECT_LABEL_KEY,
 	COMPOSE_PATH_LABEL_KEY
 } from '../constants'
 import type {
+	DatabaseContainerConfig,
 	PostgresContainerConfig,
 	DockerContainer,
 	CreateContainerResult,
@@ -41,7 +46,13 @@ const isTauri =
 export async function createPostgresContainer(
 	config: PostgresContainerConfig
 ): Promise<CreateContainerResult> {
-	if (!isTauri) return demoService.createPostgresContainer(config)
+	return createDatabaseContainer(config)
+}
+
+export async function createDatabaseContainer(
+	config: DatabaseContainerConfig
+): Promise<CreateContainerResult> {
+	if (!isTauri) return demoService.createDatabaseContainer(config)
 
 	const validation = validateContainerName(config.name)
 	if (!validation.valid) {
@@ -53,21 +64,30 @@ export async function createPostgresContainer(
 		return { success: false, error: availability.error }
 	}
 
-	const imageTag = config.postgresVersion || '16'
-	const hasImage = await imageExists(POSTGRES_IMAGE, imageTag)
+	const databaseConfig = getDatabaseImageConfig(config)
+	const { image, imageTag, buildArgs, displayName, command } = databaseConfig
+	const hasImage = await imageExists(image, imageTag)
 
 	if (!hasImage) {
 		try {
-			await pullImage(POSTGRES_IMAGE, imageTag)
+			await pullImage(image, imageTag)
 		} catch (error) {
 			return {
 				success: false,
-				error: `Failed to pull PostgreSQL image: ${error instanceof Error ? error.message : String(error)}`
+				error: `Failed to pull ${displayName} image: ${
+					error instanceof Error ? error.message : String(error)
+				}`
 			}
 		}
 	}
 
-	const args = buildCreateContainerArgs(config, imageTag)
+	const args = buildCreateContainerArgs(config, imageTag, {
+		image,
+		imageTag,
+		displayName,
+		buildArgs,
+		command
+	})
 
 	try {
 		const result = await executeDockerCommand(args)
@@ -95,36 +115,121 @@ export async function createPostgresContainer(
 	}
 }
 
-function buildCreateContainerArgs(config: PostgresContainerConfig, imageTag: string): string[] {
+type DatabaseImageConfig = {
+	image: string
+	imageTag: string
+	displayName: string
+	buildArgs: string[]
+	command?: string[]
+}
+
+function getDatabaseImageConfig(config: DatabaseContainerConfig): DatabaseImageConfig {
+	switch (config.provider) {
+		case 'mariadb':
+			return {
+				image: MARIADB_IMAGE,
+				imageTag: config.mariadbVersion || '11.4',
+				displayName: 'MariaDB',
+				buildArgs: [
+					'-e',
+					`MARIADB_ROOT_PASSWORD=${config.password}`,
+					'-e',
+					`MARIADB_ROOT_HOST=%`,
+					'-e',
+					`MARIADB_DATABASE=${config.database}`,
+					...(config.user && config.user !== 'root'
+						? ['-e', `MARIADB_USER=${config.user}`, '-e', `MARIADB_PASSWORD=${config.password}`]
+						: []),
+					'-p',
+					`${config.hostPort}:${MARIADB_CONTAINER_PORT}`,
+					'--health-cmd',
+					'mariadb-admin ping -uroot -p${MARIADB_ROOT_PASSWORD}',
+					'--health-interval',
+					'5s',
+					'--health-timeout',
+					'5s',
+					'--health-retries',
+					'5',
+					'--health-start-period',
+					'20s'
+				]
+			}
+		case 'cockroach':
+			return {
+				image: COCKROACH_IMAGE,
+				imageTag: config.cockroachVersion || '25.1.1',
+				displayName: 'CockroachDB',
+				buildArgs: [
+					'-p',
+					`${config.hostPort}:${COCKROACH_CONTAINER_PORT}`,
+					'-p',
+					`${config.hostPort + 1}:8080`,
+					'--health-cmd',
+					'cockroach sql --insecure --host=127.0.0.1:26257 -e "SELECT 1"',
+					'--health-interval',
+					'5s',
+					'--health-timeout',
+					'5s',
+					'--health-retries',
+					'10',
+					'--health-start-period',
+					'25s'
+				],
+				command: [
+					'start-single-node',
+					'--insecure',
+					'--listen-addr=0.0.0.0:26257',
+					'--http-addr=0.0.0.0:8080',
+					'--store=/cockroach-data'
+				]
+			}
+		case 'postgres':
+		default:
+			return {
+				image: POSTGRES_IMAGE,
+				imageTag: config.postgresVersion || '16',
+				displayName: 'PostgreSQL',
+				buildArgs: [
+					'-e',
+					`POSTGRES_USER=${config.user}`,
+					'-e',
+					`POSTGRES_PASSWORD=${config.password}`,
+					'-e',
+					`POSTGRES_DB=${config.database}`,
+					'-p',
+					`${config.hostPort}:${POSTGRES_CONTAINER_PORT}`,
+					'--health-cmd',
+					'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}',
+					'--health-interval',
+					'5s',
+					'--health-timeout',
+					'5s',
+					'--health-retries',
+					'5',
+					'--health-start-period',
+					'10s'
+				]
+			}
+	}
+}
+
+function buildCreateContainerArgs(
+	config: DatabaseContainerConfig,
+	imageTag: string,
+	databaseConfig: DatabaseImageConfig
+): string[] {
 	const args = [
 		'create',
 		'--name',
 		config.name,
 		'--label',
 		`${MANAGED_LABEL_KEY}=${MANAGED_LABEL_VALUE}`,
-		'-e',
-		`POSTGRES_USER=${config.user}`,
-		'-e',
-		`POSTGRES_PASSWORD=${config.password}`,
-		'-e',
-		`POSTGRES_DB=${config.database}`,
-		'-p',
-		`${config.hostPort}:${POSTGRES_CONTAINER_PORT}`,
-		'--health-cmd',
-		'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}',
-		'--health-interval',
-		'5s',
-		'--health-timeout',
-		'5s',
-		'--health-retries',
-		'5',
-		'--health-start-period',
-		'10s'
+		...databaseConfig.buildArgs
 	]
 
 	if (!config.ephemeral) {
 		const volumeName = config.volumeName || generateVolumeName(config.name)
-		args.push('-v', `${volumeName}:/var/lib/postgresql/data`)
+		args.push('-v', `${volumeName}:${getDatabaseVolumePath(config.provider)}`)
 	}
 
 	if (config.cpuLimit) {
@@ -143,9 +248,25 @@ function buildCreateContainerArgs(config: PostgresContainerConfig, imageTag: str
 		args.push('--label', `${COMPOSE_PATH_LABEL_KEY}=${config.composePath}`)
 	}
 
-	args.push(`${POSTGRES_IMAGE}:${imageTag}`)
+	args.push(`${databaseConfig.image}:${imageTag}`)
+
+	if (databaseConfig.command?.length) {
+		args.push(...databaseConfig.command)
+	}
 
 	return args
+}
+
+function getDatabaseVolumePath(provider: DatabaseContainerConfig['provider']): string {
+	switch (provider) {
+		case 'mariadb':
+			return '/var/lib/mysql'
+		case 'cockroach':
+			return '/cockroach-data'
+		case 'postgres':
+		default:
+			return '/var/lib/postgresql/data'
+	}
 }
 
 export async function performContainerAction(
@@ -285,7 +406,12 @@ export async function openContainerTerminal(
 export async function seedDatabase(
 	containerId: string,
 	filePath: string,
-	connectionConfig: { user: string; database: string }
+	connectionConfig: {
+		provider?: DatabaseContainerConfig['provider']
+		user: string
+		password?: string
+		database: string
+	}
 ): Promise<{ success: boolean; error?: string }> {
 	if (!isTauri) return demoService.seedDatabase(containerId, filePath, connectionConfig)
 
@@ -296,15 +422,7 @@ export async function seedDatabase(
 		await copyToContainer(containerId, filePath, targetPath)
 
 		// 2. Execute SQL file
-		const result = await execCommand(containerId, [
-			'psql',
-			'-U',
-			connectionConfig.user,
-			'-d',
-			connectionConfig.database,
-			'-f',
-			targetPath
-		])
+		const result = await executeSeedCommand(containerId, connectionConfig, targetPath)
 
 		if (result.exitCode !== 0) {
 			throw new Error(result.stderr || 'Failed to execute SQL seed file')
@@ -319,5 +437,51 @@ export async function seedDatabase(
 			success: false,
 			error: error instanceof Error ? error.message : 'Unknown error during seeding'
 		}
+	}
+}
+
+async function executeSeedCommand(
+	containerId: string,
+	connectionConfig: {
+		provider?: DatabaseContainerConfig['provider']
+		user: string
+		password?: string
+		database: string
+	},
+	targetPath: string
+) {
+	switch (connectionConfig.provider) {
+		case 'mariadb':
+			return execCommand(containerId, [
+				'mariadb',
+				'-u',
+				connectionConfig.user,
+				connectionConfig.password ? `-p${connectionConfig.password}` : '',
+				connectionConfig.database,
+				'-e',
+				`source ${targetPath}`
+			].filter(Boolean) as string[])
+		case 'cockroach':
+			return execCommand(containerId, [
+				'cockroach',
+				'sql',
+				'--insecure',
+				'--host=127.0.0.1:26257',
+				'--database',
+				connectionConfig.database,
+				'-f',
+				targetPath
+			])
+		case 'postgres':
+		default:
+			return execCommand(containerId, [
+				'psql',
+				'-U',
+				connectionConfig.user,
+				'-d',
+				connectionConfig.database,
+				'-f',
+				targetPath
+			])
 	}
 }

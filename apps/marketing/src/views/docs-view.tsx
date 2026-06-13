@@ -1,17 +1,56 @@
+import Link from 'next/link'
+
+import { ResourcesPageShell } from '@/components/resources-page-shell'
+import { GUIDES, GUIDES_INDEX, getGuidePath } from '@/core/config/guides'
+
 export default function DocsView() {
     return (
-        <main className="content-page">
-            <p className="eyebrow">Docs</p>
-            <h1>Dora docs</h1>
-            <p className="lead">
-                Documentation starts here. Add setup, connection, and workflow
-                pages as they become real.
-            </p>
-            <ul className="content-list">
-                <li>Install Dora.</li>
-                <li>Connect a database.</li>
-                <li>Browse schema and records.</li>
-            </ul>
-        </main>
+        <ResourcesPageShell
+            eyebrow="Docs"
+            title={GUIDES_INDEX.title}
+            lead={GUIDES_INDEX.lead}
+        >
+            <div className="mx-auto max-w-3xl">
+                <h2 className="mb-5 font-pixel text-xl font-medium text-foreground">
+                    Connection guides
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {GUIDES.map(function (guide) {
+                        return (
+                            <Link
+                                key={guide.slug}
+                                href={getGuidePath(guide.slug)}
+                                className="group flex items-center gap-3 border border-[#2b252c] bg-background/30 px-4 py-4 transition-colors hover:border-[#3a3138]"
+                            >
+                                <img
+                                    src={guide.logo}
+                                    alt={`${guide.provider} logo`}
+                                    width={24}
+                                    height={24}
+                                    className="size-6 opacity-75"
+                                    style={{ filter: 'grayscale(1) brightness(1.7)' }}
+                                    draggable={false}
+                                />
+                                <span className="flex flex-col">
+                                    <span className="text-sm font-medium text-foreground">
+                                        Connect {guide.provider}
+                                    </span>
+                                    <span className="text-[13px] text-muted-foreground">
+                                        {guide.engine}
+                                    </span>
+                                </span>
+                            </Link>
+                        )
+                    })}
+                </div>
+
+                <p className="mt-8 text-[15px] leading-relaxed text-muted-foreground">
+                    Dora connects to any PostgreSQL or libSQL host the same way —
+                    Railway, Render, Vercel Postgres, Fly.io, Aiven, and
+                    self-hosted databases all work with a standard connection
+                    string. More setup and workflow docs are on the way.
+                </p>
+            </div>
+        </ResourcesPageShell>
     )
 }

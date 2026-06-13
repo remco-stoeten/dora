@@ -1,0 +1,6 @@
+{"event": "login", "customer_id": 1, "ts": "2024-06-01T09:14:00Z", "meta": {"ip": "10.0.0.1", "ok": true}}
+{"event": "query_run", "customer_id": 1, "ts": "2024-06-01T09:15:22Z", "meta": {"rows": 482, "ms": 11}}
+{"event": "login", "customer_id": 3, "ts": "2024-06-02T11:02:10Z", "meta": {"ip": "10.0.0.7", "ok": true}}
+{"event": "export", "customer_id": 4, "ts": "2024-06-02T14:48:55Z", "meta": {"format": "csv", "rows": 12000}}
+{"event": "login", "customer_id": 7, "ts": "2024-06-03T08:30:00Z", "meta": {"ip": "10.0.0.9", "ok": false}}
+{"event": "query_run", "customer_id": 7, "ts": "2024-06-03T08:31:40Z", "meta": {"rows": 3, "ms": 3}}

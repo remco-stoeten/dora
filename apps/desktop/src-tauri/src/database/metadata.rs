@@ -174,6 +174,19 @@ pub fn get_sqlite_counts(conn: &rusqlite::Connection) -> Result<(u32, u64), Erro
     Ok((table_count, total_rows))
 }
 
+/// Get table and row counts from a DuckDB connection
+pub fn get_duckdb_counts(conn: &duckdb::Connection) -> Result<(u32, u64), Error> {
+    let (table_count, total_rows): (i64, Option<i64>) = conn
+        .query_row(
+            "SELECT COUNT(*), SUM(estimated_size) FROM duckdb_tables() WHERE NOT internal",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| Error::Any(anyhow::anyhow!("Failed to get DuckDB counts: {}", e)))?;
+
+    Ok((table_count as u32, total_rows.unwrap_or(0).max(0) as u64))
+}
+
 /// Get metadata for a LibSQL database
 pub async fn get_libsql_metadata(
     conn: &libsql::Connection,

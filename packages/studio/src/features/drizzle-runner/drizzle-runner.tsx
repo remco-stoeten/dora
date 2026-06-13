@@ -1,4 +1,4 @@
-import { PanelLeft, Play, Sparkles, Download, Loader2, Braces } from 'lucide-react'
+import { Play, Sparkles, Download, Loader2, Braces } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAdapter, useIsTauri } from '@studio/core/data-provider'
@@ -14,10 +14,9 @@ import { drizzleQueryToSql } from './utils/drizzle-query'
 
 type Props = {
 	connectionId?: string
-	onToggleSidebar?: () => void
 }
 
-export function DrizzleRunner({ connectionId, onToggleSidebar }: Props) {
+export function DrizzleRunner({ connectionId }: Props) {
 	const adapter = useAdapter()
 	const isTauri = useIsTauri()
 	const [queryCode, setQueryCode] = useState(DEFAULT_QUERY)
@@ -126,17 +125,6 @@ export function DrizzleRunner({ connectionId, onToggleSidebar }: Props) {
 			{/* Main Toolbar / Header */}
 			<div className='flex items-center h-10 border-b border-sidebar-border bg-sidebar shrink-0 px-2 justify-between'>
 				<div className='flex items-center gap-2'>
-					{onToggleSidebar && (
-						<Button
-							variant='ghost'
-							size='icon'
-							className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
-							onClick={onToggleSidebar}
-							title='Toggle Application Sidebar'
-						>
-							<PanelLeft className='h-4 w-4' />
-						</Button>
-					)}
 					<span className='font-semibold text-sidebar-foreground px-2'>
 						Drizzle Runner
 					</span>

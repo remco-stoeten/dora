@@ -11,7 +11,7 @@
 		"preview": "vite preview",
 		"tauri": "tauri",
 		"pretauri": "bun ../../tools/print-flathub-reminder.ts",
-		"tauri:dev": "node -e \"require('child_process').execSync(process.platform==='win32'?'bun run tauri:win':'bun x tauri dev',{stdio:'inherit'})\"",
+		"tauri:dev": "node -e \"const env={...process.env};if(process.platform==='linux'){env.GDK_BACKEND=env.GDK_BACKEND||'x11';env.WEBKIT_DISABLE_DMABUF_RENDERER=env.WEBKIT_DISABLE_DMABUF_RENDERER||'1';}const cmd=process.platform==='win32'?'bun run tauri:win':'bun x tauri dev';require('child_process').execSync(cmd,{stdio:'inherit',env})\"",
 		"tauri:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\tauri-dev-win.ps1",
 		"test": "vitest run -c ../../vitest.config.ts",
 		"test:watch": "vitest -c ../../vitest.config.ts",

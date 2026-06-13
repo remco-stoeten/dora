@@ -1,8 +1,10 @@
 import type { DockerContainer } from '../types'
+import { detectDatabaseProvider } from './container-connection'
 
 export function generateDockerCompose(container: DockerContainer): string {
 	const serviceName = container.name || 'postgres'
 	const image = `${container.image}:${container.imageTag}`
+	const provider = detectDatabaseProvider(container)
 
 	// Filter out internal env vars if any (e.g. self-managed ones)
 	// For now we include all, but formatted as object or list
@@ -48,16 +50,28 @@ services:
 		})
 	}
 
-	// Volumes (Managed container usually sends data to /var/lib/postgresql/data)
-	// If it's a managed container, we likely used a named volume
-	// We can try to infer or just add a standard volume for persistence if it's a DB
-	if (container.image.includes('postgres')) {
+	const volumePath =
+		provider === 'mariadb'
+			? '/var/lib/mysql'
+			: provider === 'cockroach'
+				? '/cockroach-data'
+				: '/var/lib/postgresql/data'
+
+	if (container.volumes.length > 0 || provider !== 'cockroach') {
 		yaml += `\n    volumes:`
-		yaml += `\n      - ${container.name}-data:/var/lib/postgresql/data`
+		yaml += `\n      - ${container.name}-data:${volumePath}`
 	}
 
-	// Add volumes section at the bottom if we used any named volumes
-	if (container.image.includes('postgres')) {
+	if (provider === 'cockroach') {
+		yaml += `\n    command:`
+		yaml += `\n      - start-single-node`
+		yaml += `\n      - --insecure`
+		yaml += `\n      - --listen-addr=0.0.0.0:26257`
+		yaml += `\n      - --http-addr=0.0.0.0:8080`
+		yaml += `\n      - --store=/cockroach-data`
+	}
+
+	if (container.volumes.length > 0 || provider !== 'cockroach') {
 		yaml += `\n\nvolumes:
   ${container.name}-data:`
 	}

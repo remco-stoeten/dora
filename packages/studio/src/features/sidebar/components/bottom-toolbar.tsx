@@ -20,6 +20,7 @@ import { AppearancePanel } from "./appearance-panel";
 import { ChangelogPanel } from "./changelog-panel";
 import { ProjectInfoPanel } from "./project-info-panel";
 import { CURRENT_VERSION } from "../changelog-data";
+import { SidebarPanelToggle } from "./sidebar-panel-toggle";
 
 type ToolbarAction = "project-info" | "theme" | "settings" | "changelog";
 
@@ -34,7 +35,6 @@ const LIGHT_THEMES: Theme[] = ["light", "claude"];
 const TOOLBAR_ITEMS: ToolbarItem[] = [
   { id: "changelog", icon: Sparkles, label: "What's new" },
   { id: "project-info", icon: Info, label: "Project Info" },
-  { id: "settings", icon: Settings, label: "Settings" },
   { id: "theme", icon: Sun, label: "Appearance" },
 ];
 
@@ -57,9 +57,11 @@ function useCurrentTheme() {
 
 type Props = {
   onAction?: (action: ToolbarAction) => void;
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
 };
 
-export function BottomToolbar({ onAction }: Props) {
+export function BottomToolbar({ onAction, onToggleSidebar, isSidebarOpen = true }: Props) {
   const currentTheme = useCurrentTheme();
   const isLight = LIGHT_THEMES.includes(currentTheme);
 
@@ -70,7 +72,8 @@ export function BottomToolbar({ onAction }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-end px-2 h-10 border-t border-sidebar-border mt-auto gap-1">
+    <div className="mt-auto flex items-end justify-between gap-2 border-t border-sidebar-border px-2 py-1.5">
+      <div className="flex items-center gap-1">
       {TOOLBAR_ITEMS.map(function (item) {
         if (item.id === "changelog") {
           return (
@@ -186,32 +189,35 @@ export function BottomToolbar({ onAction }: Props) {
           );
         }
 
-        if (item.id === "settings") {
-          return (
-            <div key={item.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                    onClick={function () {
-                      onAction?.("settings");
-                    }}
-                  >
-                    <item.icon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          );
-        }
-
         return null;
       })}
+      </div>
+
+      <div className="flex flex-col items-center gap-1">
+        {onToggleSidebar && (
+          <SidebarPanelToggle isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
+        )}
+        {onToggleSidebar && (
+          <div className="h-px w-5 bg-sidebar-border" role="separator" aria-orientation="horizontal" />
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={function () {
+                onAction?.("settings");
+              }}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Settings
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }

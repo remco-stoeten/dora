@@ -1,6 +1,7 @@
 import type {
 	GeneratorProfile,
 	GeneratorScale,
+	DatabaseProvider,
 	ContainerSortConfig,
 	ContainerFilterConfig
 } from './types'
@@ -27,6 +28,8 @@ export const DEFAULT_FILTER: ContainerFilterConfig = {
 }
 
 export const POSTGRES_IMAGE = 'postgres'
+export const MARIADB_IMAGE = 'mariadb'
+export const COCKROACH_IMAGE = 'cockroachdb/cockroach'
 
 export const POSTGRES_VERSIONS = [
 	{ value: '17', label: 'PostgreSQL 17 (Latest)' },
@@ -43,6 +46,50 @@ export const DEFAULT_POSTGRES_PASSWORD = 'postgres'
 export const DEFAULT_POSTGRES_DATABASE = 'postgres'
 
 export const POSTGRES_CONTAINER_PORT = 5432
+export const MARIADB_CONTAINER_PORT = 3306
+export const COCKROACH_CONTAINER_PORT = 26257
+
+export const DATABASE_PROVIDERS: Array<{
+	value: DatabaseProvider
+	label: string
+	description: string
+}> = [
+	{
+		value: 'postgres',
+		label: 'PostgreSQL',
+		description: 'General-purpose relational database'
+	},
+	{
+		value: 'mariadb',
+		label: 'MariaDB',
+		description: 'MySQL-compatible database'
+	},
+	{
+		value: 'cockroach',
+		label: 'CockroachDB',
+		description: 'Distributed SQL with PostgreSQL wire compatibility'
+	}
+]
+
+export const MARIADB_VERSIONS = [
+	{ value: '11.4', label: 'MariaDB 11.4 (Latest)' },
+	{ value: '11.3', label: 'MariaDB 11.3' },
+	{ value: '11.2', label: 'MariaDB 11.2' }
+] as const
+
+export const DEFAULT_MARIADB_VERSION = '11.4'
+export const DEFAULT_MARIADB_USER = 'root'
+export const DEFAULT_MARIADB_PASSWORD = 'rootpass'
+export const DEFAULT_MARIADB_DATABASE = 'dora'
+
+export const COCKROACH_VERSIONS = [
+	{ value: '25.1.1', label: 'CockroachDB 25.1.1 (Latest)' },
+	{ value: '24.3.5', label: 'CockroachDB 24.3.5' }
+] as const
+
+export const DEFAULT_COCKROACH_VERSION = '25.1.1'
+export const DEFAULT_COCKROACH_USER = 'root'
+export const DEFAULT_COCKROACH_DATABASE = 'defaultdb'
 
 export const DEFAULT_HOST_PORT_START = 5433
 export const DEFAULT_HOST_PORT_END = 5500

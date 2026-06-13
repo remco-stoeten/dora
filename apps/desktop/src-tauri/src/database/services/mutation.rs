@@ -168,6 +168,20 @@ impl<'a> MutationService<'a> {
                     "sqlite",
                 )
             }
+            DatabaseClient::DuckDB { .. } => {
+                let schema_prefix = schema_name
+                    .as_ref()
+                    .map(|s| format!("\"{}\".", s))
+                    .unwrap_or_default();
+                let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
+                (
+                    format!(
+                        "SELECT * FROM {}\"{}\"{}",
+                        schema_prefix, table_name, limit_clause
+                    ),
+                    "duckdb",
+                )
+            }
             DatabaseClient::LibSQL { .. } => {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
@@ -187,6 +201,7 @@ impl<'a> MutationService<'a> {
         let (columns, rows) = match db_type {
             "postgres" => fetch_postgres_data(&client, &query).await?,
             "sqlite" => fetch_sqlite_data(&client, &query)?,
+            "duckdb" => fetch_duckdb_data(&client, &query)?,
             "libsql" => fetch_libsql_data(&client, &query).await?,
             "mysql" => fetch_mysql_data(&client, &query).await?,
             _ => unreachable!(),
@@ -557,6 +572,40 @@ fn fetch_sqlite_data(
         Ok((columns, rows?))
     } else {
         Err(Error::Any(anyhow!("Expected SQLite client")))
+    }
+}
+
+fn fetch_duckdb_data(
+    client: &DatabaseClient,
+    query: &str,
+) -> Result<(Vec<String>, Vec<Vec<serde_json::Value>>), Error> {
+    if let DatabaseClient::DuckDB { connection, .. } = client {
+        let conn = connection
+            .lock()
+            .map_err(|_| crate::Error::Internal("Mutex poisoned".into()))?;
+        let mut stmt = conn.prepare(query)?;
+        let mut rows = stmt.query([])?;
+
+        let columns: Vec<String> = rows
+            .as_ref()
+            .map(|s| s.column_names())
+            .unwrap_or_default();
+
+        let mut data = Vec::new();
+        while let Some(row) = rows.next()? {
+            let values: Vec<serde_json::Value> = (0..columns.len())
+                .map(|i| {
+                    row.get_ref(i)
+                        .map(crate::database::duckdb::row_writer::value_ref_to_json)
+                        .unwrap_or(serde_json::Value::Null)
+                })
+                .collect();
+            data.push(values);
+        }
+
+        Ok((columns, data))
+    } else {
+        Err(Error::Any(anyhow!("Expected DuckDB client")))
     }
 }
 

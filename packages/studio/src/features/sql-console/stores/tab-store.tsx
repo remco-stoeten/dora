@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, ReactNode } from 'react'
+import type { ResultChartConfig } from '@studio/features/result-charts/types'
 import { QueryTab, SqlQueryResult, ResultViewMode } from '../types'
 import { DEFAULT_SQL } from '../data'
 
@@ -22,6 +23,8 @@ function createDefaultTab(connectionId: string | null): QueryTab {
 		isExecuting: false,
 		isDirty: false,
 		viewMode: 'table',
+		chartConfig: null,
+		historyEntryId: null,
 		connectionId,
 		createdAt: Date.now(),
 		lastExecutedAt: null
@@ -85,6 +88,8 @@ type TabAction =
 	| { type: 'SET_TAB_RESULT'; tabId: string; result: SqlQueryResult | null }
 	| { type: 'SET_TAB_EXECUTING'; tabId: string; isExecuting: boolean }
 	| { type: 'SET_TAB_VIEW_MODE'; tabId: string; viewMode: ResultViewMode }
+	| { type: 'SET_TAB_CHART_CONFIG'; tabId: string; chartConfig: ResultChartConfig | null }
+	| { type: 'SET_TAB_HISTORY_ENTRY'; tabId: string; historyEntryId: string | null }
 	| { type: 'AUTO_TITLE'; tabId: string; query: string }
 	| { type: 'REORDER_TABS'; fromIndex: number; toIndex: number }
 	| { type: 'DUPLICATE_TAB'; tabId: string }
@@ -179,6 +184,24 @@ function tabReducer(state: TabState, action: TabAction): TabState {
 				})
 			}
 
+		case 'SET_TAB_CHART_CONFIG':
+			return {
+				...state,
+				tabs: state.tabs.map(function (t) {
+					if (t.id !== action.tabId) return t
+					return { ...t, chartConfig: action.chartConfig }
+				})
+			}
+
+		case 'SET_TAB_HISTORY_ENTRY':
+			return {
+				...state,
+				tabs: state.tabs.map(function (t) {
+					if (t.id !== action.tabId) return t
+					return { ...t, historyEntryId: action.historyEntryId }
+				})
+			}
+
 		case 'AUTO_TITLE': {
 			return {
 				...state,
@@ -211,6 +234,7 @@ function tabReducer(state: TabState, action: TabAction): TabState {
 				title: source.title + ' (copy)',
 				result: null,
 				isExecuting: false,
+				historyEntryId: null,
 				createdAt: Date.now(),
 				lastExecutedAt: null
 			}
@@ -245,6 +269,8 @@ type TabContextValue = {
 	setTabResult: (tabId: string, result: SqlQueryResult | null) => void
 	setTabExecuting: (tabId: string, isExecuting: boolean) => void
 	setTabViewMode: (tabId: string, viewMode: ResultViewMode) => void
+	setTabChartConfig: (tabId: string, chartConfig: ResultChartConfig | null) => void
+	setTabHistoryEntry: (tabId: string, historyEntryId: string | null) => void
 	autoTitleTab: (tabId: string, query: string) => void
 	reorderTabs: (fromIndex: number, toIndex: number) => void
 	duplicateTab: (tabId: string) => void
@@ -272,7 +298,10 @@ function loadTabsFromStorage(connectionId: string | null): TabState | null {
 				return {
 					...t,
 					result: null,
-					isExecuting: false
+					isExecuting: false,
+					viewMode: t.viewMode === 'json' || t.viewMode === 'chart' ? t.viewMode : 'table',
+					chartConfig: t.chartConfig ?? null,
+					historyEntryId: t.historyEntryId ?? null
 				}
 			})
 			return { tabs: sanitized, activeTabId: parsed.activeTabId }
@@ -374,6 +403,17 @@ export function QueryTabProvider({ children, connectionId }: TProps) {
 		dispatch({ type: 'SET_TAB_VIEW_MODE', tabId, viewMode })
 	}, [])
 
+	const setTabChartConfig = useCallback(function (
+		tabId: string,
+		chartConfig: ResultChartConfig | null
+	) {
+		dispatch({ type: 'SET_TAB_CHART_CONFIG', tabId, chartConfig })
+	}, [])
+
+	const setTabHistoryEntry = useCallback(function (tabId: string, historyEntryId: string | null) {
+		dispatch({ type: 'SET_TAB_HISTORY_ENTRY', tabId, historyEntryId })
+	}, [])
+
 	const autoTitleTab = useCallback(function (tabId: string, query: string) {
 		dispatch({ type: 'AUTO_TITLE', tabId, query })
 	}, [])
@@ -417,6 +457,8 @@ export function QueryTabProvider({ children, connectionId }: TProps) {
 		setTabResult,
 		setTabExecuting,
 		setTabViewMode,
+		setTabChartConfig,
+		setTabHistoryEntry,
 		autoTitleTab,
 		reorderTabs,
 		duplicateTab,

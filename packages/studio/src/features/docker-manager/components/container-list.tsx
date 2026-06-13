@@ -12,6 +12,7 @@ type Props = {
 	onStopContainer?: (id: string) => void
 	onRestartContainer?: (id: string) => void
 	onOpenContainerInDataViewer?: (container: DockerContainer) => void
+	onRemoveContainer?: (id: string) => void
 	isActionPending?: boolean
 	isLoading?: boolean
 	searchQuery?: string
@@ -26,6 +27,7 @@ export function ContainerList({
 	onStopContainer,
 	onRestartContainer,
 	onOpenContainerInDataViewer,
+	onRemoveContainer,
 	isActionPending = false,
 	isLoading = false,
 	searchQuery = '',
@@ -115,7 +117,7 @@ export function ContainerList({
 					<Container className='h-12 w-12 mx-auto mb-4 text-muted-foreground/50' />
 					<h3 className='text-sm font-medium mb-1'>No containers yet</h3>
 					<p className='text-xs text-muted-foreground max-w-[200px]'>
-						Create your first PostgreSQL container to start working with local
+						Create your first database container to start working with local
 						development databases.
 					</p>
 				</div>
@@ -143,6 +145,7 @@ export function ContainerList({
 							onStop={onStopContainer}
 							onRestart={onRestartContainer}
 							onOpenInDataViewer={onOpenContainerInDataViewer}
+							onRemove={onRemoveContainer}
 							isActionPending={isActionPending}
 						/>
 					)

@@ -19,8 +19,13 @@ export function DatabaseTypeIcon({ type, className, withColor = true }: Props) {
 		case 'postgres':
 		case 'postgresql':
 			return <Postgres className={baseClass} />
+		case 'cockroach':
+			return <Postgres className={baseClass} />
 
 		case 'sqlite':
+			return <Sqlite className={baseClass} />
+
+		case 'duckdb':
 			return <Sqlite className={baseClass} />
 
 		case 'libsql':
@@ -28,6 +33,7 @@ export function DatabaseTypeIcon({ type, className, withColor = true }: Props) {
 			return <Turso className={baseClass} />
 
 		case 'mysql':
+		case 'mariadb':
 			return <Sql className={baseClass} />
 
 		default:

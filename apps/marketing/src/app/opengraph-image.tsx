@@ -109,7 +109,7 @@ export default async function OgImage() {
                                 fontWeight: 500
                             }}
                         >
-                            doradb.vercel.app
+                            doradb.app
                         </div>
                     </div>
                     <div

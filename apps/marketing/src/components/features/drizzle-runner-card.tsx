@@ -206,7 +206,7 @@ export function DrizzleRunnerCard({ animate }: { animate: boolean }) {
   return (
     <div ref={ref} className="relative h-full flex flex-col overflow-hidden">
       <CardAura active={running} />
-      <div className="relative flex-1 px-4 pt-5">
+      <div className="relative px-4 pt-5 pb-4">
         {/* editor — relative anchor for the caret + floating popup */}
         <div
           ref={editorRef}
@@ -344,7 +344,7 @@ export function DrizzleRunnerCard({ animate }: { animate: boolean }) {
         </div>
       </div>
 
-      <div className="relative px-5 pb-5 pt-3">
+      <div className="relative px-5 pt-3 pb-10">
         <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
           Drizzle support
         </h3>

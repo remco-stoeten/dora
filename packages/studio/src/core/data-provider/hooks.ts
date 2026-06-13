@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import type { SortDescriptor, FilterDescriptor, TableData } from '@studio/features/database-studio/types'
 import type { Connection } from '@studio/features/connections/types'
@@ -134,16 +135,44 @@ export function useConnectionMutations() {
 
 export function useSchema(connectionId: string | undefined) {
 	const adapter = useAdapter()
+	const queryClient = useQueryClient()
+
+	useEffect(
+		function listenForSchemaRefresh() {
+			if (!connectionId) return
+
+			function onSchemaRefresh(event: Event) {
+				const customEvent = event as CustomEvent<{ connectionId?: string }>
+				const targetConnectionId = customEvent.detail?.connectionId
+				if (!targetConnectionId || targetConnectionId === connectionId) {
+					void queryClient.invalidateQueries({ queryKey: ['schema', connectionId] })
+				}
+			}
+
+			window.addEventListener('dora-schema-refresh', onSchemaRefresh as EventListener)
+			return function () {
+				window.removeEventListener('dora-schema-refresh', onSchemaRefresh as EventListener)
+			}
+		},
+		[connectionId, queryClient]
+	)
 
 	return useQuery({
 		queryKey: ['schema', connectionId],
 		queryFn: async function () {
 			if (!connectionId) throw new Error('No connection ID')
+
+			const connectResult = await adapter.connectToDatabase(connectionId)
+			if (!connectResult.ok) {
+				throw new Error(getAdapterError(connectResult))
+			}
+
 			const res = await adapter.getSchema(connectionId)
 			if (!res.ok) throw new Error(getAdapterError(res))
 			return res.data
 		},
-		enabled: !!connectionId
+		enabled: !!connectionId,
+		retry: false
 	})
 }
 

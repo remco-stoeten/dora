@@ -1,0 +1,6 @@
+sku	name	category	unit_price	in_stock
+ANNUAL-PRO	Annual Pro	subscription	240.00	true
+ENT-SEAT	Enterprise Seat	subscription	1200.00	true
+ADDON-STORAGE	Add-on Storage	addon	48.00	true
+ADDON-SEATS	Extra Seats	addon	96.00	false
+TRIAL	Free Trial	subscription	0.00	true

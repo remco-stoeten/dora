@@ -27,6 +27,7 @@ import { clearTableDataCache } from "@studio/core/table-cache";
 import { Skeleton } from "@studio/shared/ui/skeleton";
 import { toast } from "@studio/shared/ui/notifier";
 import { SqlQueryResult, ResultViewMode, SqlSnippet, TableInfo } from "./types";
+import type { ResultChartConfig } from "@studio/features/result-charts/types";
 
 const SqlEditor = lazy(function () {
   return import("./components/sql-editor").then(function (module) {
@@ -47,7 +48,6 @@ function notifyFailure(title: string, error: unknown) {
 }
 
 type Props = {
-  onToggleSidebar?: () => void;
   activeConnectionId?: string;
   getConnectionName?: (id: string) => string;
   onEditorContextChange?: (context: AiAssistantEditorContext | null) => void;
@@ -62,7 +62,6 @@ export function SqlConsole(props: Props) {
 }
 
 function SqlConsoleInner({
-  onToggleSidebar: _onToggleSidebar,
   activeConnectionId,
   getConnectionName,
   onEditorContextChange,
@@ -80,6 +79,8 @@ function SqlConsoleInner({
   const result = activeTab.result;
   const isExecuting = activeTab.isExecuting;
   const viewMode = activeTab.viewMode;
+  const chartConfig = activeTab.chartConfig;
+  const historyEntryId = activeTab.historyEntryId;
 
   function setMode(m: "sql" | "drizzle") {
     tabStore.setTabMode(activeTab.id, m);
@@ -126,7 +127,17 @@ function SqlConsoleInner({
   const [showAiCmdK, setShowAiCmdK] = useState(false);
   const [tables, setTables] = useState<TableInfo[]>([]);
 
-  const { addToHistory } = useQueryHistory();
+  const { addToHistory, updateChartConfig } = useQueryHistory();
+
+  const handleChartConfigChange = useCallback(
+    function (nextChartConfig: ResultChartConfig) {
+      tabStore.setTabChartConfig(activeTab.id, nextChartConfig);
+      if (historyEntryId) {
+        updateChartConfig(historyEntryId, nextChartConfig);
+      }
+    },
+    [activeTab.id, historyEntryId, tabStore, updateChartConfig],
+  );
 
   useEffect(
     function syncAiEditorContext() {
@@ -400,13 +411,15 @@ function SqlConsoleInner({
               );
             }
 
-            addToHistory({
+            const historyId = addToHistory({
               query: queryToRun,
               connectionId: activeConnectionId,
               executionTimeMs: res.data.executionTime || 0,
               success: true,
               rowCount: res.data.rowCount,
+              chartConfig,
             });
+            tabStore.setTabHistoryEntry(activeTab.id, historyId);
           } else {
             throw new Error(getAdapterError(res));
           }
@@ -466,20 +479,32 @@ function SqlConsoleInner({
             queryType: "OTHER",
           });
 
-          addToHistory({
+          const historyId = addToHistory({
             query: historyQuery,
             connectionId: activeConnectionId || null,
             executionTimeMs: 0,
             success: false,
             error: errorMsg,
           });
+          tabStore.setTabHistoryEntry(activeTab.id, historyId);
         }
       } finally {
         cancelledRef.current = false;
         setIsExecuting(false);
       }
     },
-    [mode, currentSqlQuery, currentDrizzleQuery, isExecuting, activeConnectionId, adapter],
+    [
+      mode,
+      currentSqlQuery,
+      currentDrizzleQuery,
+      isExecuting,
+      activeConnectionId,
+      adapter,
+      addToHistory,
+      activeTab.id,
+      chartConfig,
+      tabStore,
+    ],
   );
 
   const handleCancel = useCallback(async () => {
@@ -488,6 +513,39 @@ function SqlConsoleInner({
       await adapter.cancelActiveQuery(activeConnectionId);
     }
   }, [adapter, activeConnectionId]);
+
+  useEffect(
+    function registerCaptureHelpers() {
+      if (typeof window === "undefined") return;
+      if (!window.__DORA_CAPTURE_MODE) return;
+
+      window.__DORA_CAPTURE_SET_SQL = function (sql: string) {
+        tabStore.setTabMode(activeTab.id, "sql");
+        tabStore.updateTabContent(activeTab.id, "sqlContent", sql);
+      };
+
+      window.__DORA_CAPTURE_RUN_SQL = function (sql: string) {
+        void handleExecute(sql, "sql");
+      };
+
+      window.__DORA_CAPTURE_SET_DRIZZLE = function (code: string) {
+        tabStore.setTabMode(activeTab.id, "drizzle");
+        tabStore.updateTabContent(activeTab.id, "drizzleContent", code);
+      };
+
+      window.__DORA_CAPTURE_RUN_DRIZZLE = function (code: string) {
+        void handleExecute(code, "drizzle");
+      };
+
+      return function () {
+        delete window.__DORA_CAPTURE_SET_SQL;
+        delete window.__DORA_CAPTURE_RUN_SQL;
+        delete window.__DORA_CAPTURE_SET_DRIZZLE;
+        delete window.__DORA_CAPTURE_RUN_DRIZZLE;
+      };
+    },
+    [activeTab.id, handleExecute, tabStore],
+  );
 
   useEffect(
     function listenForPaletteCommands() {
@@ -930,6 +988,17 @@ function SqlConsoleInner({
       { description: "Toggle query history" },
     );
 
+  $.key("v")
+    .except("typing")
+    .on(
+      function () {
+        const modes: ResultViewMode[] = ["table", "json", "chart"];
+        const currentIndex = modes.indexOf(viewMode);
+        setViewMode(modes[(currentIndex + 1) % modes.length]);
+      },
+      { description: "Cycle result view" },
+    );
+
   // Tab management shortcuts
   $.bind("ctrl+t").on(
     function () {
@@ -988,11 +1057,16 @@ function SqlConsoleInner({
               <QueryHistoryPanel
                 currentConnectionId={activeConnectionId}
                 getConnectionName={getConnectionName}
-                onSelectQuery={function (query) {
+                onSelectQuery={function (item) {
                   if (mode === "sql") {
-                    setCurrentSqlQuery(query);
+                    setCurrentSqlQuery(item.query);
                   } else {
-                    setCurrentDrizzleQuery(query);
+                    setCurrentDrizzleQuery(item.query);
+                  }
+                  tabStore.setTabChartConfig(activeTab.id, item.chartConfig ?? null);
+                  tabStore.setTabHistoryEntry(activeTab.id, item.id);
+                  if (item.chartConfig) {
+                    setViewMode("chart");
                   }
                 }}
               />
@@ -1088,6 +1162,8 @@ function SqlConsoleInner({
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                     onExport={handleExport}
+                    chartConfig={chartConfig}
+                    onChartConfigChange={handleChartConfigChange}
                     connectionId={activeConnectionId}
                     showFilter={showFilter}
                     onRefresh={() => handleExecute()}

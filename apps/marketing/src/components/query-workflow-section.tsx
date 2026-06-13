@@ -1,16 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { CornerTick } from "@/components/corner-tick";
+import { SectionFrame } from "@/components/section-frame";
 import { AIAssistantCard } from "@/components/features/ai-assistant-card";
 import { DrizzleRunnerCard } from "@/components/features/drizzle-runner-card";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { getFeaturePath } from "@/core/config/features";
 import { usePageVisible } from "@/shared/hooks/use-page-visible";
 import { usePrefersReducedMotion } from "@/shared/hooks/use-prefers-reduced-motion";
 
 const CELL_CLASS =
-  "min-h-[340px] border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]";
+  "relative min-h-[340px] scroll-mt-28 border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]";
 const REVEAL_CLASS = "flex h-full w-full";
 
 /* ---------------------------------------------------------------------------
@@ -37,12 +40,9 @@ export function QueryWorkflowSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full border-l border-t border-[#3a3138]"
+      className="relative w-full"
     >
-      <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
-      <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
-      <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
-      <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
+      <SectionFrame />
 
       <div className="px-6 sm:px-8 py-12 border-b border-r border-[#2b252c]">
         <ScrollReveal delay={40}>
@@ -62,15 +62,27 @@ export function QueryWorkflowSection() {
         <CornerTick className="hidden md:block left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
         <CornerTick className="hidden md:block left-1/2 top-0 -translate-x-1/2 -translate-y-1/2" />
         <CornerTick className="hidden md:block left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2" />
-        <div className={CELL_CLASS}>
+        <div id="feature-ai-assistant" className={CELL_CLASS}>
           <ScrollReveal className={REVEAL_CLASS} delay={0}>
             <AIAssistantCard animate={animate} />
           </ScrollReveal>
+          <Link
+            className="absolute bottom-4 right-4 z-10 text-[11px] text-[#ad8eb6] transition-colors hover:text-[#f5c0c0]"
+            href={getFeaturePath("ai-assistant")}
+          >
+            Learn more →
+          </Link>
         </div>
-        <div className={CELL_CLASS}>
+        <div id="feature-drizzle-runner" className={CELL_CLASS}>
           <ScrollReveal className={REVEAL_CLASS} delay={90}>
             <DrizzleRunnerCard animate={animate} />
           </ScrollReveal>
+          <Link
+            className="absolute bottom-4 right-4 z-10 text-[11px] text-[#ad8eb6] transition-colors hover:text-[#f5c0c0]"
+            href={getFeaturePath("drizzle-runner")}
+          >
+            Learn more →
+          </Link>
         </div>
       </div>
     </section>

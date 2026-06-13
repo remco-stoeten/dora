@@ -3,8 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { ENV_MODE, getEnv } from "@studio/core/env";
 import { TooltipProvider } from "@studio/shared/ui/tooltip";
 import { useToast } from "@studio/shared/ui/use-toast";
-import { useAdapter } from "@studio/core/data-provider";
+import { useAdapter, useIsTauri } from "@studio/core/data-provider";
 import { getAdapterError } from "@studio/core/data-provider/types";
+import { commands } from "@studio/lib/bindings";
 import { useSettings } from "@studio/core/settings";
 import { useEffectiveShortcuts, useShortcut } from "@studio/core/shortcuts";
 import { LiveMonitorProvider } from "@studio/core/live-monitor";
@@ -17,6 +18,13 @@ import {
 } from "@studio/features/connections/utils/mapping";
 import { ConnectionDialog } from "@studio/features/connections/components/connection-dialog";
 import { Connection } from "@studio/features/connections/types";
+import {
+  classifyDroppedPaths,
+  buildConnectionFromDataFiles,
+  buildConnectionFromDatabaseFile,
+  resolveDatabaseTypeForPath,
+  type DatabaseFileKind,
+} from "@studio/features/connections/utils/data-files";
 import { useAiAssistantStore } from "@studio/features/ai-assistant/store";
 import type { AiAssistantEditorContext } from "@studio/features/ai-assistant/types";
 import { Sparkles } from "lucide-react";
@@ -62,11 +70,17 @@ import { Plug } from "lucide-react";
 function IndexInner() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleDatabasePanel = useCallback(function () {
+    setIsSidebarOpen(function (open) {
+      return !open;
+    });
+  }, []);
   const { settings, updateSetting, updateSettings, isLoading: isSettingsLoading } = useSettings();
 
   const { data: connections = [], isLoading: isConnectionsLoading } = useConnections();
   const isLoading = isSettingsLoading || isConnectionsLoading;
   const { addConnection, updateConnection, removeConnection } = useConnectionMutations();
+  const isTauri = useIsTauri();
 
   const urlView = searchParams.get("view");
   const urlTable = searchParams.get("table");
@@ -95,8 +109,13 @@ function IndexInner() {
   const sidebarSelectedTableId = selectedTableId;
 
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
+  const [connectionDialogDroppedPaths, setConnectionDialogDroppedPaths] = useState<
+    string[] | null
+  >(null);
+  const [connectionDialogDragActive, setConnectionDialogDragActive] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<Connection | undefined>(undefined);
+  const isConnectionDialogOpenRef = useRef(isConnectionDialogOpen);
 
   const startupConnectionMode =
     settings.startupConnectionMode ?? (settings.restoreLastConnection ? "auto" : "empty");
@@ -125,14 +144,29 @@ function IndexInner() {
     { description: shortcuts.newConnection.description },
   );
 
-  $.bind(shortcuts.toggleSidebar.combo).on(
-    function () {
-      setIsSidebarOpen(function (open) {
-        return !open;
-      });
+  useEffect(
+    function syncConnectionDialogOpenRef() {
+      isConnectionDialogOpenRef.current = isConnectionDialogOpen;
     },
-    { description: shortcuts.toggleSidebar.description },
+    [isConnectionDialogOpen],
   );
+
+  async function probeDatabaseFileKind(path: string): Promise<DatabaseFileKind> {
+    if (!isTauri) return "unknown";
+    const result = await commands.probeDatabaseFile(path);
+    if (result.status === "ok") {
+      return result.data;
+    }
+    return "unknown";
+  }
+
+  async function resolveDatabaseType(path: string) {
+    return resolveDatabaseTypeForPath(path, probeDatabaseFileKind);
+  }
+
+  $.bind(shortcuts.toggleSidebar.combo).on(toggleDatabasePanel, {
+    description: shortcuts.toggleSidebar.description,
+  });
 
   $.bind(shortcuts.toggleAiAssistant.combo).on(
     function () {
@@ -175,6 +209,31 @@ function IndexInner() {
       },
       { description: shortcuts.gotoConnections.description },
     );
+
+  useEffect(
+    function syncCaptureReady() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("capture") !== "1") return;
+
+      window.__DORA_CAPTURE_MODE = true;
+
+      if (isLoading) {
+        document.documentElement.removeAttribute("data-dora-capture-ready");
+        return;
+      }
+
+      const timer = window.setTimeout(function () {
+        document.documentElement.dataset.doraCaptureReady = "true";
+        window.__DORA_CAPTURE_READY_AT = performance.now();
+      }, 500);
+
+      return function () {
+        window.clearTimeout(timer);
+        document.documentElement.removeAttribute("data-dora-capture-ready");
+      };
+    },
+    [isLoading, activeNavId],
+  );
 
   $.bind(shortcuts.gotoEditor.combo)
     .except("typing")
@@ -387,6 +446,107 @@ function IndexInner() {
     }
   }
 
+  async function handleOpenDataFiles(paths: string[]) {
+    const dataFiles = classifyDroppedPaths(paths).dataFiles;
+    if (dataFiles.length === 0) return;
+    await handleAddConnection(buildConnectionFromDataFiles(dataFiles));
+  }
+
+  async function handleOpenDatabaseFile(path: string) {
+    const type = await resolveDatabaseType(path);
+    await handleAddConnection(buildConnectionFromDatabaseFile(path, type));
+  }
+
+  async function processImmediateFileDrop(paths: string[]) {
+    const { dataFiles, databaseFiles, unsupported } = classifyDroppedPaths(paths);
+
+    if (unsupported.length > 0) {
+      toast({
+        title: "Unsupported file type",
+        description: `Could not open: ${unsupported.map(function (p) {
+          return p.split(/[\\/]/).pop() ?? p;
+        }).join(", ")}`,
+        variant: "destructive",
+      });
+    }
+
+    if (dataFiles.length > 0) {
+      await handleOpenDataFiles(dataFiles);
+    }
+
+    for (const path of databaseFiles) {
+      await handleOpenDatabaseFile(path);
+    }
+  }
+
+  async function handlePickDataFiles() {
+    try {
+      const result = await commands.openDataFiles();
+      if (result.status === "ok" && result.data.length > 0) {
+        await handleOpenDataFiles(result.data);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to open data files",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Keep the latest handlers reachable from the drag-drop listener, which is
+  // subscribed once (per Tauri availability) and would otherwise close over
+  // stale mutation references.
+  const dropHandlerRef = useRef<(paths: string[]) => void>(function () {});
+  dropHandlerRef.current = function (paths) {
+    if (isConnectionDialogOpenRef.current) {
+      setConnectionDialogDroppedPaths(paths);
+      return;
+    }
+    void processImmediateFileDrop(paths);
+  };
+
+  useEffect(
+    function subscribeToFileDrop() {
+      if (!isTauri) return;
+      let unlisten: (() => void) | undefined;
+      let cancelled = false;
+
+      import("@tauri-apps/api/webview")
+        .then(function ({ getCurrentWebview }) {
+          return getCurrentWebview().onDragDropEvent(function (event) {
+            if (event.payload.type === "over") {
+              if (isConnectionDialogOpenRef.current) {
+                setConnectionDialogDragActive(true);
+              }
+              return;
+            }
+            if (event.payload.type === "leave") {
+              setConnectionDialogDragActive(false);
+              return;
+            }
+            if (event.payload.type === "drop") {
+              setConnectionDialogDragActive(false);
+              dropHandlerRef.current(event.payload.paths ?? []);
+            }
+          });
+        })
+        .then(function (fn) {
+          if (cancelled) fn();
+          else unlisten = fn;
+        })
+        .catch(function () {
+          /* drag-drop is a desktop-only nicety; ignore when unavailable */
+        });
+
+      return function () {
+        cancelled = true;
+        unlisten?.();
+      };
+    },
+    [isTauri],
+  );
+
   async function handleUpdateConnection(
     connection: Omit<Connection, "id" | "status" | "createdAt">,
   ) {
@@ -539,7 +699,18 @@ function IndexInner() {
         <SidebarProvider>
           <div className="flex flex-col h-full w-full bg-background overflow-hidden">
             <div className="flex flex-1 overflow-hidden">
-              <NavigationSidebar activeNavId={activeNavId} onNavSelect={setActiveNavId} />
+              <NavigationSidebar
+                activeNavId={activeNavId}
+                onNavSelect={setActiveNavId}
+                databasePanelToggle={
+                  showDatabasePanel
+                    ? {
+                        isOpen: isSidebarOpen,
+                        onToggle: toggleDatabasePanel,
+                      }
+                    : undefined
+                }
+              />
 
               {showDatabasePanel && isSidebarOpen && (
                 <DatabaseSidebar
@@ -553,6 +724,8 @@ function IndexInner() {
                   activeConnectionId={activeConnectionId}
                   onConnectionSelect={handleConnectionSelect}
                   onAddConnection={handleOpenNewConnection}
+                  onToggleSidebar={toggleDatabasePanel}
+                  isSidebarOpen={isSidebarOpen}
                   onManageConnections={function () {
                     const activeConn = connections.find(function (c) {
                       return c.id === activeConnectionId;
@@ -617,10 +790,6 @@ function IndexInner() {
                           key={studioConnectionId || "empty"}
                           tableId={selectedTableId}
                           tableName={selectedTableName}
-                          isSidebarOpen={isSidebarOpen}
-                          onToggleSidebar={function () {
-                            return setIsSidebarOpen(!isSidebarOpen);
-                          }}
                           initialRowPK={settings.lastRowPK}
                           onRowSelectionChange={function (pk) {
                             if (pk !== settings.lastRowPK) {
@@ -629,15 +798,19 @@ function IndexInner() {
                           }}
                           activeConnectionId={studioConnectionId}
                           onAddConnection={handleOpenNewConnection}
+                          onEditConnection={
+                            studioConnectionId
+                              ? function () {
+                                  handleEditConnection(studioConnectionId);
+                                }
+                              : undefined
+                          }
                         />
                       </ErrorBoundary>
                     </div>
                   ) : activeNavId === "sql-console" ? (
                     <ErrorBoundary feature="SQL Console">
                       <SqlConsole
-                        onToggleSidebar={function () {
-                          return setIsSidebarOpen(!isSidebarOpen);
-                        }}
                         activeConnectionId={activeConnectionId}
                         onEditorContextChange={setSqlConsoleEditorContext}
                         getConnectionName={function (id) {
@@ -707,9 +880,6 @@ function IndexInner() {
                   ) : (
                     <ErrorBoundary feature="SQL Console">
                       <SqlConsole
-                        onToggleSidebar={function () {
-                          return setIsSidebarOpen(!isSidebarOpen);
-                        }}
                         activeConnectionId={activeConnectionId}
                         onEditorContextChange={setSqlConsoleEditorContext}
                         getConnectionName={function (id) {
@@ -729,9 +899,32 @@ function IndexInner() {
                 open={isConnectionDialogOpen}
                 onOpenChange={function (open) {
                   setIsConnectionDialogOpen(open);
-                  if (!open) setEditingConnection(undefined);
+                  if (!open) {
+                    setEditingConnection(undefined);
+                    setConnectionDialogDroppedPaths(null);
+                    setConnectionDialogDragActive(false);
+                  }
                 }}
                 onSave={handleDialogSave}
+                droppedFilePaths={connectionDialogDroppedPaths}
+                externalDropActive={connectionDialogDragActive}
+                onDroppedFilePathsHandled={function () {
+                  setConnectionDialogDroppedPaths(null);
+                }}
+                onOpenDataFiles={
+                  isTauri
+                    ? async function (paths?: string[]) {
+                        if (paths && paths.length > 0) {
+                          setIsConnectionDialogOpen(false);
+                          await handleOpenDataFiles(paths);
+                          return;
+                        }
+                        setIsConnectionDialogOpen(false);
+                        await handlePickDataFiles();
+                      }
+                    : undefined
+                }
+                resolveDatabaseType={resolveDatabaseType}
                 initialValues={editingConnection}
               />
 

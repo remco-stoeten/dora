@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, XCircle, Plug2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Loader2, CheckCircle2, XCircle, DatabaseZap, FileSpreadsheet } from "lucide-react";
 import { commands, DatabaseInfo } from "@studio/lib/bindings";
 import { formatBackendError } from "@studio/shared/utils/backend-error";
 import { Button } from "@studio/shared/ui/button";
@@ -15,6 +15,7 @@ import {
 import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
 import { Connection, DatabaseType, SshAuthMethod, SshTunnelConfig } from "../types";
+import { getSourceCaps } from "../source-caps";
 import {
   sanitizeConnectionUrl,
   isValidConnectionUrl,
@@ -28,15 +29,37 @@ import {
 import { validateConnection } from "../validation";
 import { ConnectionForm } from "./connection-dialog/connection-form";
 import { DatabaseTypeSelector } from "./connection-dialog/database-type-selector";
+import { DatabaseIcon, DATABASE_META } from "./database-icons";
+import {
+  classifyDroppedPaths,
+  connectionNameFromPath,
+} from "../utils/data-files";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (connection: Omit<Connection, "id" | "createdAt">) => void;
+  /** Opens data files — with paths from a drop, or opens the picker when omitted. */
+  onOpenDataFiles?: (paths?: string[]) => void | Promise<void>;
+  /** Resolve `.db` and other ambiguous database files via header probing. */
+  resolveDatabaseType?: (path: string) => Promise<DatabaseType>;
+  droppedFilePaths?: string[] | null;
+  externalDropActive?: boolean;
+  onDroppedFilePathsHandled?: () => void;
   initialValues?: Connection;
 };
 
-export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: Props) {
+export function ConnectionDialog({
+  open,
+  onOpenChange,
+  onSave,
+  onOpenDataFiles,
+  resolveDatabaseType,
+  droppedFilePaths,
+  externalDropActive = false,
+  onDroppedFilePathsHandled,
+  initialValues,
+}: Props) {
   const [formData, setFormData] = useState<Partial<Connection>>({
     type: "postgres",
     host: "localhost",
@@ -66,13 +89,103 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
     field?: string;
     message?: string;
   } | null>(null);
+  const [isDropTargetActive, setIsDropTargetActive] = useState(false);
+  const showDropOverlay = isDropTargetActive || externalDropActive;
+
+  const applyDatabaseFile = useCallback(
+    async function applyDatabaseFile(path: string) {
+      const type = resolveDatabaseType
+        ? await resolveDatabaseType(path)
+        : path.toLowerCase().endsWith(".duckdb")
+          ? "duckdb"
+          : "sqlite";
+
+      setFormData(function (prev) {
+        return {
+          ...prev,
+          type,
+          url: path,
+          name: prev.name && prev.name !== "" ? prev.name : connectionNameFromPath(path),
+          fileSources: undefined,
+        };
+      });
+      setUseConnectionString(false);
+      setTestStatus("idle");
+      setTestMessage("");
+    },
+    [resolveDatabaseType],
+  );
+
+  useEffect(
+    function handleDroppedFiles() {
+      if (!open || !droppedFilePaths?.length) return;
+
+      void (async function () {
+        const { dataFiles, databaseFiles, unsupported } = classifyDroppedPaths(droppedFilePaths);
+
+        if (unsupported.length > 0) {
+          toast.error("Unsupported file type", {
+            description: unsupported
+              .map(function (p) {
+                return p.split(/[\\/]/).pop() ?? p;
+              })
+              .join(", "),
+          });
+        }
+
+        if (dataFiles.length > 0 && databaseFiles.length > 0) {
+          toast.error("Drop one kind at a time", {
+            description: "Drop either data files (CSV, Parquet, JSON) or a database file, not both.",
+          });
+          onDroppedFilePathsHandled?.();
+          return;
+        }
+
+        if (dataFiles.length > 0) {
+          onDroppedFilePathsHandled?.();
+          if (onOpenDataFiles) {
+            await onOpenDataFiles(dataFiles);
+          }
+          return;
+        }
+
+        if (databaseFiles.length > 1) {
+          toast.error("One database file at a time", {
+            description: "Drop a single SQLite or DuckDB file to pre-fill this connection.",
+          });
+          onDroppedFilePathsHandled?.();
+          return;
+        }
+
+        if (databaseFiles.length === 1) {
+          await applyDatabaseFile(databaseFiles[0]);
+          onDroppedFilePathsHandled?.();
+          return;
+        }
+
+        onDroppedFilePathsHandled?.();
+      })();
+    },
+    [
+      open,
+      droppedFilePaths,
+      onDroppedFilePathsHandled,
+      onOpenDataFiles,
+      applyDatabaseFile,
+    ],
+  );
 
   useEffect(
     function resetFormOnOpen() {
       if (open) {
-        const hasUrl =
-          initialValues?.url &&
-          (initialValues.type === "postgres" || initialValues.type === "mysql");
+        const initialCaps = initialValues
+          ? getSourceCaps({
+              type: initialValues.type ?? "postgres",
+              fileSources: initialValues.fileSources,
+              url: initialValues.url,
+            })
+          : null;
+        const hasUrl = !!initialValues?.url && !!initialCaps?.supportsSshTunnel;
         setFormData({
           type: "postgres",
           host: "localhost",
@@ -121,7 +234,7 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
             database: undefined,
             ssl: undefined,
           };
-          if (updates.url && nextType === "postgres") {
+          if (updates.url && (nextType === "postgres" || nextType === "cockroach")) {
             updates.poolerMode = hasPostgresPoolerMode(updates.url);
           }
 
@@ -133,7 +246,11 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
         });
         // Host/port providers use the connection-string toggle; file/token
         // providers (sqlite/libsql) have their own dedicated fields.
-        setUseConnectionString(detectedType !== "sqlite" && detectedType !== "libsql");
+        setUseConnectionString(
+          detectedType
+            ? getSourceCaps({ type: detectedType, url: sanitized }).supportsSshTunnel
+            : false,
+        );
 
         // After libSQL switches in, move focus to the Auth Token field so
         // the user can paste their token straight away.
@@ -165,6 +282,8 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
         if (config.defaultPort > 0) {
           newData.port = config.defaultPort;
         }
+        newData.user = config.defaultUser || undefined;
+        newData.database = config.defaultDatabase || undefined;
       }
 
       return newData;
@@ -178,7 +297,12 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
 
   function handleTypeSelect(type: DatabaseType) {
     updateField("type", type);
-    if (type === "sqlite" || type === "libsql") {
+    const caps = getSourceCaps({
+      type,
+      fileSources: formData.fileSources,
+      url: formData.url,
+    });
+    if (!caps.supportsSshTunnel) {
       setUseConnectionString(false);
     }
   }
@@ -200,6 +324,14 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
           return;
         }
         databaseInfo = { SQLite: { db_path: formData.url } };
+      } else if (formData.type === "duckdb") {
+        if (!formData.url) {
+          setTestStatus("error");
+          setTestMessage("Database path is required");
+          setIsTesting(false);
+          return;
+        }
+        databaseInfo = { DuckDB: { db_path: formData.url } };
       } else if (formData.type === "libsql") {
         if (!formData.url) {
           setTestStatus("error");
@@ -290,6 +422,21 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
               ssh_config: sshConfig,
             },
           };
+        } else if (formData.type === "mariadb") {
+          databaseInfo = {
+            MariaDB: {
+              connection_string: connectionString,
+              ssh_config: sshConfig,
+            },
+          };
+        } else if (formData.type === "cockroach") {
+          connectionString = setPostgresPoolerMode(connectionString, formData.poolerMode ?? false);
+          databaseInfo = {
+            CockroachDB: {
+              connection_string: connectionString,
+              ssh_config: sshConfig,
+            },
+          };
         } else {
           connectionString = setPostgresPoolerMode(connectionString, formData.poolerMode ?? false);
           databaseInfo = {
@@ -359,31 +506,115 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
     }
   }
 
+  const selectedProvider = DATABASE_META[formData.type || "postgres"];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] max-h-[85vh] flex flex-col border-border/60 bg-card p-0 gap-0 overflow-hidden shadow-2xl">
-        {/* Header */}
-        <DialogHeader className="px-6 py-5 border-b border-border/40 bg-muted/20">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
-              <Plug2 className="h-5 w-5 text-primary" />
+      <DialogContent
+        className="relative flex max-h-[min(calc(100vh-2rem),880px)] flex-col gap-0 overflow-hidden rounded-none border-border/70 bg-background p-0 shadow-2xl sm:max-w-[640px] [&_input]:rounded-none [&_button]:rounded-none"
+        onDragEnter={function (e) {
+          if (!onOpenDataFiles && !resolveDatabaseType) return;
+          e.preventDefault();
+          setIsDropTargetActive(true);
+        }}
+        onDragOver={function (e) {
+          if (!onOpenDataFiles && !resolveDatabaseType) return;
+          e.preventDefault();
+          setIsDropTargetActive(true);
+        }}
+        onDragLeave={function (e) {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          setIsDropTargetActive(false);
+        }}
+        onDrop={function (e) {
+          setIsDropTargetActive(false);
+          if (!onOpenDataFiles && !resolveDatabaseType) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const paths = Array.from(e.dataTransfer.files)
+            .map(function (file) {
+              const withPath = file as File & { path?: string };
+              return withPath.path ?? "";
+            })
+            .filter(Boolean);
+          if (paths.length === 0) return;
+          void (async function () {
+            const { dataFiles, databaseFiles, unsupported } = classifyDroppedPaths(paths);
+
+            if (unsupported.length > 0) {
+              toast.error("Unsupported file type", {
+                description: unsupported
+                  .map(function (p) {
+                    return p.split(/[\\/]/).pop() ?? p;
+                  })
+                  .join(", "),
+              });
+            }
+
+            if (dataFiles.length > 0 && databaseFiles.length > 0) {
+              toast.error("Drop one kind at a time", {
+                description:
+                  "Drop either data files (CSV, Parquet, JSON) or a database file, not both.",
+              });
+              return;
+            }
+
+            if (dataFiles.length > 0) {
+              if (onOpenDataFiles) await onOpenDataFiles(dataFiles);
+              return;
+            }
+
+            if (databaseFiles.length > 1) {
+              toast.error("One database file at a time", {
+                description: "Drop a single SQLite or DuckDB file to pre-fill this connection.",
+              });
+              return;
+            }
+
+            if (databaseFiles.length === 1) {
+              await applyDatabaseFile(databaseFiles[0]);
+            }
+          })();
+        }}
+      >
+        {showDropOverlay ? (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border-2 border-dashed border-[hsl(48_72%_52%)]/70 bg-background/85 backdrop-blur-[1px]">
+            <div className="flex flex-col items-center gap-2 px-6 text-center">
+              <FileSpreadsheet className="h-8 w-8 text-[hsl(48_72%_52%)]" strokeWidth={1.8} />
+              <p className="text-sm font-medium text-foreground">Drop to detect file type</p>
+              <p className="text-xs text-muted-foreground">
+                CSV, Parquet, JSON, SQLite, DuckDB, and related database files
+              </p>
             </div>
-            <div>
-              <DialogTitle className="text-base font-semibold tracking-tight">
-                {initialValues ? "Edit Connection" : "New Connection"}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Configure your database connection details
+          </div>
+        ) : null}
+        <DialogHeader className="border-b border-border/50 px-6 py-5 pr-12">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-border/70 bg-card shadow-sm">
+              <DatabaseZap className="h-5 w-5 text-foreground/80" strokeWidth={1.8} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <DialogTitle className="text-lg font-semibold tracking-tight">
+                  {initialValues ? "Edit connection" : "Create connection"}
+                </DialogTitle>
+                <span className="inline-flex shrink-0 items-center gap-1.5 border border-border/65 bg-muted/40 px-2.5 py-0.5 text-xs text-muted-foreground">
+                  <DatabaseIcon type={formData.type || "postgres"} className="h-3.5 w-3.5" />
+                  {selectedProvider.name}
+                </span>
+              </div>
+              <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                Paste a URL, drop a database or data file, or configure details manually.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          <div className="space-y-2">
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          <div className="border border-border/60 bg-card/45 p-4 shadow-sm">
             <Label
               htmlFor="name"
-              className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+              className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
             >
               Connection Name
             </Label>
@@ -394,19 +625,41 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
               onChange={function (e) {
                 updateField("name", e.target.value);
               }}
-              className="input-glow"
+              className="input-glow mt-2 h-10 bg-background/70"
               autoFocus
             />
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Database Type
-            </Label>
+          <div className="space-y-3 border border-border/60 bg-card/35 p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Database Type
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground/75">
+                  Choose the engine Dora should use for validation and queries.
+                </p>
+              </div>
+            </div>
             <DatabaseTypeSelector
               selectedType={formData.type || "postgres"}
               onSelect={handleTypeSelect}
             />
+            {onOpenDataFiles && (
+              <button
+                type="button"
+                onClick={function () {
+                  void onOpenDataFiles();
+                }}
+                className="group flex w-full items-center gap-2.5 border border-dashed border-border/60 bg-background/40 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-border hover:bg-card/60 hover:text-foreground"
+              >
+                <FileSpreadsheet className="h-4 w-4 shrink-0 text-[hsl(48_72%_52%)]" strokeWidth={1.8} />
+                <span className="flex-1">
+                  Or open a <span className="font-medium text-foreground/90">CSV, Parquet, or JSON</span> file as a read-only table
+                </span>
+                <span className="text-xs opacity-60 transition-transform group-hover:translate-x-0.5">→</span>
+              </button>
+            )}
           </div>
 
           <ConnectionForm
@@ -421,30 +674,28 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
             <div
               className={
                 testStatus === "success"
-                  ? "text-sm p-3 rounded-md flex items-center gap-2.5 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15"
-                  : "text-sm p-3 rounded-md flex items-center gap-2.5 bg-red-500/8 text-red-600 dark:text-red-400 border border-red-500/15"
+                  ? "flex items-start gap-2.5 border border-emerald-500/20 bg-emerald-500/8 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+                  : "flex items-start gap-2.5 border border-red-500/20 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300"
               }
             >
-              <div
-                className={
-                  testStatus === "success"
-                    ? "h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"
-                    : "h-1.5 w-1.5 rounded-full bg-red-500 shrink-0"
-                }
-              />
-              {testMessage}
+              {testStatus === "success" ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+              ) : (
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+              )}
+              <span className="leading-5">{testMessage}</span>
             </div>
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-border/40 bg-muted/10">
-          <div className="flex items-center justify-between w-full">
+        <DialogFooter className="border-t border-border/50 bg-muted/30 px-6 py-4">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={handleTestConnection}
               disabled={isTesting || !formData.type}
-              className="gap-2"
+              className="gap-2 self-start border-border/70 bg-background/65"
             >
               {isTesting ? (
                 <>
@@ -462,6 +713,7 @@ export function ConnectionDialog({ open, onOpenChange, onSave, initialValues }: 
                 onClick={function () {
                   onOpenChange(false);
                 }}
+                className="border-border/70"
               >
                 Cancel
               </Button>

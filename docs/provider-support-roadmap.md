@@ -1,6 +1,6 @@
 # Provider Support Roadmap
 
-This document is the implementation handoff for adding new database providers to Dora, starting with `MySQL`.
+This document is the implementation handoff for adding new database providers to Dora, starting with `MySQL` and its compatibility follow-ons `MariaDB` and `CockroachDB`.
 
 It is written so multiple agents can work on it in parallel without stepping on each other. Each workstream has:
 

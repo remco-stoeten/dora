@@ -56,6 +56,29 @@ async openFile(title: string | null) : Promise<Result<string | null, { kind: str
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Multi-select picker for flat data files (CSV / TSV / Parquet / JSON) that
+ * can be opened as a read-only DuckDB-backed connection.
+ */
+async openDataFiles() : Promise<Result<string[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_data_files") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read the first bytes of a database file and identify SQLite vs DuckDB.
+ */
+async probeDatabaseFile(path: string) : Promise<Result<DatabaseFileKind, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("probe_database_file", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async addConnection(name: string, databaseInfo: DatabaseInfo, color: number | null) : Promise<Result<ConnectionInfo, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("add_connection", { name, databaseInfo, color }) };
@@ -870,7 +893,16 @@ export type ConnectionHistoryEntry = { id: number; connection_id: string; connec
 export type ConnectionInfo = { id: string; name: string; connected: boolean; database_type: DatabaseInfo; last_connected_at: number | null; created_at: number | null; updated_at: number | null; pin_hash: string | null; favorite: boolean | null; color: string | null; sort_order: number | null }
 export type CredentialStorageBackend = "os_keyring" | "local_encrypted_file"
 export type CredentialStorageStatus = { backend: CredentialStorageBackend; message: string; storage_path: string | null; install_hint: string | null }
-export type DatabaseInfo = { Postgres: { connection_string: string; ssh_config: SshConfig | null } } | { MySQL: { connection_string: string; ssh_config: SshConfig | null } } | { SQLite: { db_path: string } } | 
+export type DatabaseFileKind = "sqlite" | "duckdb" | "unknown"
+export type DatabaseInfo = { Postgres: { connection_string: string; ssh_config: SshConfig | null } } | { CockroachDB: { connection_string: string; ssh_config: SshConfig | null } } | { MySQL: { connection_string: string; ssh_config: SshConfig | null } } | { MariaDB: { connection_string: string; ssh_config: SshConfig | null } } | { SQLite: { db_path: string } } | 
+/**
+ * DuckDB database file (embedded, like SQLite).
+ * 
+ * When `file_sources` is non-empty the connection is opened in-memory
+ * (`db_path` is `:memory:`) and each source file is registered as a
+ * read-only view — this is the "query a CSV/Parquet/JSON file" mode.
+ */
+{ DuckDB: { db_path: string; file_sources?: string[] } } | 
 /**
  * LibSQL/Turso database - can be local path or remote URL with auth token
  */

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import type { ResultChartConfig } from '@studio/features/result-charts/types'
 
 export type QueryHistoryItem = {
 	id: string
@@ -10,15 +11,17 @@ export type QueryHistoryItem = {
 	error?: string
 	rowCount?: number
 	pinned?: boolean
+	chartConfig?: ResultChartConfig | null
 }
 
 type QueryHistoryContextValue = {
 	history: QueryHistoryItem[]
-	addToHistory: (entry: Omit<QueryHistoryItem, 'id' | 'timestamp' | 'pinned'>) => void
+	addToHistory: (entry: Omit<QueryHistoryItem, 'id' | 'timestamp' | 'pinned'>) => string
 	clearHistory: () => void
 	removeFromHistory: (id: string) => void
 	pinItem: (id: string) => void
 	unpinItem: (id: string) => void
+	updateChartConfig: (id: string, chartConfig: ResultChartConfig | null) => void
 }
 
 const STORAGE_KEY = 'dora-query-history'
@@ -60,10 +63,11 @@ export function QueryHistoryProvider({ children }: Props) {
 	}, [])
 
 	const addToHistory = useCallback(function (entry: Omit<QueryHistoryItem, 'id' | 'timestamp' | 'pinned'>) {
+		const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 		setHistory(function (prev) {
 			const newItem: QueryHistoryItem = {
 				...entry,
-				id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+				id,
 				timestamp: Date.now(),
 				pinned: false,
 			}
@@ -75,6 +79,7 @@ export function QueryHistoryProvider({ children }: Props) {
 			saveHistoryToStorage(updated)
 			return updated
 		})
+		return id
 	}, [])
 
 	const clearHistory = useCallback(function () {
@@ -110,9 +115,31 @@ export function QueryHistoryProvider({ children }: Props) {
 		})
 	}, [])
 
+	const updateChartConfig = useCallback(function (
+		id: string,
+		chartConfig: ResultChartConfig | null
+	) {
+		setHistory(function (prev) {
+			const updated = prev.map(function (item) {
+				if (item.id !== id) return item
+				return { ...item, chartConfig }
+			})
+			saveHistoryToStorage(updated)
+			return updated
+		})
+	}, [])
+
 	return (
 		<QueryHistoryContext.Provider
-			value={{ history, addToHistory, clearHistory, removeFromHistory, pinItem, unpinItem }}
+			value={{
+				history,
+				addToHistory,
+				clearHistory,
+				removeFromHistory,
+				pinItem,
+				unpinItem,
+				updateChartConfig
+			}}
 		>
 			{children}
 		</QueryHistoryContext.Provider>

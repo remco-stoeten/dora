@@ -1,5 +1,5 @@
 import Editor from '@monaco-editor/react'
-import { Table2, Braces, Download, Copy, Trash2, CircleCheck, Database } from 'lucide-react'
+import { Table2, Braces, Download, Copy, Trash2, CircleCheck, Database, BarChart3 } from 'lucide-react'
 import { useAsyncRowCount } from '../hooks/use-async-row-count'
 import {
 	AlertDialog,
@@ -27,6 +27,8 @@ import { ScrollArea } from '@studio/shared/ui/scroll-area'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { cn } from '@studio/shared/utils/cn'
 import { areValuesEqual } from '@studio/shared/utils/value-equality'
+import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
+import type { ResultChartConfig } from '@studio/features/result-charts/types'
 import { SqlQueryResult, ResultViewMode } from '../types'
 
 type Props = {
@@ -34,6 +36,8 @@ type Props = {
 	viewMode: ResultViewMode
 	onViewModeChange: (mode: ResultViewMode) => void
 	onExport: () => void
+	chartConfig: ResultChartConfig | null
+	onChartConfigChange: (config: ResultChartConfig) => void
 	connectionId?: string
 	showFilter?: boolean
 	onRefresh?: () => void
@@ -52,6 +56,8 @@ export function SqlResults({
 	viewMode,
 	onViewModeChange,
 	onExport,
+	chartConfig,
+	onChartConfigChange,
 	connectionId,
 	showFilter,
 	onRefresh,
@@ -369,9 +375,23 @@ export function SqlResults({
 					>
 						<Braces className='h-3.5 w-3.5' />
 					</Button>
+					<Button
+						variant='ghost'
+						size='icon'
+						className={cn(
+							'h-6 w-6',
+							viewMode === 'chart'
+								? 'bg-sidebar-accent text-sidebar-foreground'
+								: 'text-muted-foreground hover:text-sidebar-foreground'
+						)}
+						onClick={() => onViewModeChange('chart')}
+						title='Chart view'
+					>
+						<BarChart3 className='h-3.5 w-3.5' />
+					</Button>
 				</div>
 
-				{result && !result.error && (
+				{result && !result.error && viewMode !== 'chart' && (
 					<div className='flex items-center gap-2 text-xs'>
 						<span className='inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-600 dark:text-emerald-400'>
 							<CircleCheck className='h-3 w-3' />
@@ -436,6 +456,19 @@ export function SqlResults({
 							{result.error}
 						</div>
 					</div>
+				) : viewMode === 'chart' ? (
+					<ResultChartPanel
+						columns={result.columns.map(function (column) {
+							const definition = result.columnDefinitions?.find(function (item) {
+								return item.name === column
+							})
+							return { name: column, type: definition?.type }
+						})}
+						rows={result.rows}
+						config={chartConfig}
+						onConfigChange={onChartConfigChange}
+						title='Query chart'
+					/>
 				) : result.rows.length === 0 ? (
 					<div className='flex flex-col items-center justify-center h-full text-muted-foreground'>
 						<div className='inline-flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-600 dark:text-emerald-400'>

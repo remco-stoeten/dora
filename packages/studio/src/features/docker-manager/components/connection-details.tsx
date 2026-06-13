@@ -3,35 +3,24 @@ import { useState } from "react";
 import { Button } from "@studio/shared/ui/button";
 import { toast } from "@studio/shared/ui/notifier";
 import type { DockerContainer } from "../types";
-import { buildConnectionEnvVars, maskPassword } from "../utilities/connection-string-builder";
+import { maskPassword } from "../utilities/connection-string-builder";
+import { getContainerConnectionDetails } from "../utilities/container-connection";
 import { cn } from "@studio/shared/utils/cn";
 
 type Props = {
   container: DockerContainer;
-  password: string;
 };
 
-export function ConnectionDetails({ container, password }: Props) {
+export function ConnectionDetails({ container }: Props) {
   const [copied, setCopied] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const primaryPort = container.ports.find(function (p) {
-    return p.containerPort === 5432;
-  });
-
-  const host = "localhost";
-  const port = primaryPort?.hostPort ?? 5432;
-  const user =
-    container.env.find((e) => e.startsWith("POSTGRES_USER="))?.split("=")[1] || "postgres";
-  const database =
-    container.env.find((e) => e.startsWith("POSTGRES_DB="))?.split("=")[1] || "postgres";
-
-  const envVars = buildConnectionEnvVars(host, port, user, password, database);
-  const displayUrl = showPassword ? envVars.DATABASE_URL : maskPassword(envVars.DATABASE_URL);
+  const connection = getContainerConnectionDetails(container);
+  const displayUrl = showPassword ? connection.connectionUrl : maskPassword(connection.connectionUrl);
 
   async function handleCopyEnv() {
     try {
-      await navigator.clipboard.writeText(envVars.DATABASE_URL);
+      await navigator.clipboard.writeText(connection.connectionUrl);
       setCopied(true);
       setTimeout(function () {
         setCopied(false);
@@ -60,12 +49,12 @@ export function ConnectionDetails({ container, password }: Props) {
           {copied ? (
             <>
               <Check className="h-3.5 w-3.5 text-emerald-500" />
-              Copied
+              Copied URL
             </>
           ) : (
             <>
               <Copy className="h-3.5 w-3.5" />
-              Copy Env
+              Copy URL
             </>
           )}
         </Button>
@@ -73,14 +62,14 @@ export function ConnectionDetails({ container, password }: Props) {
 
       <div className="mt-2 text-sm">
         <div className="rounded-lg border border-border overflow-hidden">
-          <ConnectionRow label="Host" value={host} />
-          <ConnectionRow label="Port" value={String(port)} />
-          <ConnectionRow label="User" value={user} />
+          <ConnectionRow label="Host" value={connection.host} />
+          <ConnectionRow label="Port" value={String(connection.port)} />
+          <ConnectionRow label="User" value={connection.user} />
           <div className="flex items-center justify-between py-2 px-3 border-b border-border/50 last:border-b-0 bg-muted/30 even:bg-transparent">
             <span className="text-xs text-muted-foreground">Password</span>
             <div className="flex items-center gap-1.5">
               <code className="text-xs font-mono text-foreground">
-                {showPassword ? password : "••••••••"}
+                {showPassword ? connection.password || "—" : connection.password ? "••••••••" : "—"}
               </code>
               <button
                 type="button"
@@ -96,7 +85,7 @@ export function ConnectionDetails({ container, password }: Props) {
               </button>
             </div>
           </div>
-          <ConnectionRow label="Database" value={database} isLast />
+          <ConnectionRow label="Database" value={connection.database} isLast />
         </div>
       </div>
 

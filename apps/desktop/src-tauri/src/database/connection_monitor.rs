@@ -47,15 +47,23 @@ impl ConnectionMonitor {
         connection.connected = false;
         match &mut connection.database {
             crate::database::types::Database::Postgres { client, .. } => *client = None,
+            crate::database::types::Database::CockroachDB { client, .. } => *client = None,
             crate::database::types::Database::SQLite {
                 connection: sqlite_conn,
                 ..
             } => *sqlite_conn = None,
+            crate::database::types::Database::DuckDB {
+                connection: duckdb_conn,
+                ..
+            } => *duckdb_conn = None,
             crate::database::types::Database::LibSQL {
                 connection: libsql_conn,
                 ..
             } => *libsql_conn = None,
             crate::database::types::Database::MySQL {
+                pool: mysql_pool, ..
+            } => *mysql_pool = None,
+            crate::database::types::Database::MariaDB {
                 pool: mysql_pool, ..
             } => *mysql_pool = None,
         }

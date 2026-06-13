@@ -34,10 +34,17 @@ impl<'a> MetadataService<'a> {
         let connection = connection_entry.value();
 
         let schema = match &connection.database {
-            Database::Postgres {
+            Database::CockroachDB {
+                client: Some(client),
+                ..
+            }
+            | Database::Postgres {
                 client: Some(client),
                 ..
             } => postgres::schema::get_database_schema(client).await?,
+            Database::CockroachDB { client: None, .. } => {
+                return Err(Error::Any(anyhow!("CockroachDB connection not active")))
+            }
             Database::Postgres { client: None, .. } => {
                 return Err(Error::Any(anyhow!("Postgres connection not active")))
             }
@@ -48,6 +55,13 @@ impl<'a> MetadataService<'a> {
             Database::SQLite {
                 connection: None, ..
             } => return Err(Error::Any(anyhow!("SQLite connection not active"))),
+            Database::DuckDB {
+                connection: Some(conn),
+                ..
+            } => crate::database::duckdb::schema::get_database_schema(Arc::clone(conn)).await?,
+            Database::DuckDB {
+                connection: None, ..
+            } => return Err(Error::Any(anyhow!("DuckDB connection not active"))),
             Database::LibSQL {
                 connection: Some(conn),
                 ..
@@ -55,9 +69,15 @@ impl<'a> MetadataService<'a> {
             Database::LibSQL {
                 connection: None, ..
             } => return Err(Error::Any(anyhow!("LibSQL connection not active"))),
-            Database::MySQL {
+            Database::MariaDB {
+                pool: Some(pool), ..
+            }
+            | Database::MySQL {
                 pool: Some(pool), ..
             } => crate::database::mysql::schema::get_database_schema(pool.clone()).await?,
+            Database::MariaDB { pool: None, .. } => {
+                return Err(Error::Any(anyhow!("MariaDB connection not active")))
+            }
             Database::MySQL { pool: None, .. } => {
                 return Err(Error::Any(anyhow!("MySQL connection not active")))
             }
@@ -81,11 +101,19 @@ impl<'a> MetadataService<'a> {
         let connection = connection_entry.value();
 
         match &connection.database {
-            Database::Postgres {
+            Database::CockroachDB {
+                connection_string,
+                client: Some(client),
+                ..
+            }
+            | Database::Postgres {
                 connection_string,
                 client: Some(client),
                 ..
             } => metadata::get_postgres_metadata(client, connection_string).await,
+            Database::CockroachDB { client: None, .. } => {
+                Err(Error::Any(anyhow!("CockroachDB connection not active")))
+            }
             Database::Postgres { client: None, .. } => {
                 Err(Error::Any(anyhow!("Postgres connection not active")))
             }
@@ -105,6 +133,24 @@ impl<'a> MetadataService<'a> {
             Database::SQLite {
                 connection: None, ..
             } => Err(Error::Any(anyhow!("SQLite connection not active"))),
+            Database::DuckDB {
+                db_path,
+                connection: Some(conn),
+                ..
+            } => {
+                // File-stat based metadata works for any file-backed database
+                let mut meta = metadata::get_sqlite_metadata(db_path)?;
+                let conn_guard = conn
+                    .lock()
+                    .map_err(|_| Error::Internal("Mutex poisoned".into()))?;
+                let (table_count, row_count) = metadata::get_duckdb_counts(&conn_guard)?;
+                meta.table_count = table_count;
+                meta.row_count_total = row_count;
+                Ok(meta)
+            }
+            Database::DuckDB {
+                connection: None, ..
+            } => Err(Error::Any(anyhow!("DuckDB connection not active"))),
             Database::LibSQL {
                 url,
                 connection: Some(conn),
@@ -113,11 +159,19 @@ impl<'a> MetadataService<'a> {
             Database::LibSQL {
                 connection: None, ..
             } => Err(Error::Any(anyhow!("LibSQL connection not active"))),
-            Database::MySQL {
+            Database::MariaDB {
+                connection_string,
+                pool: Some(pool),
+                ..
+            }
+            | Database::MySQL {
                 connection_string,
                 pool: Some(pool),
                 ..
             } => metadata::get_mysql_metadata(pool, connection_string).await,
+            Database::MariaDB { pool: None, .. } => {
+                Err(Error::Any(anyhow!("MariaDB connection not active")))
+            }
             Database::MySQL { pool: None, .. } => {
                 Err(Error::Any(anyhow!("MySQL connection not active")))
             }

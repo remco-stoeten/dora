@@ -168,3 +168,4 @@ Bugs and debt first, then features. Items within each tier are ordered by impact
 | MySQL | Enabled in backend, disabled in UI | Re-enable after Phase 5b WriteAdapter ports |
 | Telemetry | Undecided | Must resolve before public release announcement |
 | MSSQL | Planned | After MySQL reaches full parity |
+| File-as-database (CSV/Parquet/JSON) | Shipped | Spec 02 — flat files open as read-only DuckDB views; drag-and-drop or "Open data file". Follow-up: dedicated "Materialize to database" action |

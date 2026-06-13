@@ -380,7 +380,7 @@ export function ContainerTerminal({ container, enabled }: Props) {
 					value={command}
 					name='terminal_command'
 					autoComplete='off'
-					placeholder='Type command (example: psql -U postgres -d postgres)...'
+					placeholder='Type command (example: psql -U postgres -d postgres, mysql -u root)...'
 					onChange={function (event) {
 						setCommand(event.target.value)
 					}}

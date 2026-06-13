@@ -124,12 +124,30 @@ pub enum DatabaseInfo {
         connection_string: String,
         ssh_config: Option<SshConfig>,
     },
+    CockroachDB {
+        connection_string: String,
+        ssh_config: Option<SshConfig>,
+    },
     MySQL {
+        connection_string: String,
+        ssh_config: Option<SshConfig>,
+    },
+    MariaDB {
         connection_string: String,
         ssh_config: Option<SshConfig>,
     },
     SQLite {
         db_path: String,
+    },
+    /// DuckDB database file (embedded, like SQLite).
+    ///
+    /// When `file_sources` is non-empty the connection is opened in-memory
+    /// (`db_path` is `:memory:`) and each source file is registered as a
+    /// read-only view — this is the "query a CSV/Parquet/JSON file" mode.
+    DuckDB {
+        db_path: String,
+        #[serde(default)]
+        file_sources: Vec<String>,
     },
     /// LibSQL/Turso database - can be local path or remote URL with auth token
     LibSQL {
@@ -163,6 +181,12 @@ pub enum DatabaseClient {
     SQLite {
         connection: Arc<Mutex<rusqlite::Connection>>,
     },
+    DuckDB {
+        connection: Arc<Mutex<duckdb::Connection>>,
+        /// True for file-source connections (CSV/Parquet/JSON views), which
+        /// must refuse mutations.
+        read_only: bool,
+    },
     LibSQL {
         connection: Arc<libsql::Connection>,
     },
@@ -184,7 +208,20 @@ pub enum Database {
         /// by `postgres/execute.rs` — see TODO markers there.
         use_simple_query: bool,
     },
+    CockroachDB {
+        connection_string: String,
+        ssh_config: Option<SshConfig>,
+        client: Option<Arc<tokio_postgres::Client>>,
+        tunnel: Option<Arc<SshTunnel>>,
+        use_simple_query: bool,
+    },
     MySQL {
+        connection_string: String,
+        ssh_config: Option<SshConfig>,
+        pool: Option<Arc<mysql_async::Pool>>,
+        tunnel: Option<Arc<SshTunnel>>,
+    },
+    MariaDB {
         connection_string: String,
         ssh_config: Option<SshConfig>,
         pool: Option<Arc<mysql_async::Pool>>,
@@ -193,6 +230,11 @@ pub enum Database {
     SQLite {
         db_path: String,
         connection: Option<Arc<Mutex<rusqlite::Connection>>>,
+    },
+    DuckDB {
+        db_path: String,
+        file_sources: Vec<String>,
+        connection: Option<Arc<Mutex<duckdb::Connection>>>,
     },
     LibSQL {
         url: String,
@@ -216,6 +258,14 @@ impl DatabaseConnection {
                     connection_string: connection_string.clone(),
                     ssh_config: ssh_config.clone(),
                 },
+                Database::CockroachDB {
+                    connection_string,
+                    ssh_config,
+                    ..
+                } => DatabaseInfo::CockroachDB {
+                    connection_string: connection_string.clone(),
+                    ssh_config: ssh_config.clone(),
+                },
                 Database::MySQL {
                     connection_string,
                     ssh_config,
@@ -224,8 +274,24 @@ impl DatabaseConnection {
                     connection_string: connection_string.clone(),
                     ssh_config: ssh_config.clone(),
                 },
+                Database::MariaDB {
+                    connection_string,
+                    ssh_config,
+                    ..
+                } => DatabaseInfo::MariaDB {
+                    connection_string: connection_string.clone(),
+                    ssh_config: ssh_config.clone(),
+                },
                 Database::SQLite { db_path, .. } => DatabaseInfo::SQLite {
                     db_path: db_path.clone(),
+                },
+                Database::DuckDB {
+                    db_path,
+                    file_sources,
+                    ..
+                } => DatabaseInfo::DuckDB {
+                    db_path: db_path.clone(),
+                    file_sources: file_sources.clone(),
                 },
                 Database::LibSQL {
                     url, auth_token, ..
@@ -256,6 +322,16 @@ impl DatabaseConnection {
                 client: None,
                 tunnel: None,
             },
+            DatabaseInfo::CockroachDB {
+                connection_string,
+                ssh_config,
+            } => Database::CockroachDB {
+                use_simple_query: false,
+                connection_string,
+                ssh_config,
+                client: None,
+                tunnel: None,
+            },
             DatabaseInfo::MySQL {
                 connection_string,
                 ssh_config,
@@ -265,8 +341,25 @@ impl DatabaseConnection {
                 pool: None,
                 tunnel: None,
             },
+            DatabaseInfo::MariaDB {
+                connection_string,
+                ssh_config,
+            } => Database::MariaDB {
+                connection_string,
+                ssh_config,
+                pool: None,
+                tunnel: None,
+            },
             DatabaseInfo::SQLite { db_path } => Database::SQLite {
                 db_path,
+                connection: None,
+            },
+            DatabaseInfo::DuckDB {
+                db_path,
+                file_sources,
+            } => Database::DuckDB {
+                db_path,
+                file_sources,
                 connection: None,
             },
             DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
@@ -299,6 +392,16 @@ impl DatabaseConnection {
                 client: None,
                 tunnel: None,
             },
+            DatabaseInfo::CockroachDB {
+                connection_string,
+                ssh_config,
+            } => Database::CockroachDB {
+                use_simple_query: false,
+                connection_string,
+                ssh_config,
+                client: None,
+                tunnel: None,
+            },
             DatabaseInfo::MySQL {
                 connection_string,
                 ssh_config,
@@ -308,8 +411,25 @@ impl DatabaseConnection {
                 pool: None,
                 tunnel: None,
             },
+            DatabaseInfo::MariaDB {
+                connection_string,
+                ssh_config,
+            } => Database::MariaDB {
+                connection_string,
+                ssh_config,
+                pool: None,
+                tunnel: None,
+            },
             DatabaseInfo::SQLite { db_path } => Database::SQLite {
                 db_path,
+                connection: None,
+            },
+            DatabaseInfo::DuckDB {
+                db_path,
+                file_sources,
+            } => Database::DuckDB {
+                db_path,
+                file_sources,
                 connection: None,
             },
             DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
@@ -337,8 +457,11 @@ impl DatabaseConnection {
     pub fn is_client_connected(&self) -> bool {
         match &self.database {
             Database::Postgres { client, .. } => client.is_some(),
+            Database::CockroachDB { client, .. } => client.is_some(),
             Database::MySQL { pool, .. } => pool.is_some(),
+            Database::MariaDB { pool, .. } => pool.is_some(),
             Database::SQLite { connection, .. } => connection.is_some(),
+            Database::DuckDB { connection, .. } => connection.is_some(),
             Database::LibSQL { connection, .. } => connection.is_some(),
         }
     }
@@ -359,11 +482,30 @@ impl DatabaseConnection {
                     "Postgres connection not active"
                 )));
             }
+            Database::CockroachDB {
+                client: Some(client),
+                use_simple_query,
+                ..
+            } => DatabaseClient::Postgres {
+                client: client.clone(),
+                use_simple_query: *use_simple_query,
+            },
+            Database::CockroachDB { client: None, .. } => {
+                return Err(Error::Any(anyhow::anyhow!(
+                    "CockroachDB connection not active"
+                )));
+            }
             Database::MySQL {
                 pool: Some(pool), ..
             } => DatabaseClient::MySQL { pool: pool.clone() },
             Database::MySQL { pool: None, .. } => {
                 return Err(Error::Any(anyhow::anyhow!("MySQL connection not active")));
+            }
+            Database::MariaDB {
+                pool: Some(pool), ..
+            } => DatabaseClient::MySQL { pool: pool.clone() },
+            Database::MariaDB { pool: None, .. } => {
+                return Err(Error::Any(anyhow::anyhow!("MariaDB connection not active")));
             }
             Database::SQLite {
                 connection: Some(sqlite_conn),
@@ -375,6 +517,19 @@ impl DatabaseConnection {
                 connection: None, ..
             } => {
                 return Err(Error::Any(anyhow::anyhow!("SQLite connection not active")));
+            }
+            Database::DuckDB {
+                connection: Some(duckdb_conn),
+                file_sources,
+                ..
+            } => DatabaseClient::DuckDB {
+                connection: duckdb_conn.clone(),
+                read_only: !file_sources.is_empty(),
+            },
+            Database::DuckDB {
+                connection: None, ..
+            } => {
+                return Err(Error::Any(anyhow::anyhow!("DuckDB connection not active")));
             }
             Database::LibSQL {
                 connection: Some(libsql_conn),

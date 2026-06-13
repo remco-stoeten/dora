@@ -1,0 +1,79 @@
+'use client'
+
+import { Palette } from 'lucide-react'
+
+const SWATCHES = ['#f5c0c0', '#9b84d4', '#6b8cae', '#6aab7e', '#d4a84b']
+const ACCENT = SWATCHES[0]
+
+export function ThemingCard({ animate }: { animate: boolean }) {
+    return (
+        <div className="flex h-full w-full flex-col gap-0 p-6 pt-7">
+            <div className="mb-5 flex items-center gap-2">
+                <Palette className="h-4 w-4 shrink-0" style={{ color: ACCENT }} />
+                <span className="text-[12px] font-medium text-[#c4bcc4]">
+                    Appearance
+                </span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                    <p className="text-[10px] uppercase tracking-widest text-[#6a6a6a]">
+                        Base theme
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        {(['Dark', 'Dim', 'Light'] as const).map((t, i) => (
+                            <div
+                                key={t}
+                                className={[
+                                    'flex flex-col gap-1 rounded-md border p-2 text-[10px]',
+                                    i === 0
+                                        ? 'border-[#f5c0c0]/30 bg-[rgba(245,192,192,0.05)] text-[#c4bcc4]'
+                                        : 'border-[#2b252c] text-[#6a6a6a]',
+                                ].join(' ')}
+                            >
+                                <div
+                                    className="h-4 w-full rounded-sm"
+                                    style={{
+                                        background: i === 0 ? '#0d0b0e' : i === 1 ? '#191520' : '#f4f4f5',
+                                    }}
+                                />
+                                {t}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <p className="text-[10px] uppercase tracking-widest text-[#6a6a6a]">
+                        Accent
+                    </p>
+                    <div className="flex gap-1.5 flex-wrap">
+                        {SWATCHES.map((s, i) => (
+                            <div
+                                key={s}
+                                className={[
+                                    'h-5 w-5 rounded-full transition-transform',
+                                    animate ? 'duration-300' : '',
+                                    i === 0 ? 'ring-1 ring-offset-1 ring-offset-[#0d0b0e] scale-110' : '',
+                                ].join(' ')}
+                                style={{ backgroundColor: s }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-auto rounded-lg border border-[#2b252c] bg-[#100d12] p-3">
+                <div className="flex flex-col gap-1.5">
+                    <div className="h-1.5 w-2/3 rounded-sm" style={{ backgroundColor: ACCENT, opacity: 0.7 }} />
+                    <div className="h-1 w-full rounded-sm bg-[#2b252c]" />
+                    <div className="h-1 w-5/6 rounded-sm bg-[#2b252c]" />
+                    <div
+                        className="mt-0.5 h-4 w-full rounded"
+                        style={{ backgroundColor: ACCENT, opacity: 0.12 }}
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}

@@ -42,8 +42,24 @@ export const PROVIDER_CONFIGS: Record<DatabaseType, ProviderConfig> = {
 		protocols: ['postgresql', 'postgres'],
 		supportsSSL: true
 	},
+	cockroach: {
+		name: 'CockroachDB',
+		defaultPort: 26257,
+		defaultUser: 'root',
+		defaultDatabase: 'defaultdb',
+		protocols: ['postgresql', 'postgres'],
+		supportsSSL: true
+	},
 	mysql: {
 		name: 'MySQL',
+		defaultPort: 3306,
+		defaultUser: 'root',
+		defaultDatabase: 'mysql',
+		protocols: ['mysql'],
+		supportsSSL: true
+	},
+	mariadb: {
+		name: 'MariaDB',
 		defaultPort: 3306,
 		defaultUser: 'root',
 		defaultDatabase: 'mysql',
@@ -56,6 +72,14 @@ export const PROVIDER_CONFIGS: Record<DatabaseType, ProviderConfig> = {
 		defaultUser: '',
 		defaultDatabase: '',
 		protocols: ['sqlite'],
+		supportsSSL: false
+	},
+	duckdb: {
+		name: 'DuckDB',
+		defaultPort: 0,
+		defaultUser: '',
+		defaultDatabase: '',
+		protocols: ['duckdb'],
 		supportsSSL: false
 	},
 	libsql: {
@@ -76,6 +100,8 @@ export const PROVIDER_PATTERNS: ProviderPattern[] = [
 	{ pattern: 'neon', displayName: 'Neon DB', type: 'postgres' },
 	{ pattern: 'turso', displayName: 'Turso DB', type: 'libsql' },
 	{ pattern: 'planetscale', displayName: 'PlanetScale DB', type: 'mysql' },
+	{ pattern: /maria(?:db)?/, displayName: 'MariaDB DB', type: 'mariadb' },
+	{ pattern: /cockroach(?:db)?|crdb/, displayName: 'CockroachDB', type: 'cockroach' },
 	{ pattern: 'railway', displayName: 'Railway DB' },
 	{ pattern: 'render', displayName: 'Render DB' },
 	{ pattern: 'vercel', displayName: 'Vercel DB', type: 'postgres' },
@@ -83,6 +109,28 @@ export const PROVIDER_PATTERNS: ProviderPattern[] = [
 	{ pattern: 'azure', displayName: 'Azure DB' },
 	{ pattern: /gcp|google.*cloud/, displayName: 'Google Cloud SQL' }
 ]
+
+function inferProviderFromUrl(parsed: URL): DatabaseType | undefined {
+	const hostname = parsed.hostname.toLowerCase()
+	const port = parsed.port ? parseInt(parsed.port, 10) : undefined
+	const database = parsed.pathname.slice(1).toLowerCase()
+
+	if (hostname.includes('cockroach') || hostname.includes('crdb') || port === 26257) {
+		return 'cockroach'
+	}
+
+	if (hostname.includes('mariadb') || hostname.includes('maria')) {
+		return 'mariadb'
+	}
+
+	if (port === 3306) {
+		if (database.includes('maria') || database.includes('mariadb')) {
+			return 'mariadb'
+		}
+	}
+
+	return undefined
+}
 
 /**
  * Connection string builder parameters
@@ -105,6 +153,10 @@ export function buildConnectionString(params: ConnectionParams): string {
 
 	if (params.type === 'sqlite') {
 		throw new Error('SQLite uses file paths, not connection strings')
+	}
+
+	if (params.type === 'duckdb') {
+		throw new Error('DuckDB uses file paths, not connection strings')
 	}
 
 	if (params.type === 'libsql') {
@@ -227,6 +279,7 @@ export function parseConnectionUrl(url: string): Partial<ConnectionParams> | nul
 		const parsed = new URL(url)
 		// Remove trailing colon from protocol (e.g., "postgres:" -> "postgres")
 		const protocol = parsed.protocol.replace(':', '')
+		const urlProviderHint = inferProviderFromUrl(parsed)
 
 		// Determine database type from protocol
 		let type: DatabaseType | undefined
@@ -235,6 +288,26 @@ export function parseConnectionUrl(url: string): Partial<ConnectionParams> | nul
 		for (const [dbType, config] of Object.entries(PROVIDER_CONFIGS)) {
 			if (config.protocols.includes(protocol)) {
 				type = dbType as DatabaseType
+				break
+			}
+		}
+
+		if (urlProviderHint === 'cockroach' && (type === 'postgres' || type === 'cockroach')) {
+			type = 'cockroach'
+		}
+
+		if (urlProviderHint === 'mariadb' && (type === 'mysql' || type === 'mariadb')) {
+			type = 'mariadb'
+		}
+
+		for (const pattern of PROVIDER_PATTERNS) {
+			const matches =
+				typeof pattern.pattern === 'string'
+					? parsed.hostname.toLowerCase().includes(pattern.pattern)
+					: pattern.pattern.test(parsed.hostname.toLowerCase())
+
+			if (matches && pattern.type) {
+				type = pattern.type
 				break
 			}
 		}
@@ -276,6 +349,15 @@ export function detectProviderName(url: string): string {
 	try {
 		const parsed = new URL(url)
 		const hostname = parsed.hostname.toLowerCase()
+		const urlProviderHint = inferProviderFromUrl(parsed)
+
+		if (urlProviderHint === 'cockroach') {
+			return 'CockroachDB'
+		}
+
+		if (urlProviderHint === 'mariadb') {
+			return 'MariaDB DB'
+		}
 
 		// Check against known patterns
 		for (const pattern of PROVIDER_PATTERNS) {

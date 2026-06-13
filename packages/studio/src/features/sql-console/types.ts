@@ -1,5 +1,6 @@
 // Types for the SQL Console feature
 import type { ColumnDefinition } from '@studio/features/database-studio/types'
+import type { ResultChartConfig } from '@studio/features/result-charts/types'
 
 export type SqlSnippet = {
 	id: string
@@ -37,7 +38,7 @@ export type TableInfo = {
 	}[]
 }
 
-export type ResultViewMode = 'table' | 'json'
+export type ResultViewMode = 'table' | 'json' | 'chart'
 
 export type ConsoleState = {
 	snippets: SqlSnippet[]
@@ -46,6 +47,7 @@ export type ConsoleState = {
 	result: SqlQueryResult | null
 	isExecuting: boolean
 	viewMode: ResultViewMode
+	chartConfig: ResultChartConfig | null
 	showLeftSidebar: boolean
 	showRightSidebar: boolean
 }
@@ -60,6 +62,8 @@ export type QueryTab = {
 	isExecuting: boolean
 	isDirty: boolean
 	viewMode: ResultViewMode
+	chartConfig: ResultChartConfig | null
+	historyEntryId: string | null
 	connectionId: string | null
 	createdAt: number
 	lastExecutedAt: number | null

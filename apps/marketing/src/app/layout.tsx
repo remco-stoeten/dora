@@ -6,6 +6,7 @@ import { GeistSans } from 'geist/font/sans'
 import { Analytics } from '@remcostoeten/analytics'
 
 import { siteConfig } from '@/core/config/site'
+import { organizationSchema, websiteSchema, softwareSchema } from '@/core/config/structured-data'
 import '@/core/three-suppress'
 
 import './globals.css'
@@ -63,6 +64,20 @@ export default function RootLayout({ children }: TRootProps) {
             lang="en"
             suppressHydrationWarning
         >
+            <head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema()) }}
+                />
+            </head>
             <body>
                 <main className="min-h-screen bg-background text-foreground">
                     {children}

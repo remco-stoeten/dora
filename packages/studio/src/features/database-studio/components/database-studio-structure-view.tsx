@@ -13,22 +13,20 @@ type Props = {
 	tableData: TableData
 	viewMode: ViewMode
 	onViewModeChange: (mode: ViewMode) => void
-	onToggleSidebar?: () => void
-	isSidebarOpen?: boolean
 	onRefresh: () => void
 	onExport: () => void
-	onExportCsv: () => void
-	onExportSql: () => void
+	onExportCsv?: () => void
+	onExportSql?: () => void
 	isLoading: boolean
 	onCopySchema: () => void
 	onCopyDrizzleSchema: () => void
-	liveMonitorConfig: LiveMonitorConfig
-	onLiveMonitorConfigChange: (config: LiveMonitorConfig) => void
-	isLiveMonitorPolling: boolean
-	changeEvents: ChangeEvent[]
-	unreadChangeCount: number
-	onClearChangeEvents: () => void
-	onMarkChangesRead: () => void
+	liveMonitorConfig?: LiveMonitorConfig
+	onLiveMonitorConfigChange?: (config: LiveMonitorConfig) => void
+	isLiveMonitorPolling?: boolean
+	changeEvents?: ChangeEvent[]
+	unreadChangeCount?: number
+	onClearChangeEvents?: () => void
+	onMarkChangesRead?: () => void
 	pagination: PaginationState
 	onPaginationChange: (pagination: PaginationState) => void
 	liveMonitorIntervalMs: number
@@ -36,10 +34,10 @@ type Props = {
 	liveMonitorError: string | null
 	showAddColumnDialog: boolean
 	onShowAddColumnDialogChange: (open: boolean) => void
-	onAddColumn: (column: ColumnFormData) => void
+	onAddColumn?: (column: ColumnFormData) => void
 	showDropTableDialog: boolean
 	onShowDropTableDialogChange: (open: boolean) => void
-	onDropTable: () => void
+	onDropTable?: () => void
 	isDdlLoading: boolean
 }
 
@@ -48,8 +46,6 @@ export function DatabaseStudioStructureView({
 	tableData,
 	viewMode,
 	onViewModeChange,
-	onToggleSidebar,
-	isSidebarOpen,
 	onRefresh,
 	onExport,
 	onExportCsv,
@@ -83,8 +79,6 @@ export function DatabaseStudioStructureView({
 				tableName={displayTableName}
 				viewMode={viewMode}
 				onViewModeChange={onViewModeChange}
-				onToggleSidebar={onToggleSidebar}
-				isSidebarOpen={isSidebarOpen}
 				onRefresh={onRefresh}
 				onExport={onExport}
 				onExportCsv={onExportCsv}
@@ -149,30 +143,32 @@ export function DatabaseStudioStructureView({
 						</tbody>
 					</table>
 
-					<div className='flex gap-2 mt-6'>
-						<Button
-							variant='outline'
-							size='sm'
-							onClick={function () {
-								onShowAddColumnDialogChange(true)
-							}}
-							className='gap-2'
-						>
-							<Columns className='h-4 w-4' />
-							Add Column
-						</Button>
-						<Button
-							variant='outline'
-							size='sm'
-							onClick={function () {
-								onShowDropTableDialogChange(true)
-							}}
-							className='gap-2 text-destructive hover:text-destructive'
-						>
-							<Trash2 className='h-4 w-4' />
-							Drop Table
-						</Button>
-					</div>
+					{onAddColumn && onDropTable && (
+						<div className='flex gap-2 mt-6'>
+							<Button
+								variant='outline'
+								size='sm'
+								onClick={function () {
+									onShowAddColumnDialogChange(true)
+								}}
+								className='gap-2'
+							>
+								<Columns className='h-4 w-4' />
+								Add Column
+							</Button>
+							<Button
+								variant='outline'
+								size='sm'
+								onClick={function () {
+									onShowDropTableDialogChange(true)
+								}}
+								className='gap-2 text-destructive hover:text-destructive'
+							>
+								<Trash2 className='h-4 w-4' />
+								Drop Table
+							</Button>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -182,28 +178,32 @@ export function DatabaseStudioStructureView({
 				rowCount={tableData.rows.length}
 				totalCount={tableData.totalCount}
 				executionTime={tableData.executionTime}
-				liveMonitorEnabled={liveMonitorConfig.enabled}
+				liveMonitorEnabled={liveMonitorConfig?.enabled}
 				liveMonitorIntervalMs={liveMonitorIntervalMs}
 				lastPolledAt={lastPolledAt}
 				changesDetected={unreadChangeCount}
 				liveMonitorError={liveMonitorError}
 			/>
 
-			<AddColumnDialog
-				open={showAddColumnDialog}
-				onOpenChange={onShowAddColumnDialogChange}
-				tableName={displayTableName}
-				onSubmit={onAddColumn}
-				isLoading={isDdlLoading}
-			/>
+			{onAddColumn && (
+				<AddColumnDialog
+					open={showAddColumnDialog}
+					onOpenChange={onShowAddColumnDialogChange}
+					tableName={displayTableName}
+					onSubmit={onAddColumn}
+					isLoading={isDdlLoading}
+				/>
+			)}
 
-			<DropTableDialog
-				open={showDropTableDialog}
-				onOpenChange={onShowDropTableDialogChange}
-				tableName={displayTableName}
-				onConfirm={onDropTable}
-				isLoading={isDdlLoading}
-			/>
+			{onDropTable && (
+				<DropTableDialog
+					open={showDropTableDialog}
+					onOpenChange={onShowDropTableDialogChange}
+					tableName={displayTableName}
+					onConfirm={onDropTable}
+					isLoading={isDdlLoading}
+				/>
+			)}
 		</div>
 	)
 }

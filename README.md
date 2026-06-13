@@ -1,195 +1,137 @@
 <div align="center">
-  <img src="assets/dora-backgroundless.png" alt="Dora Logo" width="180" />
+  <img src="assets/dora-backgroundless.png" alt="Dora" width="120" />
   <h1>Dora</h1>
-  <p><i>The database explorer</i></p>
-  <small><i>A native-feeling desktop database studio for PostgreSQL, MySQL, SQLite, and LibSQL.</i></small>
+  <p><em>A native desktop database workbench that stays out of your way.</em></p>
 
 [![Release](https://img.shields.io/github/v/release/remcostoeten/dora?display_name=tag&sort=semver)](https://github.com/remcostoeten/dora/releases)
 [![Downloads](https://img.shields.io/github/downloads/remcostoeten/dora/total)](https://github.com/remcostoeten/dora/releases)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue)](LICENSE)
 [![Snap](https://img.shields.io/badge/snap-install-82BEA0?logo=snapcraft&logoColor=ffffff)](https://snapcraft.io/dora)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-tauri-FFC131?logo=tauri&logoColor=ffffff)](https://tauri.app/)
-[![Rust](https://img.shields.io/badge/rust-000000?logo=rust&logoColor=ffffff)](https://www.rust-lang.org/)
-[![TypeScript](https://img.shields.io/badge/typescript-3178C6?logo=typescript&logoColor=ffffff)](https://www.typescriptlang.org/)
 
 </div>
 
 <p align="center">
-  <img src="assets/demo-tour.webp" alt="Dora App Demonstration" width="92%" />
+  <img src="assets/demo-tour.webp" alt="Dora in use" width="92%" />
 </p>
 
-<p align="center"><sub>UI heavily inspired by <a href="https://drizzle.studio">Drizzle Studio</a></sub></p>
+Dora is a cross-platform database workbench built with Tauri and Rust. It connects to PostgreSQL, MySQL, SQLite, libSQL, MariaDB, and CockroachDB — and ships as a ~10 MB binary instead of the 100+ MB you get from Electron-based alternatives.
 
-Dora is a cross-platform database studio for PostgreSQL, MySQL, SQLite, and LibSQL.
-Built with Tauri, it weighs ~10 MB versus the 100+ MB of TablePlus — no
-Electron bloat, just a fast native app with a Data Viewer, Monaco SQL/Drizzle
-editor, and local Docker PostgreSQL tooling.
+It covers the full day-to-day loop: browse data, run queries with a Monaco editor, inspect schemas as an ER diagram, manage local Docker databases, generate SQL with AI, and write type-safe Drizzle ORM queries — all from one keyboard-first app.
 
-## Features
+## Install
 
-### Connect
-
-- Save, edit, test, search, and switch between connections
-- PostgreSQL, MySQL, SQLite, LibSQL / Turso
-- Structured fields or full connection strings
-- Open SQLite files via native file picker
-- SSL/TLS and SSH tunneling (PostgreSQL and MySQL)
-- Restore last connection on startup
-
-### Local PostgreSQL with Docker
-
-- Create, start, stop, restart, inspect, remove containers
-- Search, filter, sort containers by status
-- Open container directly in Data Viewer
-- View logs, open terminal, run seed scripts
-- Copy connection snippets, export Docker Compose
-
-### Explore and edit data
-
-- Browse schemas, tables, columns, indexes, and metadata
-- Switch between content and structure view
-- Sort, filter, paginate, show or hide columns
-- Inspect row details and set values to `NULL`
-- Inline cell editing, add/duplicate/delete rows
-- Bulk edit selections
-- Stage changes in dry-run mode before applying
-- Export data as JSON, CSV, or SQL `INSERT`
-- Copy schema as SQL or Drizzle
-- Add columns, rename/drop/truncate tables
-- Seed tables with generated data
-- Live table updates (PostgreSQL: LISTEN/NOTIFY, MySQL: polling, others: polling)
-
-### Write and run queries
-
-- Multi-tab query workspace with isolated execution state and drag-to-reorder
-- Async real-time row count indicator in status bar
-- Monaco-based SQL and Drizzle editor with autocomplete
-- Run `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and DDL
-- Save snippets in folders, reuse per connection
-- Schema sidebar to browse and insert tables/columns
-- Query history with search and re-run
-- Filter result sets, switch between table and JSON view
-- Export results as JSON or CSV
-- Edit or delete rows from single-table result sets
-
-### AI SQL generation (⌘I / Ctrl+I)
-
-- Describe what you want in plain English; get schema-grounded SQL back
-- Powered by Groq (Llama 3) — streams results token by token
-- Insert into editor or insert and run in one step
-- Rotating key pool with automatic failover on rate-limit or error
-- Add multiple Groq API keys in Settings → AI Keys (AES-256-GCM encrypted, master key in OS keychain)
-- Works without a key too: set `GROQ_API_KEY` in your environment
-
-### Schema visualizer
-
-- Interactive ER diagram of your entire database
-- Pan, zoom, and click tables to inspect columns and relationships
-- Foreign-key edges drawn automatically
-- Search tables and columns — matches highlight, unrelated tables dim
-- Layout auto-fits to viewport
-
-### Make Dora fit your workflow
-
-- Keyboard-first navigation with customizable shortcuts
-- Vim keybindings in the editor
-- Dark/light themes and configurable font sizes
-- Secure credential storage via system keyring
-- Query history with search and re-run
-- Multiple result tabs
-- Export database schema (SQL, Drizzle)
-- Control delete confirmations, notifications, and startup behavior
-
-## Platforms
-
-Dora is a Tauri app built for macOS, Windows, and Linux.
-
-## Get Dora
-
-Download a release asset for your platform:
-
-- macOS: `.dmg`
-- Windows: `.msi`
-- Linux: `.deb`, `.rpm`, `.AppImage`, `.snap`, or `.flatpak`
-
-For direct GitHub release downloads below, set `VERSION` to the release version
-you want to install.
-
-### Install
-
+**macOS**
 ```bash
-# Debian / Ubuntu — apt repository (recommended for Linux)
-curl -fsSL https://remcostoeten.github.io/dora/KEY.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/dora.gpg
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/dora.gpg] https://remcostoeten.github.io/dora stable main" \
+brew install remcostoeten/tap/dora
+```
+
+**Windows**
+```powershell
+winget install RemcoStoeten.Dora
+```
+
+**Arch Linux**
+```bash
+yay -S dora
+```
+
+**Debian / Ubuntu**
+```bash
+curl -fsSL https://remcostoeten.github.io/dora/KEY.gpg \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/dora.gpg
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/dora.gpg] \
+  https://remcostoeten.github.io/dora stable main" \
   | sudo tee /etc/apt/sources.list.d/dora.list
 sudo apt update && sudo apt install dora
 ```
 
+**Linux (Snap)**
 ```bash
-# Arch Linux (AUR)
-yay -S dora
-```
-
-```bash
-# Linux (Snap)
 sudo snap install dora
 ```
 
-```bash
-# macOS (Homebrew)
-brew install --cask remcostoeten/dora/dora
-```
+**Linux (Flatpak / AppImage / deb / rpm)** — download from the [releases page](https://github.com/remcostoeten/dora/releases).
 
-```powershell
-# Windows (Winget)
-winget install RemcoStoeten.Dora
-```
+## Database support
 
-```bash
-# Linux (Flatpak bundle from GitHub releases)
-flatpak install --user Dora-<version>-x86_64.flatpak
-flatpak run io.github.remcostoeten.dora
-```
+| Database | Status |
+|---|---|
+| PostgreSQL | Full support — SSH tunneling, live updates via LISTEN/NOTIFY |
+| MySQL | Full support — SSH tunneling, live updates via polling |
+| SQLite | Full support — native file picker |
+| DuckDB | Beta — local files, full query/browse/edit, live updates via polling |
+| Flat files (CSV / TSV / Parquet / JSON / NDJSON) | Open via drag-and-drop or "Open data file" — read-only, queried as tables with cross-file JOINs (embedded DuckDB) |
+| libSQL / Turso | Full support — local and remote |
+| MariaDB | Compatibility layer — MySQL path, dialect pass in progress |
+| CockroachDB | Compatibility layer — PostgreSQL path, dialect pass in progress |
 
-```bash
-# Linux — one-off .deb install
-VERSION="<version>"
-wget "https://github.com/remcostoeten/dora/releases/download/v${VERSION}/Dora_${VERSION}_amd64.deb"
-sudo apt install "./Dora_${VERSION}_amd64.deb"
-```
+## Features
 
-```bash
-# Linux (.rpm)
-VERSION="<version>"
-wget "https://github.com/remcostoeten/dora/releases/download/v${VERSION}/Dora-${VERSION}-1.x86_64.rpm"
-sudo dnf install "./Dora-${VERSION}-1.x86_64.rpm"
-```
+**Data viewer** — Browse schemas, tables, columns, indexes, and row data. Sort, filter, paginate, inline-edit cells, bulk-edit selections, set values to `NULL`, add/duplicate/delete rows, and stage changes in dry-run mode before committing. Export as JSON, CSV, or SQL `INSERT`.
 
-```bash
-# Linux (AppImage)
-VERSION="<version>"
-wget "https://github.com/remcostoeten/dora/releases/download/v${VERSION}/Dora_${VERSION}_amd64.AppImage"
-chmod +x "Dora_${VERSION}_amd64.AppImage"
-"./Dora_${VERSION}_amd64.AppImage"
-```
+**SQL console** — Multi-tab workspace with isolated execution state. Monaco editor with autocomplete, syntax highlighting, and Vim keybindings. Run `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and DDL. Filter result sets, switch between table and JSON view, export results.
 
-## Database Support
+**Query history** — Every query you run is stored, searchable, and re-runnable. History is scoped per connection.
 
-| Database | Status | Notes |
-|----------|--------|-------|
-| PostgreSQL | ✅ Supported | Full desktop path, SSH tunneling, live change monitoring via LISTEN/NOTIFY |
-| MySQL | ✅ Supported | Connection pooling, SSH tunneling, schema introspection, live change monitoring via polling |
-| SQLite | ✅ Supported | Native desktop workflow with file picker |
-| LibSQL / Turso | ✅ Supported | Local and remote flows |
+**Schema visualizer** — Interactive ER diagram with pan, zoom, FK edges, and a search that dims unrelated tables.
+
+**Docker manager** — Create, start, stop, inspect, and remove local database containers without leaving the app. Open a container directly in the data viewer, view logs, run seed scripts, or export a Docker Compose file.
+
+**AI SQL generation** — Press `⌘I` / `Ctrl+I`, describe what you want, get schema-grounded SQL back. Supports Groq, Ollama, and other providers. API keys are stored encrypted (AES-256-GCM) with the master key in the OS keychain.
+
+**Drizzle runner** — Write and run Drizzle ORM queries with schema-aware autocomplete and a SQL preview before execution.
+
+**SSH tunneling** — Connect to databases behind firewalls through encrypted SSH tunnels. Tunnel config is stored per connection alongside its credentials.
+
+**Theming** — Dark and light themes, custom accent colours, and configurable font sizes. Live preview, no restart required.
 
 ## Development
 
-```bash
-bun install
-bun run desktop:dev
+Dora is a Bun + Turborepo monorepo:
+
+```
+apps/
+  desktop/   # Tauri app (Rust backend + React/TypeScript frontend)
+  marketing/ # Next.js marketing site
+packages/
+  style/     # Shared ESLint + Prettier config
 ```
 
-To build: `bun run desktop:build`
+**Prerequisites:** [Bun](https://bun.sh), [Rust](https://rustup.rs), and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform.
+
+```bash
+# Install dependencies
+bun install
+
+# Start the desktop app in development mode
+bun run desktop:dev
+
+# Run the marketing site
+bun run --cwd apps/marketing dev
+```
+
+**Build**
+
+```bash
+bun run desktop:build                    # current platform
+bun run desktop:build:linux              # AppImage + deb + rpm
+bun run desktop:build:win                # nsis + msi
+bun run desktop:build:mac                # dmg
+```
+
+**Tests**
+
+```bash
+bun test
+```
+
+> [!NOTE]
+> The desktop app uses Vite as its dev server (`http://localhost:1420`). Hot-reload works for the TypeScript frontend; Rust changes require a full rebuild.
+
+## Platforms
+
+macOS (Apple Silicon + Intel), Windows (x64), Linux (x64) via AppImage, deb, rpm, Snap, or Flatpak.
 
 ## License
 

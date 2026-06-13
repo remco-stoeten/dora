@@ -11,9 +11,33 @@ export type ChangelogEntry = {
 	details?: string[]
 }
 
-export const CURRENT_VERSION = "0.26.7"
+export const CURRENT_VERSION = "0.27.0"
 
 export const CHANGELOG: ChangelogEntry[] = [
+	{
+		version: "0.27.0",
+		date: "2026-06-07",
+		commit: "v0.27.0",
+		title: "Add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
+		description: "Add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama. Add in-app Ollama setup flow with installer, runtime helpers, and model management.",
+		type: "feature",
+		details: [
+			"add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
+			"add encrypted API key storage, provider/model selection, and usage history",
+			"add in-app Ollama setup flow with installer, runtime helpers, and model management",
+			"feed live table indexes into assistant schema context",
+			"extract Dora Studio into `@dora/studio` for desktop and marketing web demo",
+			"render shared Studio at `/app` and refresh marketing landing with live demos and release-aware downloads",
+			"add `Ctrl+Shift+B` to toggle the AI assistant from the Studio keyboard flow",
+			"preserve high-precision numeric values and BIGINTs during cell editing",
+			"fix typed Postgres/SQLite cell edit and add-record binding behavior",
+			"improve credential-store recovery with OS-aware keyring install actions",
+			"move reusable Studio experience into `packages/studio`",
+			"rebuild marketing app-demo framing, theme polish, and deployment metadata",
+			"harden release automation with generated notes, post-release changelog sync, and package-manager fan-out",
+			"bump release line to 0.27.0 across root, desktop, Tauri, and Cargo manifests",
+		]
+	},
 	{
 		version: "0.26.5",
 		date: "2026-05-28",
