@@ -9,7 +9,103 @@ use crate::database::{
 };
 
 pub fn parse_statements(query: &str) -> anyhow::Result<Vec<ParsedStatement>> {
-    database::parser::parse_statements(&SQLiteDialect {}, query)
+    match database::parser::parse_statements(&SQLiteDialect {}, query) {
+        Ok(statements) => Ok(statements),
+        // `sqlparser`'s SQLite dialect rejects several valid statements
+        // (VACUUM, DETACH DATABASE, `PRAGMA x = ON`, `PRAGMA fn(identifier)`).
+        // SQLite executes the raw SQL through rusqlite, so fall back to a
+        // keyword-based classifier rather than failing the whole batch.
+        Err(_) => Ok(fallback_parse(query)),
+    }
+}
+
+/// Best-effort statement classification for SQL the AST parser cannot handle.
+/// Splits on top-level semicolons (honouring quoted strings) and classifies
+/// each statement by its leading keyword.
+fn fallback_parse(query: &str) -> Vec<ParsedStatement> {
+    split_sql_statements(query)
+        .into_iter()
+        .map(|statement| ParsedStatement {
+            returns_values: stmt_returns_values_heuristic(&statement),
+            is_read_only: stmt_is_read_only_heuristic(&statement),
+            statement,
+        })
+        .collect()
+}
+
+fn split_sql_statements(query: &str) -> Vec<String> {
+    let mut statements = Vec::new();
+    let mut current = String::new();
+    let mut in_single = false;
+    let mut in_double = false;
+
+    for c in query.chars() {
+        match c {
+            '\'' if !in_double => {
+                in_single = !in_single;
+                current.push(c);
+            }
+            '"' if !in_single => {
+                in_double = !in_double;
+                current.push(c);
+            }
+            ';' if !in_single && !in_double => {
+                if !current.trim().is_empty() {
+                    statements.push(current.trim().to_string());
+                }
+                current.clear();
+            }
+            _ => current.push(c),
+        }
+    }
+
+    if !current.trim().is_empty() {
+        statements.push(current.trim().to_string());
+    }
+
+    statements
+}
+
+fn first_keyword(stmt: &str) -> String {
+    stmt.split(|c: char| c.is_whitespace() || c == '(')
+        .find(|s| !s.is_empty())
+        .unwrap_or("")
+        .to_ascii_uppercase()
+}
+
+fn stmt_returns_values_heuristic(stmt: &str) -> bool {
+    match first_keyword(stmt).as_str() {
+        "SELECT" | "WITH" | "VALUES" | "EXPLAIN" => true,
+        "PRAGMA" => pragma_sql_returns_values(stmt),
+        "INSERT" | "UPDATE" | "DELETE" => stmt.to_ascii_uppercase().contains(" RETURNING "),
+        _ => false,
+    }
+}
+
+fn stmt_is_read_only_heuristic(stmt: &str) -> bool {
+    match first_keyword(stmt).as_str() {
+        "SELECT" | "WITH" | "VALUES" | "EXPLAIN" => true,
+        // Introspection PRAGMAs are read-only; assignments mutate state.
+        "PRAGMA" => pragma_sql_returns_values(stmt),
+        _ => false,
+    }
+}
+
+/// Classifies a raw `PRAGMA …` string: assignments (`PRAGMA x = y`) never
+/// return rows; otherwise it depends on whether the pragma is value-returning.
+fn pragma_sql_returns_values(stmt: &str) -> bool {
+    let rest = match stmt.get("PRAGMA".len()..) {
+        Some(rest) => rest.trim_start(),
+        None => return false,
+    };
+    let head: String = rest
+        .chars()
+        .take_while(|c| !matches!(c, '(' | '=' | ';') && !c.is_whitespace())
+        .collect();
+    let after = rest[head.len()..].trim_start();
+    let is_assignment = after.starts_with('=');
+    let name = head.rsplit('.').next().unwrap_or(&head);
+    !is_assignment && pragma_name_returns_values(name)
 }
 
 impl SqlDialectExt for SQLiteDialect {
@@ -32,6 +128,14 @@ impl SqlDialectExt for SQLiteDialect {
 }
 
 fn pragma_returns_values(name: &ObjectName) -> bool {
+    let Some(ident) = name.0.first() else {
+        return false;
+    };
+
+    pragma_name_returns_values(&ident.value)
+}
+
+fn pragma_name_returns_values(name: &str) -> bool {
     const VALUE_RETURNING_PRAGMAS: &[&str] = &[
         "table_info",
         "index_info",
@@ -48,25 +152,14 @@ fn pragma_returns_values(name: &ObjectName) -> bool {
         "temp_store",
     ];
 
-    let Some(ident) = name.0.first() else {
-        return false;
-    };
-
     VALUE_RETURNING_PRAGMAS
         .iter()
-        .any(|&pragma| ident.value.eq_ignore_ascii_case(pragma))
+        .any(|&pragma| name.eq_ignore_ascii_case(pragma))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // TODO: check these:
-    // ATTACH/DETACH DATABASE
-    // vacuum
-    // PRAGMA table_info(users);;
-    // PRAGMA foreign_key_list(orders);
-    // PRAGMA foreign_keys = ON;
 
     #[test]
     fn parses_statements() {
@@ -341,6 +434,81 @@ mod tests {
         assert!(
             !results[6].returns_values,
             "Unknown PRAGMA should not return values"
+        );
+    }
+
+    #[test]
+    fn test_pragma_with_arguments() {
+        // Value-returning PRAGMAs called with arguments still return rows.
+        let results = parse_statements(
+            "PRAGMA table_info('users'); PRAGMA foreign_key_list(orders); PRAGMA index_info(idx_a);",
+        )
+        .unwrap();
+        assert_eq!(results.len(), 3);
+        for result in &results {
+            assert!(
+                result.returns_values,
+                "value-returning PRAGMA with an argument should return rows: {}",
+                result.statement
+            );
+            assert!(
+                result.is_read_only,
+                "introspection PRAGMA should be read-only: {}",
+                result.statement
+            );
+        }
+    }
+
+    #[test]
+    fn test_pragma_assignment_does_not_return_values() {
+        let results =
+            parse_statements("PRAGMA foreign_keys = ON; PRAGMA cache_size = 4000;").unwrap();
+        assert_eq!(results.len(), 2);
+        for result in &results {
+            assert!(
+                !result.returns_values,
+                "PRAGMA assignment should not return rows: {}",
+                result.statement
+            );
+        }
+    }
+
+    #[test]
+    fn test_attach_and_detach_database() {
+        let results = parse_statements(
+            "ATTACH DATABASE 'aux.db' AS aux; DETACH DATABASE aux;",
+        )
+        .unwrap();
+        assert_eq!(results.len(), 2);
+
+        // ATTACH/DETACH produce no result set and mutate connection state, so
+        // they must route through the write path (not read-only).
+        assert!(
+            !results[0].returns_values,
+            "ATTACH DATABASE should not return values"
+        );
+        assert!(
+            !results[0].is_read_only,
+            "ATTACH DATABASE mutates connection state — not read-only"
+        );
+        assert!(
+            !results[1].returns_values,
+            "DETACH DATABASE should not return values"
+        );
+        assert!(
+            !results[1].is_read_only,
+            "DETACH DATABASE mutates connection state — not read-only"
+        );
+    }
+
+    #[test]
+    fn test_vacuum() {
+        let results = parse_statements("VACUUM;").unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].returns_values, "VACUUM should not return values");
+        assert!(
+            !results[0].is_read_only,
+            "VACUUM rewrites the database file — not read-only"
         );
     }
 }
