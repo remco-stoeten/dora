@@ -60,11 +60,32 @@ sudo snap install dora
 | PostgreSQL | Full support — SSH tunneling, live updates via LISTEN/NOTIFY |
 | MySQL | Full support — SSH tunneling, live updates via polling |
 | SQLite | Full support — native file picker |
-| DuckDB | Beta — local files, full query/browse/edit, live updates via polling |
-| Flat files (CSV / TSV / Parquet / JSON / NDJSON) | Open via drag-and-drop or "Open data file" — read-only, queried as tables with cross-file JOINs (embedded DuckDB) |
+| DuckDB | Beta — local `.duckdb` files (editable), import CSV/JSON/Parquet as tables |
+| Data files (CSV / TSV / Parquet / JSON / NDJSON) | Readonly DuckDB-backed sessions — query, export, cross-file JOINs; Save as DuckDB to edit |
 | libSQL / Turso | Full support — local and remote |
 | MariaDB | Compatibility layer — MySQL path, dialect pass in progress |
 | CockroachDB | Compatibility layer — PostgreSQL path, dialect pass in progress |
+
+## Local files
+
+Dora distinguishes **database files** from **data files**:
+
+| Open this | What you get |
+|---|---|
+| `.sqlite` / `.db` | Editable SQLite database |
+| `.duckdb` | Editable DuckDB database — browse, edit rows, run SQL, import more files |
+| CSV, JSON, Parquet, TSV, NDJSON | **Data files** — readonly DuckDB-backed session. Tables are rebuilt from disk when the connection opens. SQL queries, export, and cross-file JOINs work; inline row editing does not. |
+
+**Making data files editable**
+
+- **Save as DuckDB** — materializes the active data-file session into a new `.duckdb` file on disk, then opens it as an editable connection. The original data-file connection is unchanged.
+- **Import files** — on an existing native `.duckdb` connection, import CSV/JSON/Parquet as physical tables you can edit.
+
+**Recovery**
+
+If a data file moves or goes missing, Dora shows connection health (Active / Connected with issues / Unavailable) and lets you relocate or remove sources from the source panel without losing the connection entry.
+
+Open database files via the connection dialog file picker. Open data files via drag-and-drop or **Open data file** in the desktop app.
 
 ## Features
 

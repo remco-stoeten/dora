@@ -50,7 +50,7 @@
 		"release:gen": "bun tools/scripts/generate-release.ts",
 		"ai:setup": "bun tools/scripts/setup-local-ai.ts",
 		"setup:ai": "bun tools/scripts/setup-local-ai.ts",
-		"runner": "./dora-runner"
+		"runner": "./dora-manager-executor"
 	},
 	"dependencies": {
 		"@google/generative-ai": "^0.24.1",
