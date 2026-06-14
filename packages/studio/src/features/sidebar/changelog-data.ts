@@ -15,6 +15,22 @@ export const CURRENT_VERSION = "0.27.0"
 
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "Unreleased",
+		date: "2026-06-14",
+		commit: "vUnreleased",
+		title: "Add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
+		description: "Add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks. **Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files.",
+		type: "feature",
+		details: [
+			"add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
+			"open CSV, JSON, Parquet, TSV, and NDJSON as readonly **data files** (DuckDB-backed sessions) with health indicators, recovery actions, and connection summaries",
+			"**Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files",
+			"**Import files** — import CSV/JSON/Parquet as physical tables in native DuckDB file connections",
+			"open SQLite and DuckDB files as editable embedded databases",
+			"README support matrix and **Local files** section explaining database files vs data files",
+		]
+	},
+	{
 		version: "0.27.0",
 		date: "2026-06-07",
 		commit: "v0.27.0",

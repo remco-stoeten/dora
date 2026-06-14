@@ -4,12 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-
 ### Features
 
-- open flat files (CSV, TSV, Parquet, JSON, NDJSON) as read-only connections via drag-and-drop or "Open data file"; files register as DuckDB views, appear as tables, and support SQL queries and cross-file JOINs
+- add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks
+- open CSV, JSON, Parquet, TSV, and NDJSON as readonly **data files** (DuckDB-backed sessions) with health indicators, recovery actions, and connection summaries
+- **Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files
+- **Import files** — import CSV/JSON/Parquet as physical tables in native DuckDB file connections
+- open SQLite and DuckDB files as editable embedded databases
 
-- recover gracefully from missing file sources when reopening a flat-file connection
+### Reliability
+
+- recover gracefully from missing or moved data-file sources when reopening a connection
+- clearer failure copy for save/import paths (no active files, destination conflicts, partial imports, schema refresh warnings)
+
+### Fixes
+
+- SQL console loading shell and editor surfaces now use a themed `--editor` token, so they no longer render a black rectangle in light and non-dark themes (#114)
+- data-grid column headers show a tooltip with the full column name and type, but only when the label is actually truncated (#115)
+- database-studio empty states no longer re-fire their entrance animation on every tab switch, removing the zoom/flicker (#113)
+- AI provider status dot is no longer colour-only — it uses a filled vs hollow shape plus `aria-pressed`/`aria-label` for screen readers (#116)
+
+### Documentation
+
+- README support matrix and **Local files** section explaining database files vs data files
+
+### Internal
+
+- remove unused `DisabledFeature`/`NotImplemented` components and the deprecated `database-studio/api.ts` (#95)
+- drop the inaccurate PgBouncer scaffold comment in `types.rs` now that `use_simple_query` is fully wired (#92)
 
 
 ## [v0.27.0]

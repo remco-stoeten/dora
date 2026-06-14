@@ -17,6 +17,52 @@ export const CURRENT_VERSION = "0.27.0"
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
 	{
+		version: "Unreleased",
+		date: "2026-06-14",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/vUnreleased",
+		groups: [
+			{
+				name: "Features",
+				items: [
+				"add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
+				"open CSV, JSON, Parquet, TSV, and NDJSON as readonly **data files** (DuckDB-backed sessions) with health indicators, recovery actions, and connection summaries",
+				"**Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files",
+				"**Import files** — import CSV/JSON/Parquet as physical tables in native DuckDB file connections",
+				"open SQLite and DuckDB files as editable embedded databases",
+				]
+			},
+			{
+				name: "Reliability",
+				items: [
+				"recover gracefully from missing or moved data-file sources when reopening a connection",
+				"clearer failure copy for save/import paths (no active files, destination conflicts, partial imports, schema refresh warnings)",
+				]
+			},
+			{
+				name: "Fixes",
+				items: [
+				"SQL console loading shell and editor surfaces now use a themed `--editor` token, so they no longer render a black rectangle in light and non-dark themes (#114)",
+				"data-grid column headers show a tooltip with the full column name and type, but only when the label is actually truncated (#115)",
+				"database-studio empty states no longer re-fire their entrance animation on every tab switch, removing the zoom/flicker (#113)",
+				"AI provider status dot is no longer colour-only — it uses a filled vs hollow shape plus `aria-pressed`/`aria-label` for screen readers (#116)",
+				]
+			},
+			{
+				name: "Documentation",
+				items: [
+				"README support matrix and **Local files** section explaining database files vs data files",
+				]
+			},
+			{
+				name: "Internal",
+				items: [
+				"remove unused `DisabledFeature`/`NotImplemented` components and the deprecated `database-studio/api.ts` (#95)",
+				"drop the inaccurate PgBouncer scaffold comment in `types.rs` now that `use_simple_query` is fully wired (#92)",
+				]
+			}
+		]
+	},
+	{
 		version: "0.27.0",
 		date: "2026-06-07",
 		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.27.0",
