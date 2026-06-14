@@ -389,49 +389,13 @@ export function SqlResults({
 					>
 						<BarChart3 className='h-3.5 w-3.5' />
 					</Button>
-				</div>
-
-				{result && !result.error && viewMode !== 'chart' && (
-					<div className='flex items-center gap-2 text-xs'>
-						<span className='inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-600 dark:text-emerald-400'>
+					{result && !result.error && (
+						<span className='ml-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400'>
 							<CircleCheck className='h-3 w-3' />
 							Success
 						</span>
-						<span className='text-muted-foreground'>
-							{successMessage}{' '}
-							{filteredRows.length !== result.rowCount
-								? `${filteredRows.length} / `
-								: ''}
-							{result.rowCount} row{result.rowCount !== 1 ? 's' : ''} •{' '}
-							{result.executionTime}ms backend • {filterTime}ms filtering
-						</span>
-						{(sourceTable || result.sourceTable) && (
-							<span className='inline-flex items-center gap-1.5 rounded-md border border-sidebar-border bg-sidebar-accent/40 px-2 py-0.5 text-muted-foreground transition-all duration-300'>
-								<Database className='h-3 w-3 shrink-0' />
-								<span className='font-mono text-[11px]'>
-									{sourceTable || result.sourceTable}
-								</span>
-								<span className='font-mono text-[11px]'>:</span>
-								{asyncRowCount.isLoading ? (
-									<span className='async-count-shimmer inline-block h-3 w-10 rounded-sm' />
-								) : asyncRowCount.count !== null ? (
-									<span className='async-count-reveal font-mono text-[11px] font-medium text-foreground'>
-										{asyncRowCount.count.toLocaleString()}
-									</span>
-								) : (
-									<span className='font-mono text-[11px] opacity-50'>~</span>
-								)}
-								<span className='text-[10px] opacity-60'>rows</span>
-							</span>
-						)}
-					</div>
-				)}
-
-				{mutationDisabledReason && result && !result.error && result.rows.length > 0 && (
-					<div className='text-[11px] text-muted-foreground'>
-						{mutationDisabledReason}
-					</div>
-				)}
+					)}
+				</div>
 
 				<Button
 					variant='ghost'
@@ -646,6 +610,43 @@ export function SqlResults({
 					</div>
 				)}
 			</div>
+
+			{result && !result.error && (
+				<div className='flex items-center justify-between gap-3 px-2 py-1.5 border-t border-sidebar-border bg-sidebar-accent/20 shrink-0 text-xs'>
+					<div className='flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground'>
+						<span>
+							{successMessage}{' '}
+							{filteredRows.length !== result.rowCount ? `${filteredRows.length} / ` : ''}
+							{result.rowCount} row{result.rowCount !== 1 ? 's' : ''} •{' '}
+							{result.executionTime}ms backend • {filterTime}ms filtering
+						</span>
+						{(sourceTable || result.sourceTable) && (
+							<span className='inline-flex items-center gap-1.5 rounded-md border border-sidebar-border bg-sidebar-accent/40 px-2 py-0.5 text-muted-foreground transition-all duration-300'>
+								<Database className='h-3 w-3 shrink-0' />
+								<span className='font-mono text-[11px]'>
+									{sourceTable || result.sourceTable}
+								</span>
+								<span className='font-mono text-[11px]'>:</span>
+								{asyncRowCount.isLoading ? (
+									<span className='async-count-shimmer inline-block h-3 w-10 rounded-sm' />
+								) : asyncRowCount.count !== null ? (
+									<span className='async-count-reveal font-mono text-[11px] font-medium text-foreground'>
+										{asyncRowCount.count.toLocaleString()}
+									</span>
+								) : (
+									<span className='font-mono text-[11px] opacity-50'>~</span>
+								)}
+								<span className='text-[10px] opacity-60'>rows</span>
+							</span>
+						)}
+					</div>
+					{mutationDisabledReason && result.rows.length > 0 && (
+						<span className='shrink-0 text-[11px] text-muted-foreground'>
+							{mutationDisabledReason}
+						</span>
+					)}
+				</div>
+			)}
 
 			<AlertDialog
 				open={rowToDelete !== null}

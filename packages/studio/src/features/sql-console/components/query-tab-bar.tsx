@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Plus, X, Loader2, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
 import { useQueryTabs } from '../stores/tab-store'
 import { cn } from '@studio/shared/utils/cn'
-import { WindowControls } from '@studio/components/window-controls'
 import {
 	ContextMenu,
 	ContextMenuTrigger,
@@ -229,9 +228,6 @@ export function QueryTabBar() {
 					<ChevronRight className='h-3 w-3' />
 				</button>
 			)}
-			<div className='flex h-full shrink-0 items-center border-l border-sidebar-border px-1' data-tauri-drag-region='false'>
-				<WindowControls />
-			</div>
 		</div>
 	)
 }

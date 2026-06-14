@@ -12,9 +12,14 @@ import { ResizablePanels } from "@studio/features/drizzle-runner/components/resi
 import type { SavedQuery } from "@studio/lib/bindings";
 
 import { DEFAULT_QUERY } from "../../features/drizzle-runner/data";
+import {
+  buildDefaultDrizzleQuery,
+  buildDefaultSqlQuery,
+  pickDefaultQueryTable,
+} from "@studio/shared/utils/default-query-table";
 import { drizzleQueryToSql } from "../../features/drizzle-runner/utils/drizzle-query";
 import { AiCmdK } from "./components/ai-cmd-k";
-import { ConsoleToolbar } from "./components/console-toolbar";
+import { ConsoleHeader, EditorActionBar } from "./components/console-toolbar";
 import { QueryTabBar } from "./components/query-tab-bar";
 import { QueryHistoryPanel } from "./components/query-history-panel";
 import { SqlResults } from "./components/sql-results";
@@ -103,7 +108,7 @@ function SqlConsoleInner({
 
   function renderEditorFallback() {
     return (
-      <div className="h-full bg-[#0e0e12] p-4">
+      <div className="h-full bg-editor p-4">
         <div className="h-full rounded-md border border-border/60 bg-black/20 p-4">
           <div className="space-y-3">
             {["w-5/12", "w-8/12", "w-6/12", "w-7/12", "w-4/12"].map(function (width, index) {
@@ -275,9 +280,14 @@ function SqlConsoleInner({
             setTables(mapped);
 
             if (mapped.length > 0) {
-              const firstTable = mapped[0].name;
-              setCurrentSqlQuery(`SELECT * FROM ${firstTable} LIMIT 100;`);
-              setCurrentDrizzleQuery(`db.select().from(${firstTable}).limit(100);`);
+              const defaultTable = pickDefaultQueryTable(mapped);
+              if (defaultTable) {
+                setCurrentSqlQuery(buildDefaultSqlQuery(defaultTable.name));
+                setCurrentDrizzleQuery(buildDefaultDrizzleQuery(defaultTable.name));
+              } else {
+                setCurrentSqlQuery(DEFAULT_SQL);
+                setCurrentDrizzleQuery(DEFAULT_QUERY);
+              }
             } else {
               setCurrentSqlQuery(DEFAULT_SQL);
               setCurrentDrizzleQuery(DEFAULT_QUERY);
@@ -961,23 +971,19 @@ function SqlConsoleInner({
     { description: shortcuts.toggleSidebar.description },
   );
 
-  $.key("s")
-    .except("typing")
-    .on(
-      function () {
-        setMode("sql");
-      },
-      { description: "Switch to SQL mode" },
-    );
+  $.bind(sqlShortcuts.switchToSql.combo).on(
+    function () {
+      setMode("sql");
+    },
+    { description: sqlShortcuts.switchToSql.description },
+  );
 
-  $.key("d")
-    .except("typing")
-    .on(
-      function () {
-        setMode("drizzle");
-      },
-      { description: "Switch to Drizzle mode" },
-    );
+  $.bind(sqlShortcuts.switchToDrizzle.combo).on(
+    function () {
+      setMode("drizzle");
+    },
+    { description: sqlShortcuts.switchToDrizzle.description },
+  );
 
   $.key("h")
     .except("typing")
@@ -1079,34 +1085,18 @@ function SqlConsoleInner({
         <Panel minSize={40}>
           <div className="flex flex-col h-full overflow-hidden">
             {/* Toolbar */}
-            <ConsoleToolbar
+            <ConsoleHeader
               mode={mode}
               onModeChange={setMode}
-              onToggleRightSidebar={toggleRightSidebar}
-              showRightSidebar={showRightSidebar}
-              isExecuting={isExecuting}
               connectionName={
                 activeConnectionId && getConnectionName
                   ? getConnectionName(activeConnectionId)
                   : undefined
               }
-              onRun={function () {
-                handleExecute();
-              }}
-              onCancel={handleCancel}
-              onPrettify={handlePrettify}
-              onExport={handleExport}
-              onExportCsv={handleExportCsv}
-              hasResults={!!result}
-              showFilter={showFilter}
-              onToggleFilter={function () {
-                setShowFilter(!showFilter);
-              }}
               showHistory={showHistory}
               onToggleHistory={function () {
                 setShowHistory(!showHistory);
               }}
-              onSave={handleSaveSnippet}
             />
 
             {/* Tab Bar */}
@@ -1118,7 +1108,8 @@ function SqlConsoleInner({
                 defaultSplit={55}
                 minSize={100}
                 topPanel={
-                  <div className="relative w-full h-full">
+                  <div className="flex flex-col h-full">
+                    <div className="relative flex-1 min-h-0">
                     <Suspense fallback={renderEditorFallback()}>
                       {mode === "sql" ? (
                         <SqlEditor
@@ -1126,6 +1117,7 @@ function SqlConsoleInner({
                           onChange={setCurrentSqlQuery}
                           onExecute={(code) => handleExecute(code)}
                           onSave={handleSaveActiveSnippetFromEditor}
+                          onModeChange={setMode}
                           isExecuting={isExecuting}
                           tables={tables}
                         />
@@ -1137,6 +1129,7 @@ function SqlConsoleInner({
                             handleExecute(code);
                           }}
                           onSave={handleSaveActiveSnippetFromEditor}
+                          onModeChange={setMode}
                           isExecuting={isExecuting}
                           tables={tables.map(function (t) {
                             return {
@@ -1154,6 +1147,25 @@ function SqlConsoleInner({
                         />
                       )}
                     </Suspense>
+                    </div>
+                    <EditorActionBar
+                      onToggleRightSidebar={toggleRightSidebar}
+                      showRightSidebar={showRightSidebar}
+                      isExecuting={isExecuting}
+                      onRun={function () {
+                        handleExecute();
+                      }}
+                      onCancel={handleCancel}
+                      onPrettify={handlePrettify}
+                      onExport={handleExport}
+                      onExportCsv={handleExportCsv}
+                      hasResults={!!result}
+                      showFilter={showFilter}
+                      onToggleFilter={function () {
+                        setShowFilter(!showFilter);
+                      }}
+                      onSave={handleSaveSnippet}
+                    />
                   </div>
                 }
                 bottomPanel={

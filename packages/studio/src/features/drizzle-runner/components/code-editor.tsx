@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type MutableRefObject } from "react";
 import { useSetting } from "@studio/core/settings";
 import { loadTheme, isBuiltinTheme, MonacoTheme } from "@studio/core/settings/editor-themes";
 import { toast } from "@studio/shared/ui/notifier";
+import { pickDefaultQueryTable } from "@studio/shared/utils/default-query-table";
 import { SchemaColumn, SchemaTable } from "../types";
 import {
   getDbName,
@@ -25,6 +26,7 @@ type Props = {
   onChange: (value: string) => void;
   onExecute: (code?: string) => void;
   onSave?: () => void;
+  onModeChange?: (mode: "sql" | "drizzle") => void;
   isExecuting: boolean;
   tables: SchemaTable[];
 };
@@ -238,11 +240,12 @@ function replaceDrizzleTypes(
     });
 }
 
-export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, tables }: Props) {
+export function CodeEditor({ value, onChange, onExecute, onSave, onModeChange, isExecuting, tables }: Props) {
   const [isMonacoReady, setIsMonacoReady] = useState(false);
   const [editorFontSize] = useSetting("editorFontSize");
   const [editorThemeSetting] = useSetting("editorTheme");
   const [enableVimMode] = useSetting("enableVimMode");
+  const [isEditorReady, setIsEditorReady] = useState(false);
   const editorRef = useRef<EditorRef | null>(null);
   const monacoRef = useRef<MonacoApi | null>(null);
   const vimModeRef = useRef<{ dispose: () => void } | null>(null);
@@ -254,6 +257,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
   const tablesRef = useRef<SchemaTable[]>(tables);
   const onExecuteRef = useRef(onExecute);
   const onSaveRef = useRef(onSave);
+  const onModeChangeRef = useRef(onModeChange);
 
   useEffect(function loadMonacoWorkers() {
     let cancelled = false;
@@ -293,6 +297,13 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
       onSaveRef.current = onSave;
     },
     [onSave],
+  );
+
+  useEffect(
+    function syncOnModeChange() {
+      onModeChangeRef.current = onModeChange;
+    },
+    [onModeChange],
   );
 
   function getThemeFromDocument(): MonacoTheme {
@@ -393,7 +404,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
         }
       };
     },
-    [enableVimMode],
+    [enableVimMode, isEditorReady],
   );
 
   useEffect(() => {
@@ -491,6 +502,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
   const handleEditorDidMount: OnMount = function (editor, monaco) {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    setIsEditorReady(true);
 
     monaco.editor.setTheme(editorTheme);
 
@@ -656,13 +668,13 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
         }
 
         if (isInsideExecuteParens(textUntilPosition)) {
-          const firstTable = currentTables[0];
+          const defaultTable = pickDefaultQueryTable(currentTables);
           return buildSuggestions(range, [
             {
               label: "sql`SELECT ...`",
               kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: firstTable
-                ? "sql`SELECT * FROM ${1:" + firstTable.name + "} LIMIT ${2:100}`)"
+              insertText: defaultTable
+                ? "sql`SELECT * FROM ${1:" + defaultTable.name + "} LIMIT ${2:100}`)"
                 : "sql`SELECT ${1:*}`)",
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               detail: "Run raw SQL through Drizzle",
@@ -2051,6 +2063,14 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
       onSaveRef.current?.();
     });
 
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyS, function () {
+      onModeChangeRef.current?.("sql");
+    });
+
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyD, function () {
+      onModeChangeRef.current?.("drizzle");
+    });
+
     editor.onMouseDown(function (e) {
       if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
         const lineNumber = e.target.position?.lineNumber;
@@ -2201,7 +2221,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, isExecuting, ta
           }}
         />
       ) : (
-        <div className="h-full bg-[#0e0e12] p-4">
+        <div className="h-full bg-editor p-4">
           <div className="h-full rounded-md border border-border/60 bg-black/20 p-4" />
         </div>
       )}

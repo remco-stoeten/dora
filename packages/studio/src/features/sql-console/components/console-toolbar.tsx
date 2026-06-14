@@ -1,6 +1,6 @@
+import { forwardRef } from 'react'
 import {
 	PanelRight,
-	Loader2,
 	Sparkles,
 	Play,
 	Square,
@@ -20,28 +20,8 @@ import {
 	DropdownMenuTrigger
 } from '@studio/shared/ui/dropdown-menu'
 import { cn } from '@studio/shared/utils/cn'
-
-type Props = {
-	onToggleRightSidebar: () => void
-	showRightSidebar: boolean
-	isExecuting: boolean
-	mode: 'sql' | 'drizzle'
-	onModeChange: (mode: 'sql' | 'drizzle') => void
-	onRun?: () => void
-	onCancel?: () => void
-	onPrettify?: () => void
-	onExport?: () => void
-	onExportCsv?: () => void
-	hasResults?: boolean
-	showJson?: boolean
-	onShowJsonToggle?: () => void
-	showFilter?: boolean
-	onToggleFilter?: () => void
-	showHistory?: boolean
-	onToggleHistory?: () => void
-	onSave?: () => void
-	connectionName?: string
-}
+import { WindowControls } from '@studio/components/window-controls'
+import { formatShortcut } from '@studio/core/shortcuts'
 
 function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
 	return (
@@ -62,34 +42,36 @@ type ToolbarIconButtonProps = {
 	disabled?: boolean
 	onClick?: () => void
 	children: React.ReactNode
-}
+} & Omit<React.ComponentPropsWithoutRef<typeof Button>, 'children' | 'title'>
 
-function ToolbarIconButton({
-	label,
-	active,
-	disabled,
-	onClick,
-	children
-}: ToolbarIconButtonProps) {
-	return (
-		<Button
-			variant='ghost'
-			size='icon'
-			className={cn(
-				'h-8 w-8 rounded-md text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]',
-				'hover:bg-sidebar-accent hover:text-sidebar-foreground',
-				active && 'bg-sidebar-accent text-sidebar-foreground',
-				disabled && 'cursor-not-allowed opacity-45'
-			)}
-			onClick={onClick}
-			disabled={disabled}
-			title={label}
-			aria-label={label}
-		>
-			{children}
-		</Button>
-	)
-}
+const ToolbarIconButton = forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
+	function ToolbarIconButton(
+		{ label, active, disabled, onClick, children, className, ...props },
+		ref
+	) {
+		return (
+			<Button
+				ref={ref}
+				variant='ghost'
+				size='icon'
+				className={cn(
+					'h-8 w-8 rounded-md text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]',
+					'hover:bg-sidebar-accent hover:text-sidebar-foreground',
+					active && 'bg-sidebar-accent text-sidebar-foreground',
+					disabled && 'cursor-not-allowed opacity-45',
+					className
+				)}
+				onClick={onClick}
+				disabled={disabled}
+				title={label}
+				aria-label={label}
+				{...props}
+			>
+				{children}
+			</Button>
+		)
+	}
+)
 
 function ModeTab({
 	active,
@@ -107,7 +89,7 @@ function ModeTab({
 			type='button'
 			onClick={onClick}
 			className={cn(
-				'inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium',
+				'inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium',
 				'transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]',
 				active
 					? 'bg-sidebar-accent text-sidebar-foreground shadow-sm'
@@ -122,31 +104,28 @@ function ModeTab({
 	)
 }
 
-export function ConsoleToolbar({
-	onToggleRightSidebar,
-	showRightSidebar,
-	isExecuting,
+type HeaderProps = {
+	mode: 'sql' | 'drizzle'
+	onModeChange: (mode: 'sql' | 'drizzle') => void
+	showHistory?: boolean
+	onToggleHistory?: () => void
+	connectionName?: string
+}
+
+export function ConsoleHeader({
 	mode,
 	onModeChange,
-	onRun,
-	onCancel,
-	onPrettify,
-	onExport,
-	onExportCsv,
-	hasResults,
-	showJson,
-	onShowJsonToggle,
-	showFilter,
-	onToggleFilter,
 	showHistory,
 	onToggleHistory,
-	onSave,
 	connectionName
-}: Props) {
+}: HeaderProps) {
 	return (
-		<div className='flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-sidebar-border bg-sidebar px-3 py-2'>
-			<div className='flex min-w-0 items-center gap-3'>
-				<div className='hidden min-w-0 items-center gap-2 rounded-md border border-sidebar-border/60 bg-sidebar-accent/35 px-2.5 py-1.5 text-xs text-muted-foreground sm:flex'>
+		<div
+			className='flex h-10 shrink-0 items-center justify-between gap-3 border-b border-sidebar-border bg-sidebar px-3'
+			data-tauri-drag-region='true'
+		>
+			<div className='flex min-w-0 items-center gap-2' data-tauri-drag-region='true'>
+				<div className='hidden min-w-0 items-center gap-2 rounded-md border border-sidebar-border/60 bg-sidebar-accent/35 px-2.5 py-1 text-xs text-muted-foreground sm:flex'>
 					<Database className='h-3.5 w-3.5 shrink-0' />
 					<span className='max-w-48 truncate font-medium text-sidebar-foreground'>
 						{connectionName || 'No connection'}
@@ -163,40 +142,78 @@ export function ConsoleToolbar({
 					</ToolbarIconButton>
 				)}
 
-				<div className='flex items-center gap-1 rounded-lg border border-sidebar-border/70 bg-background/25 p-1'>
+				<div className='flex items-center gap-1 rounded-lg border border-sidebar-border/70 bg-background/25 p-0.5'>
 					<ModeTab
 						active={mode === 'sql'}
 						onClick={() => onModeChange?.('sql')}
-						shortcut='S'
+						shortcut={formatShortcut('alt+s')}
 					>
 						SQL
 					</ModeTab>
 					<ModeTab
 						active={mode === 'drizzle'}
 						onClick={() => onModeChange?.('drizzle')}
-						shortcut='D'
+						shortcut={formatShortcut('alt+d')}
 					>
 						Drizzle
 					</ModeTab>
 				</div>
 			</div>
 
-			<div className='flex shrink-0 items-center gap-1.5'>
+			<WindowControls />
+		</div>
+	)
+}
+
+type ActionBarProps = {
+	onToggleRightSidebar: () => void
+	showRightSidebar: boolean
+	isExecuting: boolean
+	onRun?: () => void
+	onCancel?: () => void
+	onPrettify?: () => void
+	onExport?: () => void
+	onExportCsv?: () => void
+	hasResults?: boolean
+	showJson?: boolean
+	onShowJsonToggle?: () => void
+	showFilter?: boolean
+	onToggleFilter?: () => void
+	onSave?: () => void
+}
+
+export function EditorActionBar({
+	onToggleRightSidebar,
+	showRightSidebar,
+	isExecuting,
+	onRun,
+	onCancel,
+	onPrettify,
+	onExport,
+	onExportCsv,
+	hasResults,
+	showJson,
+	onShowJsonToggle,
+	showFilter,
+	onToggleFilter,
+	onSave
+}: ActionBarProps) {
+	return (
+		<div className='flex h-9 shrink-0 items-center justify-between gap-2 border-t border-sidebar-border bg-sidebar px-2'>
+			<div className='flex min-w-0 items-center gap-1'>
 				{onSave && (
 					<Button
 						size='sm'
 						variant='ghost'
-						className='h-8 gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]'
+						className='h-7 gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]'
 						onClick={onSave}
 						title='Save to Snippet Library'
 					>
 						<Bookmark className='h-3.5 w-3.5' />
-						<span className='hidden md:inline'>Save</span>
+						<span className='hidden sm:inline'>Save</span>
 						<Kbd className='ml-0.5 inline-flex'>⌘S</Kbd>
 					</Button>
 				)}
-
-				<div className='mx-1 h-5 w-px bg-sidebar-border/70' />
 
 				{onPrettify && (
 					<ToolbarIconButton
@@ -237,20 +254,20 @@ export function ConsoleToolbar({
 								<Download className='h-3.5 w-3.5' />
 							</ToolbarIconButton>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent align='end'>
+						<DropdownMenuContent align='start'>
 							<DropdownMenuItem onClick={onExport}>Export as JSON</DropdownMenuItem>
 							<DropdownMenuItem onClick={onExportCsv}>Export as CSV</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				)}
+			</div>
 
-				<div className='mx-1 h-5 w-px bg-sidebar-border/70' />
-
+			<div className='flex shrink-0 items-center gap-1.5'>
 				{isExecuting && onCancel ? (
 					<Button
 						size='sm'
 						variant='default'
-						className='h-8 gap-2 rounded-md px-3 text-sm font-semibold shadow-sm transition-[background-color,color,transform,box-shadow] duration-150 ease-out active:scale-[0.97] bg-destructive/90 text-destructive-foreground hover:bg-destructive'
+						className='h-7 gap-2 rounded-md px-3 text-xs font-semibold shadow-sm transition-[background-color,color,transform,box-shadow] duration-150 ease-out active:scale-[0.97] bg-destructive/90 text-destructive-foreground hover:bg-destructive'
 						onClick={onCancel}
 					>
 						<Square className='h-3 w-3 fill-current' />
@@ -260,7 +277,7 @@ export function ConsoleToolbar({
 					<Button
 						size='sm'
 						variant='default'
-						className='h-8 gap-2 rounded-md px-3 text-sm font-semibold shadow-sm transition-[background-color,color,transform,box-shadow] duration-150 ease-out active:scale-[0.97] bg-sidebar-foreground text-sidebar hover:bg-sidebar-foreground/90'
+						className='h-7 gap-2 rounded-md px-3 text-xs font-semibold shadow-sm transition-[background-color,color,transform,box-shadow] duration-150 ease-out active:scale-[0.97] bg-sidebar-foreground text-sidebar hover:bg-sidebar-foreground/90'
 						onClick={onRun}
 					>
 						<Play className='h-3.5 w-3.5 fill-current' />
@@ -275,7 +292,7 @@ export function ConsoleToolbar({
 					variant='ghost'
 					size='sm'
 					className={cn(
-						'h-8 gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]',
+						'h-7 gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]',
 						showRightSidebar && 'bg-sidebar-accent'
 					)}
 					onClick={onToggleRightSidebar}

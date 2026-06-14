@@ -5,13 +5,13 @@ import { useSetting } from "@studio/core/settings";
 import { loadTheme, isBuiltinTheme, MonacoTheme } from "@studio/core/settings/editor-themes";
 import { toast } from "@studio/shared/ui/notifier";
 import type { TableInfo } from "../types";
-import { usePromotionalDemo } from "../hooks/use-promotional-demo";
 
 type Props = {
   value: string;
   onChange: (value: string) => void;
   onExecute: (sql?: string) => void;
   onSave?: () => void;
+  onModeChange?: (mode: "sql" | "drizzle") => void;
   isExecuting: boolean;
   tables: TableInfo[];
 };
@@ -142,7 +142,7 @@ function getNextStepKeywords(beforeLower: string): string[] {
   return [];
 }
 
-export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tables }: Props) {
+export function SqlEditor({ value, onChange, onExecute, onSave, onModeChange, isExecuting, tables }: Props) {
   const [isMonacoReady, setIsMonacoReady] = useState(false);
   const [editorFontSize] = useSetting("editorFontSize");
   const [editorThemeSetting] = useSetting("editorTheme");
@@ -155,6 +155,7 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
   const loadedThemesRef = useRef<Set<string>>(new Set());
   const onExecuteRef = useRef(onExecute);
   const onSaveRef = useRef(onSave);
+  const onModeChangeRef = useRef(onModeChange);
   const completionProviderRef = useRef<Monaco.IDisposable | null>(null);
 
   useEffect(function loadMonacoWorkers() {
@@ -183,6 +184,10 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
+
+  useEffect(() => {
+    onModeChangeRef.current = onModeChange;
+  }, [onModeChange]);
 
   function getThemeFromDocument(): MonacoTheme {
     if (typeof document !== "undefined") {
@@ -296,7 +301,7 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
         }
       };
     },
-    [enableVimMode],
+    [enableVimMode, isEditorReady],
   );
 
   const handleEditorDidMount: OnMount = function (editor, monaco) {
@@ -313,6 +318,14 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSaveRef.current?.();
+    });
+
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyS, () => {
+      onModeChangeRef.current?.("sql");
+    });
+
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyD, () => {
+      onModeChangeRef.current?.("drizzle");
     });
 
     // Add "Run line" glyph margin listener
@@ -630,10 +643,8 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
     }
   }
 
-  const { isActive: isDemoActive, toggleDemoMode } = usePromotionalDemo(editorRef.current);
-
   return (
-    <div className="h-full w-full overflow-hidden pt-2 relative group">
+    <div className="h-full w-full overflow-hidden pt-2">
       {/* Inject global styles for the glyph margin icon */}
       <style
         dangerouslySetInnerHTML={{
@@ -653,15 +664,6 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
              `,
         }}
       />
-
-      <div className="absolute top-2 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={toggleDemoMode}
-          className={`text-[10px] px-2 py-0.5 rounded border ${isDemoActive ? "bg-primary text-primary-foreground border-primary" : "bg-background/50 border-border text-muted-foreground"}`}
-        >
-          {isDemoActive ? "DEMO ON" : "DEMO"}
-        </button>
-      </div>
 
       {isMonacoReady ? (
         <Editor
@@ -689,7 +691,7 @@ export function SqlEditor({ value, onChange, onExecute, onSave, isExecuting, tab
           }}
         />
       ) : (
-        <div className="h-full bg-[#0e0e12] p-4">
+        <div className="h-full bg-editor p-4">
           <div className="h-full rounded-md border border-border/60 bg-black/20 p-4" />
         </div>
       )}

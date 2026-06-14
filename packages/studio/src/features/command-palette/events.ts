@@ -24,6 +24,23 @@ export function dispatchSqlConsolePaletteCommand(detail: SqlConsolePaletteComman
 	window.dispatchEvent(new CustomEvent(SQL_CONSOLE_PALETTE_EVENT, { detail }))
 }
 
+export function scheduleSqlConsoleCommand(
+	detail: SqlConsolePaletteCommand,
+	options?: { navigate?: () => void }
+) {
+	if (options?.navigate) {
+		options.navigate()
+		requestAnimationFrame(function () {
+			requestAnimationFrame(function () {
+				dispatchSqlConsolePaletteCommand(detail)
+			})
+		})
+		return
+	}
+
+	dispatchSqlConsolePaletteCommand(detail)
+}
+
 export function dispatchDockerPaletteCommand(detail: DockerPaletteCommand) {
 	window.dispatchEvent(new CustomEvent(DOCKER_PALETTE_EVENT, { detail }))
 }
