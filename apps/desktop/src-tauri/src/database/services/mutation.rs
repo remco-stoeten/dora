@@ -77,6 +77,31 @@ impl<'a> MutationService<'a> {
         Ok(result)
     }
 
+    /// Re-select a single binary cell and return its raw bytes (for
+    /// "Copy as base64" / "Save to file", which need the original bytes the
+    /// rendered display string no longer carries).
+    #[instrument(skip(self, primary_key_value), fields(connection_id = %connection_id, table = %table_name))]
+    pub async fn get_blob_bytes(
+        &self,
+        connection_id: Uuid,
+        table_name: String,
+        schema_name: Option<String>,
+        primary_key_column: String,
+        primary_key_value: serde_json::Value,
+        column_name: String,
+    ) -> Result<Vec<u8>, Error> {
+        let (adapter, _cid) = self.write_adapter(connection_id)?;
+        adapter
+            .get_blob_bytes(
+                table_name,
+                schema_name,
+                primary_key_column,
+                primary_key_value,
+                column_name,
+            )
+            .await
+    }
+
     #[instrument(skip(self, primary_key_values), fields(connection_id = %connection_id, table = %table_name))]
     pub async fn delete_rows(
         &self,
@@ -136,6 +161,15 @@ impl<'a> MutationService<'a> {
         Ok(result)
     }
 
+    /// Exports a table's rows in the requested format.
+    ///
+    /// `where_clause` and `order_by` are optional SQL fragments (WITHOUT the
+    /// leading `WHERE` / `ORDER BY` keywords) produced by the same trusted
+    /// frontend filter/sort builder used for the normal data fetch
+    /// (`filter-sql.ts`). They are appended verbatim so export honors active
+    /// filters and sort (#99); when omitted the full table is exported as
+    /// before. No new escaping path is introduced here — value escaping happens
+    /// in the shared frontend builder.
     pub async fn export_table(
         &self,
         connection_id: Uuid,
@@ -143,8 +177,25 @@ impl<'a> MutationService<'a> {
         schema_name: Option<String>,
         format: ExportFormat,
         limit: Option<u32>,
+        where_clause: Option<String>,
+        order_by: Option<String>,
     ) -> Result<String, Error> {
         let client = self.connection_repo.get_client(connection_id)?;
+
+        // Shared optional clause fragments. Empty/blank inputs are ignored so a
+        // caller passing `Some("")` behaves like `None`.
+        let where_sql = where_clause
+            .as_ref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| format!(" WHERE {}", s))
+            .unwrap_or_default();
+        let order_sql = order_by
+            .as_ref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| format!(" ORDER BY {}", s))
+            .unwrap_or_default();
 
         let (query, db_type) = match &client {
             DatabaseClient::Postgres { .. } => {
@@ -155,8 +206,8 @@ impl<'a> MutationService<'a> {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
                     format!(
-                        "SELECT * FROM {}\"{}\"{}",
-                        schema_prefix, table_name, limit_clause
+                        "SELECT * FROM {}\"{}\"{}{}{}",
+                        schema_prefix, table_name, where_sql, order_sql, limit_clause
                     ),
                     "postgres",
                 )
@@ -164,7 +215,10 @@ impl<'a> MutationService<'a> {
             DatabaseClient::SQLite { .. } => {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
-                    format!("SELECT * FROM \"{}\"{}", table_name, limit_clause),
+                    format!(
+                        "SELECT * FROM \"{}\"{}{}{}",
+                        table_name, where_sql, order_sql, limit_clause
+                    ),
                     "sqlite",
                 )
             }
@@ -176,8 +230,8 @@ impl<'a> MutationService<'a> {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
                     format!(
-                        "SELECT * FROM {}\"{}\"{}",
-                        schema_prefix, table_name, limit_clause
+                        "SELECT * FROM {}\"{}\"{}{}{}",
+                        schema_prefix, table_name, where_sql, order_sql, limit_clause
                     ),
                     "duckdb",
                 )
@@ -185,14 +239,20 @@ impl<'a> MutationService<'a> {
             DatabaseClient::LibSQL { .. } => {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
-                    format!("SELECT * FROM `{}`{}", table_name, limit_clause),
+                    format!(
+                        "SELECT * FROM `{}`{}{}{}",
+                        table_name, where_sql, order_sql, limit_clause
+                    ),
                     "libsql",
                 )
             }
             DatabaseClient::MySQL { .. } => {
                 let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
                 (
-                    format!("SELECT * FROM `{}`{}", table_name, limit_clause),
+                    format!(
+                        "SELECT * FROM `{}`{}{}{}",
+                        table_name, where_sql, order_sql, limit_clause
+                    ),
                     "mysql",
                 )
             }

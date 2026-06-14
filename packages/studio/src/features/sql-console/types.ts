@@ -22,6 +22,8 @@ export type SqlQueryResult = {
 	queryType: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'OTHER'
 	columnDefinitions?: ColumnDefinition[]
 	sourceTable?: string
+	/** The exact SQL that produced this result, used to detect EXPLAIN plans. */
+	executedQuery?: string
 }
 
 export type TableInfo = {

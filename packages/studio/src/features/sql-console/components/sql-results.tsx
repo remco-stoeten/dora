@@ -1,6 +1,7 @@
 import Editor from '@monaco-editor/react'
 import { Table2, Braces, Download, Copy, Trash2, CircleCheck, Database, BarChart3, Sparkles } from 'lucide-react'
 import { askAi, buildFixErrorPrompt } from '@studio/features/ai-assistant/ai-actions'
+import { QueryPlanPanel, isExplainQuery } from './query-plan-panel'
 import { useAsyncRowCount } from '../hooks/use-async-row-count'
 import {
 	AlertDialog,
@@ -16,6 +17,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useDataMutation } from '@studio/core/data-provider'
 import { useSettings } from '@studio/core/settings'
 import { Button } from '@studio/shared/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import {
 	ContextMenu,
 	ContextMenuTrigger,
@@ -350,48 +352,63 @@ export function SqlResults({
 		<div className='flex flex-col h-full bg-background'>
 			<div className='flex items-center justify-between h-8 px-2 border-b border-sidebar-border bg-sidebar-accent/30 shrink-0'>
 				<div className='flex items-center gap-0.5'>
-					<Button
-						variant='ghost'
-						size='icon'
-						className={cn(
-							'h-6 w-6',
-							viewMode === 'table'
-								? 'bg-sidebar-accent text-sidebar-foreground'
-								: 'text-muted-foreground hover:text-sidebar-foreground'
-						)}
-						onClick={() => onViewModeChange('table')}
-						title='Table view'
-					>
-						<Table2 className='h-3.5 w-3.5' />
-					</Button>
-					<Button
-						variant='ghost'
-						size='icon'
-						className={cn(
-							'h-6 w-6',
-							viewMode === 'json'
-								? 'bg-sidebar-accent text-sidebar-foreground'
-								: 'text-muted-foreground hover:text-sidebar-foreground'
-						)}
-						onClick={() => onViewModeChange('json')}
-						title='JSON view'
-					>
-						<Braces className='h-3.5 w-3.5' />
-					</Button>
-					<Button
-						variant='ghost'
-						size='icon'
-						className={cn(
-							'h-6 w-6',
-							viewMode === 'chart'
-								? 'bg-sidebar-accent text-sidebar-foreground'
-								: 'text-muted-foreground hover:text-sidebar-foreground'
-						)}
-						onClick={() => onViewModeChange('chart')}
-						title='Chart view'
-					>
-						<BarChart3 className='h-3.5 w-3.5' />
-					</Button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant='ghost'
+								size='icon'
+								className={cn(
+									'h-6 w-6',
+									viewMode === 'table'
+										? 'bg-sidebar-accent text-sidebar-foreground'
+										: 'text-muted-foreground hover:text-sidebar-foreground'
+								)}
+								onClick={() => onViewModeChange('table')}
+								aria-label='Table view'
+							>
+								<Table2 className='h-3.5 w-3.5' />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Table view</TooltipContent>
+					</Tooltip>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant='ghost'
+								size='icon'
+								className={cn(
+									'h-6 w-6',
+									viewMode === 'json'
+										? 'bg-sidebar-accent text-sidebar-foreground'
+										: 'text-muted-foreground hover:text-sidebar-foreground'
+								)}
+								onClick={() => onViewModeChange('json')}
+								aria-label='JSON view'
+							>
+								<Braces className='h-3.5 w-3.5' />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>JSON view</TooltipContent>
+					</Tooltip>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant='ghost'
+								size='icon'
+								className={cn(
+									'h-6 w-6',
+									viewMode === 'chart'
+										? 'bg-sidebar-accent text-sidebar-foreground'
+										: 'text-muted-foreground hover:text-sidebar-foreground'
+								)}
+								onClick={() => onViewModeChange('chart')}
+								aria-label='Chart view'
+							>
+								<BarChart3 className='h-3.5 w-3.5' />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Chart view</TooltipContent>
+					</Tooltip>
 					{result && !result.error && (
 						<span className='ml-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400'>
 							<CircleCheck className='h-3 w-3' />
@@ -400,16 +417,21 @@ export function SqlResults({
 					)}
 				</div>
 
-				<Button
-					variant='ghost'
-					size='icon'
-					className='h-6 w-6 text-muted-foreground hover:text-sidebar-foreground'
-					onClick={onExport}
-					disabled={!result || result.rows.length === 0}
-					title='Export results'
-				>
-					<Download className='h-3.5 w-3.5' />
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-6 w-6 text-muted-foreground hover:text-sidebar-foreground'
+							onClick={onExport}
+							disabled={!result || result.rows.length === 0}
+							aria-label='Export results'
+						>
+							<Download className='h-3.5 w-3.5' />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Export results</TooltipContent>
+				</Tooltip>
 			</div>
 
 			<div className='flex-1 overflow-hidden'>
@@ -438,6 +460,8 @@ export function SqlResults({
 							)}
 						</div>
 					</div>
+				) : isExplainQuery(result.executedQuery) ? (
+					<QueryPlanPanel result={result} />
 				) : viewMode === 'chart' ? (
 					<ResultChartPanel
 						columns={result.columns.map(function (column) {

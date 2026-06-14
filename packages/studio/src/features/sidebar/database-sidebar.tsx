@@ -709,6 +709,8 @@ export function DatabaseSidebar({
         getTableRefParts(tableName).schemaName,
         format,
         null,
+        null,
+        null,
       );
       if (result.status !== "ok") throw new Error(formatBackendError(result.error));
 

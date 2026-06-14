@@ -10,6 +10,7 @@ import { useUndo } from '@studio/core/undo'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import { getSourceCaps } from '@studio/features/connections/source-caps'
 import { isUiActionVisible } from '@studio/features/connections/ui-actions'
+import { askAi, buildSuggestIndexesPrompt } from '@studio/features/ai-assistant/ai-actions'
 import { DataFileSessionChrome } from './components/data-file-session-chrome'
 import { ImportFilesIntoDuckDbButton } from './components/import-files-into-duckdb-button'
 import {
@@ -42,6 +43,7 @@ import { RowDetailPanel } from './components/row-detail-panel'
 import { SelectionActionBar } from './components/selection-action-bar'
 import { SetNullDialog } from './components/set-null-dialog'
 import { StudioToolbar } from './components/studio-toolbar'
+import { ExportOptionsDialog, type ExportFormatChoice } from './components/export-options-dialog'
 import { ImportCsvDialog } from './components/import-csv-dialog'
 import { DataSeederDialog } from './data-seeder-dialog'
 import { useDatabaseStudioSync } from './hooks/use-database-studio-sync'
@@ -49,9 +51,14 @@ import { useDatabaseStudioActions } from './hooks/use-database-studio-actions'
 import { useDatabaseStudioEdits } from './hooks/use-database-studio-edits'
 import { useDatabaseStudioCommands } from './hooks/use-database-studio-commands'
 import { buildTableCacheKey } from './utils/table-cache'
-import { FilterConjunction, FilterDescriptor, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
+import { FilterConjunction, FilterDescriptor, FilterGroup, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
+import { flatFiltersToGroup, groupToFlatFilters } from '@studio/core/data-provider/filter-sql'
 import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
 import type { ResultChartConfig } from '@studio/features/result-charts/types'
+import { commands } from '@studio/lib/bindings'
+import type { ColumnDefinition } from './types'
+import type { BlobAction } from './components/cell-context-menu'
+import { bytesToBase64, bytesToHex } from './components/cells/blob-utils'
 
 type Props = {
 	tableId: string | null
@@ -194,6 +201,10 @@ export function DatabaseStudio({
 	const [sort, setSort] = useState<SortDescriptor | undefined>()
 	const [filters, setFilters] = useState<FilterDescriptor[]>([])
 	const [filterConjunction, setFilterConjunction] = useState<FilterConjunction>('AND')
+	// Structured AND/OR filter tree (#102). Source of truth for the filter UI and
+	// the data fetch. The flat `filters`/`filterConjunction` above are kept in sync
+	// as the root-level projection, for cache keys and tab persistence (#98).
+	const [filterGroup, setFilterGroup] = useState<FilterGroup>({ logic: 'AND', conditions: [] })
 	const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
 	const [showAddColumnDialog, setShowAddColumnDialog] = useState(false)
 	const [showDropTableDialog, setShowDropTableDialog] = useState(false)
@@ -223,6 +234,31 @@ export function DatabaseStudio({
 	const [contextMenuState, setContextMenuState] = useState<ContextMenuState>(null)
 	const toolbarRef = useRef<HTMLDivElement>(null)
 	const gridContainerRef = useRef<HTMLDivElement>(null)
+	// Applies an edited filter tree from the FilterBar: stores the group and keeps
+	// the flat projection (#98 persistence + cache key) in sync.
+	const handleFilterGroupChange = useCallback(function (group: FilterGroup) {
+		setFilterGroup(group)
+		const flat = groupToFlatFilters(group)
+		setFilters(flat.filters)
+		setFilterConjunction(flat.conjunction)
+	}, [])
+
+	// Flat-filter dispatcher used by the sync hook (restoring persisted filters)
+	// and the bulk "filter by value" actions. Accepts both a value and the
+	// updater form, and lifts the result back into the structured group so the
+	// UI and the data fetch stay consistent. The group's existing logic is
+	// preserved (the flat conjunction state mirrors `group.logic`).
+	const handleSetFiltersFromSync = useCallback(function (
+		next: React.SetStateAction<FilterDescriptor[]>
+	) {
+		setFilterGroup(function (prevGroup) {
+			const prevFlat = groupToFlatFilters(prevGroup).filters
+			const resolved = typeof next === 'function' ? next(prevFlat) : next
+			setFilters(resolved)
+			return flatFiltersToGroup(resolved, prevGroup.logic)
+		})
+	}, [])
+
 	const currentCacheKey = useMemo(
 		function () {
 			return buildTableCacheKey(
@@ -232,10 +268,11 @@ export function DatabaseStudio({
 				pagination.offset,
 				sort,
 				filters,
-				filterConjunction
+				filterConjunction,
+				filterGroup
 			)
 		},
-		[activeConnectionId, tableId, pagination.limit, pagination.offset, sort, filters, filterConjunction]
+		[activeConnectionId, tableId, pagination.limit, pagination.offset, sort, filters, filterConjunction, filterGroup]
 	)
 	const {
 		liveMonitor,
@@ -252,6 +289,7 @@ export function DatabaseStudio({
 		sort,
 		filters,
 		filterConjunction,
+		filterGroup,
 		tableData,
 		draftRow,
 		draftInsertIndex,
@@ -268,7 +306,7 @@ export function DatabaseStudio({
 		setIsTableTransitioning,
 		setPagination,
 		setSort,
-		setFilters,
+		setFilters: handleSetFiltersFromSync,
 		setSelectedRows,
 		setSelectedCells,
 		setFocusedCell,
@@ -358,9 +396,73 @@ export function DatabaseStudio({
 		setAddDialogMode,
 		setSelectedRowForDetail,
 		setShowRowDetail,
-		setFilters,
+		setFilters: handleSetFiltersFromSync,
 		displayTableName
 	})
+
+	// Re-fetch the original bytes of a blob cell (the grid only has the rendered
+	// display string) and copy/save them. Addresses the cell by primary key,
+	// reusing the same safe parameter binding as cell edits.
+	const handleBlobAction = useCallback(
+		async function handleBlobAction(
+			action: BlobAction,
+			column: ColumnDefinition,
+			row: Record<string, unknown>
+		) {
+			if (!activeConnectionId || !tableRefName) return
+			const pkColumn = tableData?.columns.find(function (c) {
+				return c.primaryKey
+			})
+			if (!pkColumn) {
+				notifyMissingPrimaryKey('fetch binary cell')
+				return
+			}
+			const tableRef = getTableRefParts(tableRefName)
+			try {
+				const result = await commands.getBlobBytes(
+					activeConnectionId,
+					tableRef.tableName,
+					tableRef.schemaName,
+					pkColumn.name,
+					row[pkColumn.name] as never,
+					column.name
+				)
+				if (result.status !== 'ok') {
+					notifyActionFailure('Failed to read binary cell', result.error)
+					return
+				}
+				const bytes = result.data
+
+				if (action === 'copy-hex') {
+					await navigator.clipboard.writeText('0x' + bytesToHex(bytes))
+					toast({ title: `Copied ${bytes.length} bytes as hex` })
+				} else if (action === 'copy-base64') {
+					await navigator.clipboard.writeText(bytesToBase64(bytes))
+					toast({ title: `Copied ${bytes.length} bytes as base64` })
+				} else if (action === 'save-file') {
+					const { save } = await import('@tauri-apps/plugin-dialog')
+					const { writeFile } = await import('@tauri-apps/plugin-fs')
+					const path = await save({
+						defaultPath: `${displayTableName}_${column.name}.bin`
+					})
+					if (!path) return
+					await writeFile(path, new Uint8Array(bytes))
+					toast({ title: `Saved ${bytes.length} bytes to file` })
+				}
+			} catch (error) {
+				notifyActionFailure('Failed to read binary cell', error)
+			}
+		},
+		[
+			activeConnectionId,
+			tableRefName,
+			tableData,
+			displayTableName,
+			toast,
+			notifyMissingPrimaryKey,
+			notifyActionFailure
+		]
+	)
 
 	useEffect(
 		function announceSelection() {
@@ -405,7 +507,7 @@ export function DatabaseStudio({
 	)
 
 	$.bind(shortcuts.exportTable.combo).on(
-		function () { handleExport() },
+		function () { requestExport('json') },
 		{ description: shortcuts.exportTable.description }
 	)
 
@@ -578,6 +680,7 @@ export function DatabaseStudio({
 		handleExport,
 		handleExportCsvAll,
 		handleExportSqlAll,
+		hasActiveFilters,
 		handleBackupDatabase,
 		handleRestoreDatabase,
 		handleCopySchema,
@@ -594,12 +697,62 @@ export function DatabaseStudio({
 		sort,
 		filters,
 		filterConjunction,
+		filterGroup,
 		loadTableData,
 		setIsDdlLoading,
 		setShowAddColumnDialog,
 		setShowDropTableDialog,
 		notifyActionFailure
 	})
+
+	// Export dialog (#99): when filters are active, clicking an export action
+	// opens a chooser ("Export N matching rows" vs "Export all rows (ignore
+	// filters)"). With no active filters, export runs immediately as before.
+	const [exportDialogFormat, setExportDialogFormat] = useState<ExportFormatChoice | null>(null)
+
+	const runExport = useCallback(
+		function (format: ExportFormatChoice, ignoreFilters: boolean) {
+			if (format === 'json') void handleExport(ignoreFilters)
+			else if (format === 'csv') void handleExportCsvAll(ignoreFilters)
+			else void handleExportSqlAll(ignoreFilters)
+		},
+		[handleExport, handleExportCsvAll, handleExportSqlAll]
+	)
+
+	const requestExport = useCallback(
+		function (format: ExportFormatChoice) {
+			if (hasActiveFilters) {
+				setExportDialogFormat(format)
+				return
+			}
+			runExport(format, false)
+		},
+		[hasActiveFilters, runExport]
+	)
+
+	const handleSuggestIndexes = useCallback(
+		function () {
+			if (!tableData) return
+			const columnLines = tableData.columns
+				.map(function (col) {
+					const flags: string[] = [col.type]
+					if (col.primaryKey) flags.push('PRIMARY KEY')
+					if (!col.nullable) flags.push('NOT NULL')
+					if (col.foreignKey) {
+						flags.push(
+							`REFERENCES ${col.foreignKey.referencedTable}(${col.foreignKey.referencedColumn})`
+						)
+					}
+					return `  ${col.name} ${flags.join(' ')}`
+				})
+				.join('\n')
+			const schema = `CREATE TABLE ${displayTableName} (\n${columnLines}\n);`
+			const queries =
+				'No recent query samples available; base suggestions on the schema and common access patterns.'
+			askAi(buildSuggestIndexesPrompt(schema, queries))
+		},
+		[tableData, displayTableName]
+	)
 
 	// No connection selected
 	if (!activeConnectionId) {
@@ -655,9 +808,9 @@ export function DatabaseStudio({
 				viewMode={viewMode}
 				onViewModeChange={setViewMode}
 				onRefresh={loadTableData}
-				onExport={canExportFile ? handleExport : function () {}}
-				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
-				onExportSql={canExportFile ? handleExportSqlAll : undefined}
+				onExport={canExportFile ? function () { requestExport('json') } : function () {}}
+				onExportCsv={canExportFile ? function () { requestExport('csv') } : undefined}
+				onExportSql={canExportFile ? function () { requestExport('sql') } : undefined}
 				onBackup={handleBackupDatabase}
 				onRestore={handleRestoreDatabase}
 				isLoading={isLoading}
@@ -694,19 +847,17 @@ export function DatabaseStudio({
 					viewMode={viewMode}
 					onViewModeChange={setViewMode}
 					onRefresh={loadTableData}
-					onExport={canExportFile ? handleExport : function () {}}
-					onExportCsv={canExportFile ? handleExportCsvAll : undefined}
-					onExportSql={canExportFile ? handleExportSqlAll : undefined}
+					onExport={canExportFile ? function () { requestExport('json') } : function () {}}
+					onExportCsv={canExportFile ? function () { requestExport('csv') } : undefined}
+					onExportSql={canExportFile ? function () { requestExport('sql') } : undefined}
 					onBackup={handleBackupDatabase}
 					onRestore={handleRestoreDatabase}
 					onAddRecord={canEditRows ? handleAddRecord : undefined}
 					onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
 					importFilesAction={importFilesAction}
 					isLoading={isLoading}
-					filters={filters}
-					onFiltersChange={setFilters}
-					conjunction={filterConjunction}
-					onConjunctionChange={setFilterConjunction}
+					filterGroup={filterGroup}
+					onFilterGroupChange={handleFilterGroupChange}
 					columns={tableData.columns}
 					visibleColumns={visibleColumns}
 					onToggleColumn={handleToggleColumn}
@@ -714,6 +865,7 @@ export function DatabaseStudio({
 					onDryEditModeChange={canEditRows ? setDryEditMode : undefined}
 					onCopySchema={handleCopySchema}
 					onCopyDrizzleSchema={handleCopyDrizzleSchema}
+					onSuggestIndexes={handleSuggestIndexes}
 					liveMonitorConfig={showLiveMonitor ? liveMonitor.config : undefined}
 					onLiveMonitorConfigChange={showLiveMonitor ? liveMonitor.setConfig : undefined}
 					isLiveMonitorPolling={showLiveMonitor ? liveMonitor.isPolling : false}
@@ -746,19 +898,17 @@ export function DatabaseStudio({
 				viewMode={viewMode}
 				onViewModeChange={setViewMode}
 				onRefresh={loadTableData}
-				onExport={canExportFile ? handleExport : function () {}}
-				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
-				onExportSql={canExportFile ? handleExportSqlAll : undefined}
+				onExport={canExportFile ? function () { requestExport('json') } : function () {}}
+				onExportCsv={canExportFile ? function () { requestExport('csv') } : undefined}
+				onExportSql={canExportFile ? function () { requestExport('sql') } : undefined}
 				onBackup={handleBackupDatabase}
 				onRestore={handleRestoreDatabase}
 				onAddRecord={canEditRows ? handleAddRecord : undefined}
 				onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
 				importFilesAction={importFilesAction}
 				isLoading={isLoading}
-				filters={filters}
-				onFiltersChange={setFilters}
-				conjunction={filterConjunction}
-				onConjunctionChange={setFilterConjunction}
+				filterGroup={filterGroup}
+				onFilterGroupChange={handleFilterGroupChange}
 				columns={tableData?.columns || []}
 				visibleColumns={visibleColumns}
 				onToggleColumn={handleToggleColumn}
@@ -766,6 +916,7 @@ export function DatabaseStudio({
 				onDryEditModeChange={canEditRows ? setDryEditMode : undefined}
 				onCopySchema={handleCopySchema}
 				onCopyDrizzleSchema={handleCopyDrizzleSchema}
+				onSuggestIndexes={handleSuggestIndexes}
 				liveMonitorConfig={showLiveMonitor ? liveMonitor.config : undefined}
 				onLiveMonitorConfigChange={showLiveMonitor ? liveMonitor.setConfig : undefined}
 				isLiveMonitorPolling={showLiveMonitor ? liveMonitor.isPolling : false}
@@ -797,6 +948,7 @@ export function DatabaseStudio({
 							sort={sort}
 							onSortChange={setSort}
 							onFilterAdd={handleFilterAdd}
+							onBlobAction={handleBlobAction}
 							onCellEdit={canEditRows ? handleCellEdit : undefined}
 							onDeleteSelectedRows={canEditRows ? handleBulkDelete : undefined}
 							onBatchCellEdit={canEditRows ? handleBatchCellEdit : undefined}
@@ -1126,6 +1278,21 @@ export function DatabaseStudio({
 					onGenerate={handleSeederGenerate}
 				/>
 			)}
+
+			<ExportOptionsDialog
+				open={exportDialogFormat !== null}
+				onOpenChange={function (open) {
+					if (!open) setExportDialogFormat(null)
+				}}
+				format={exportDialogFormat ?? 'json'}
+				matchingRowCount={tableData?.totalCount}
+				onExportMatching={function () {
+					if (exportDialogFormat) runExport(exportDialogFormat, false)
+				}}
+				onExportAll={function () {
+					if (exportDialogFormat) runExport(exportDialogFormat, true)
+				}}
+			/>
 		</div>
 	)
 }

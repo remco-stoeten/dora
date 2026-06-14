@@ -34,6 +34,11 @@ impl<'a> MetadataService<'a> {
         let connection = connection_entry.value();
 
         let schema = match &connection.database {
+            // TODO(dialect-parity, #89): CockroachDB shares the Postgres
+            // introspection path. Some Postgres catalog queries differ on
+            // CockroachDB; branch here on `connection.detected_dialect` once a
+            // live CockroachDB cluster is available to verify a Cockroach-specific
+            // query. Until then the vanilla Postgres query is the safe default.
             Database::CockroachDB {
                 client: Some(client),
                 ..
@@ -69,6 +74,12 @@ impl<'a> MetadataService<'a> {
             Database::LibSQL {
                 connection: None, ..
             } => return Err(Error::Any(anyhow!("LibSQL connection not active"))),
+            // TODO(dialect-parity, #88): MariaDB shares the MySQL introspection
+            // path. MariaDB-specific types (UUID, INET4/INET6) and some
+            // information_schema differences need a dialect branch on
+            // `connection.detected_dialect`, plus row-writer type mapping in the
+            // write path. Deferred until a live MariaDB cluster is available; the
+            // vanilla MySQL query remains the safe default.
             Database::MariaDB {
                 pool: Some(pool), ..
             }

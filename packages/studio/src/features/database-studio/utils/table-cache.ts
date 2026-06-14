@@ -1,5 +1,5 @@
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
-import type { SortDescriptor, FilterDescriptor, FilterConjunction } from '../types'
+import type { SortDescriptor, FilterDescriptor, FilterConjunction, FilterGroup } from '../types'
 
 export function buildTableCacheKey(
 	connectionId: string | undefined,
@@ -8,7 +8,8 @@ export function buildTableCacheKey(
 	offset: number,
 	sort: SortDescriptor | undefined,
 	filters: FilterDescriptor[],
-	conjunction: FilterConjunction = 'AND'
+	conjunction: FilterConjunction = 'AND',
+	filterGroup?: FilterGroup
 ) {
 	return JSON.stringify({
 		connectionId: connectionId || '',
@@ -17,7 +18,8 @@ export function buildTableCacheKey(
 		offset,
 		sort: sort || null,
 		filters,
-		conjunction
+		conjunction,
+		filterGroup: filterGroup || null
 	})
 }
 

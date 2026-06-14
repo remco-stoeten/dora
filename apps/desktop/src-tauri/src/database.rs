@@ -12,6 +12,7 @@ pub use postgres::tls::Certificates;
 pub mod commands;
 mod connection_monitor;
 pub mod contract;
+pub mod dialect;
 mod live_monitor;
 pub mod maintenance;
 pub mod metadata;

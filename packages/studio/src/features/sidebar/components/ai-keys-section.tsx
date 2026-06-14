@@ -353,6 +353,13 @@ export function AiKeysSection() {
 					<code className='font-mono'>{activeProvider.envVar}</code> are merged automatically.
 				</div>
 
+				<div className='text-[10px] leading-snug text-muted-foreground/80'>
+					Groq, OpenAI, Anthropic, and Gemini are cloud providers and need an API key.
+					Ollama runs locally — it needs no key and is configured under the AI provider
+					settings instead. See{' '}
+					<code className='font-mono'>docs/ai-providers.md</code> for per-provider setup.
+				</div>
+
 				<div className='space-y-2 rounded-sm border border-sidebar-border bg-background p-2'>
 					<div className='flex items-center justify-between gap-2'>
 						<span className='text-[10px] uppercase tracking-wide text-muted-foreground'>

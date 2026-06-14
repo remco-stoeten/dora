@@ -301,9 +301,7 @@ impl OpenAiClient {
             {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!(
-                        "OpenAI request failed: {error}"
-                    )));
+                    last_err = Some(super::errors::request_error("OpenAI", &error));
                     continue;
                 }
             };
@@ -311,17 +309,17 @@ impl OpenAiClient {
             let status = response.status();
             if Self::should_rotate(status) {
                 let body_text = response.text().await.unwrap_or_default();
-                last_err = Some(Error::Any(anyhow::anyhow!(
-                    "OpenAI key/provider error (status {status}): {body_text}"
-                )));
+                last_err = Some(super::errors::http_error(
+                    "OpenAI", &self.model, status, &body_text,
+                ));
                 continue;
             }
 
             if !status.is_success() {
                 let body_text = response.text().await.unwrap_or_default();
-                return Err(Error::Any(anyhow::anyhow!(
-                    "OpenAI API error ({status}): {body_text}"
-                )));
+                return Err(super::errors::http_error(
+                    "OpenAI", &self.model, status, &body_text,
+                ));
             }
 
             let parsed: OpenAiResponse = response.json().await.map_err(|error| {
@@ -380,9 +378,7 @@ impl OpenAiClient {
             {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!(
-                        "OpenAI request failed: {error}"
-                    )));
+                    last_err = Some(super::errors::request_error("OpenAI", &error));
                     continue;
                 }
             };
@@ -390,17 +386,17 @@ impl OpenAiClient {
             let status = response.status();
             if Self::should_rotate(status) {
                 let body_text = response.text().await.unwrap_or_default();
-                last_err = Some(Error::Any(anyhow::anyhow!(
-                    "OpenAI key/provider error (status {status}): {body_text}"
-                )));
+                last_err = Some(super::errors::http_error(
+                    "OpenAI", &self.model, status, &body_text,
+                ));
                 continue;
             }
 
             if !status.is_success() {
                 let body_text = response.text().await.unwrap_or_default();
-                return Err(Error::Any(anyhow::anyhow!(
-                    "OpenAI API error ({status}): {body_text}"
-                )));
+                return Err(super::errors::http_error(
+                    "OpenAI", &self.model, status, &body_text,
+                ));
             }
 
             let mut stream = response.bytes_stream();

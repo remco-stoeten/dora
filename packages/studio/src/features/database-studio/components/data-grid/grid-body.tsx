@@ -3,7 +3,7 @@ import type { VirtualItem } from '@tanstack/react-virtual'
 import { Checkbox } from '@studio/shared/ui/checkbox'
 import { cn } from '@studio/shared/utils/cn'
 import { ColumnDefinition, FilterDescriptor } from '../../types'
-import { CellContextMenu } from '../cell-context-menu'
+import { BlobAction, CellContextMenu } from '../cell-context-menu'
 import { RowAction, RowContextMenu } from '../row-context-menu'
 import { formatCellValue } from './cell-value'
 import { DraftRow } from './draft-row'
@@ -35,6 +35,11 @@ type GridBodyProps = {
 	onDraftChange?: (columnName: string, value: unknown) => void
 	onDraftSave?: () => void
 	onFilterAdd?: (filter: FilterDescriptor) => void
+	onBlobAction?: (
+		action: BlobAction,
+		column: ColumnDefinition,
+		row: Record<string, unknown>
+	) => void
 	onRowAction?: (
 		action: RowAction,
 		row: Record<string, unknown>,
@@ -81,6 +86,7 @@ export function GridBody({
 	onDraftChange,
 	onDraftSave,
 	onFilterAdd,
+	onBlobAction,
 	onRowAction,
 	onRowSelect,
 	pendingEdits,
@@ -221,8 +227,10 @@ export function GridBody({
 											column={col}
 											rowIndex={rowIndex}
 											colIndex={colIndex}
+											row={row}
 											selectedRows={effectiveSelectedRows}
 											hasFilter={!!onFilterAdd}
+											onBlobAction={onBlobAction}
 											onAction={function (
 												action,
 												value,

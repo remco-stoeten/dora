@@ -188,6 +188,40 @@ impl WriteAdapter for SqliteAdapter {
         self.insert_row(table, schema, row_data).await
     }
 
+    async fn get_blob_bytes(
+        &self,
+        table: String,
+        _schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+        column: String,
+    ) -> Result<Vec<u8>, Error> {
+        let conn = self
+            .connection()
+            .lock()
+            .map_err(|_| Error::Internal("Mutex poisoned".into()))?;
+        let query = format!(
+            "SELECT \"{}\" FROM \"{}\" WHERE \"{}\" = ? LIMIT 1",
+            column, table, pk_column
+        );
+        let pk_val = json_to_sqlite_value(&pk_value);
+        let bytes = conn.query_row(
+            &query,
+            [&pk_val as &dyn rusqlite::ToSql],
+            |row| row.get::<_, Option<Vec<u8>>>(0),
+        );
+        match bytes {
+            Ok(Some(b)) => Ok(b),
+            Ok(None) => Ok(Vec::new()),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Err(Error::Any(anyhow!(
+                "No row found in \"{}\" where {} matches the provided primary key",
+                table,
+                pk_column
+            ))),
+            Err(error) => Err(error.into()),
+        }
+    }
+
     async fn truncate_table(
         &self,
         table: String,

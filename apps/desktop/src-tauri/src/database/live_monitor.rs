@@ -292,6 +292,20 @@ async fn create_postgres_notification_receiver(
     };
 
     let connection_entry = state.connections.get(&connection_id)?;
+
+    // Gate LISTEN/NOTIFY on detected capabilities. CockroachDB speaks the
+    // Postgres wire protocol but does not implement LISTEN/NOTIFY, so attempting
+    // to install the notify trigger/LISTEN would fail. When the engine does not
+    // support it we return None and the monitor loop falls back to polling.
+    if !connection_entry.value().source_caps().supports_listen_notify {
+        log::debug!(
+            "Live monitor: LISTEN/NOTIFY unsupported for connection {} (dialect {:?}); using polling",
+            connection_id,
+            connection_entry.value().detected_dialect
+        );
+        return None;
+    }
+
     let (mut connection_string, tunnel_local_port) = match &connection_entry.value().database {
         Database::CockroachDB {
             connection_string,

@@ -463,6 +463,14 @@ async updateCell(connectionId: string, tableName: string, schemaName: string | n
     else return { status: "error", error: e  as any };
 }
 },
+async getBlobBytes(connectionId: string, tableName: string, schemaName: string | null, primaryKeyColumn: string, primaryKeyValue: JsonValue, columnName: string) : Promise<Result<number[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_blob_bytes", { connectionId, tableName, schemaName, primaryKeyColumn, primaryKeyValue, columnName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async deleteRows(connectionId: string, tableName: string, schemaName: string | null, primaryKeyColumn: string, primaryKeyValues: JsonValue[]) : Promise<Result<MutationResult, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("delete_rows", { connectionId, tableName, schemaName, primaryKeyColumn, primaryKeyValues }) };
@@ -479,9 +487,9 @@ async duplicateRow(connectionId: string, tableName: string, schemaName: string |
     else return { status: "error", error: e  as any };
 }
 },
-async exportTable(connectionId: string, tableName: string, schemaName: string | null, format: ExportFormat, limit: number | null) : Promise<Result<string, { kind: string; detail: string }>> {
+async exportTable(connectionId: string, tableName: string, schemaName: string | null, format: ExportFormat, limit: number | null, whereClause: string | null, orderBy: string | null) : Promise<Result<string, { kind: string; detail: string }>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("export_table", { connectionId, tableName, schemaName, format, limit }) };
+    return { status: "ok", data: await TAURI_INVOKE("export_table", { connectionId, tableName, schemaName, format, limit, whereClause, orderBy }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

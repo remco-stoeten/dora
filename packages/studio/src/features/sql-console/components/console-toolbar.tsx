@@ -9,7 +9,9 @@ import {
 	Filter,
 	Clock,
 	Bookmark,
-	Database
+	Database,
+	BookOpen,
+	Gauge
 } from 'lucide-react'
 
 import { Button } from '@studio/shared/ui/button'
@@ -19,6 +21,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger
 } from '@studio/shared/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 import { WindowControls } from '@studio/components/window-controls'
 import { formatShortcut } from '@studio/core/shortcuts'
@@ -50,25 +53,29 @@ const ToolbarIconButton = forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
 		ref
 	) {
 		return (
-			<Button
-				ref={ref}
-				variant='ghost'
-				size='icon'
-				className={cn(
-					'h-8 w-8 rounded-md text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]',
-					'hover:bg-sidebar-accent hover:text-sidebar-foreground',
-					active && 'bg-sidebar-accent text-sidebar-foreground',
-					disabled && 'cursor-not-allowed opacity-45',
-					className
-				)}
-				onClick={onClick}
-				disabled={disabled}
-				title={label}
-				aria-label={label}
-				{...props}
-			>
-				{children}
-			</Button>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						ref={ref}
+						variant='ghost'
+						size='icon'
+						className={cn(
+							'h-8 w-8 rounded-md text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]',
+							'hover:bg-sidebar-accent hover:text-sidebar-foreground',
+							active && 'bg-sidebar-accent text-sidebar-foreground',
+							disabled && 'cursor-not-allowed opacity-45',
+							className
+						)}
+						onClick={onClick}
+						disabled={disabled}
+						aria-label={label}
+						{...props}
+					>
+						{children}
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>{label}</TooltipContent>
+			</Tooltip>
 		)
 	}
 )
@@ -180,6 +187,8 @@ type ActionBarProps = {
 	showFilter?: boolean
 	onToggleFilter?: () => void
 	onSave?: () => void
+	onExplainQuery?: () => void
+	onExplainAnalyze?: () => void
 }
 
 export function EditorActionBar({
@@ -196,23 +205,30 @@ export function EditorActionBar({
 	onShowJsonToggle,
 	showFilter,
 	onToggleFilter,
-	onSave
+	onSave,
+	onExplainQuery,
+	onExplainAnalyze
 }: ActionBarProps) {
 	return (
 		<div className='flex h-9 shrink-0 items-center justify-between gap-2 border-t border-sidebar-border bg-sidebar px-2'>
 			<div className='flex min-w-0 items-center gap-1'>
 				{onSave && (
-					<Button
-						size='sm'
-						variant='ghost'
-						className='h-7 gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]'
-						onClick={onSave}
-						title='Save to Snippet Library'
-					>
-						<Bookmark className='h-3.5 w-3.5' />
-						<span className='hidden sm:inline'>Save</span>
-						<Kbd className='ml-0.5 inline-flex'>⌘S</Kbd>
-					</Button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								size='sm'
+								variant='ghost'
+								className='h-7 gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]'
+								onClick={onSave}
+								aria-label='Save to Snippet Library'
+							>
+								<Bookmark className='h-3.5 w-3.5' />
+								<span className='hidden sm:inline'>Save</span>
+								<Kbd className='ml-0.5 inline-flex'>⌘S</Kbd>
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Save to Snippet Library</TooltipContent>
+					</Tooltip>
 				)}
 
 				{onPrettify && (
@@ -241,6 +257,24 @@ export function EditorActionBar({
 						onClick={onToggleFilter}
 					>
 						<Filter className='h-3.5 w-3.5' />
+					</ToolbarIconButton>
+				)}
+
+				{onExplainQuery && (
+					<ToolbarIconButton
+						label='Explain this query with AI'
+						onClick={onExplainQuery}
+					>
+						<BookOpen className='h-3.5 w-3.5' />
+					</ToolbarIconButton>
+				)}
+
+				{onExplainAnalyze && (
+					<ToolbarIconButton
+						label='Run with EXPLAIN ANALYZE'
+						onClick={onExplainAnalyze}
+					>
+						<Gauge className='h-3.5 w-3.5' />
 					</ToolbarIconButton>
 				)}
 
@@ -288,25 +322,30 @@ export function EditorActionBar({
 					</Button>
 				) : null}
 
-				<Button
-					variant='ghost'
-					size='sm'
-					className={cn(
-						'h-7 gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]',
-						showRightSidebar && 'bg-sidebar-accent'
-					)}
-					onClick={onToggleRightSidebar}
-					title='Toggle snippets'
-				>
-					<PanelRight
-						className={cn(
-							'h-3.5 w-3.5 transition-transform duration-200',
-							showRightSidebar && 'rotate-180'
-						)}
-						style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
-					/>
-					<span className='hidden lg:inline'>Snippets</span>
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant='ghost'
+							size='sm'
+							className={cn(
+								'h-7 gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out hover:bg-sidebar-accent hover:text-sidebar-foreground active:scale-[0.97]',
+								showRightSidebar && 'bg-sidebar-accent'
+							)}
+							onClick={onToggleRightSidebar}
+							aria-label='Toggle snippets'
+						>
+							<PanelRight
+								className={cn(
+									'h-3.5 w-3.5 transition-transform duration-200',
+									showRightSidebar && 'rotate-180'
+								)}
+								style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+							/>
+							<span className='hidden lg:inline'>Snippets</span>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Toggle snippets</TooltipContent>
+				</Tooltip>
 			</div>
 		</div>
 	)

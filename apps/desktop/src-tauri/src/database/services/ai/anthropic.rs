@@ -271,9 +271,7 @@ impl AnthropicClient {
                 {
                     Ok(response) => response,
                     Err(error) => {
-                        last_err = Some(Error::Any(anyhow::anyhow!(
-                            "Anthropic request failed: {error}"
-                        )));
+                        last_err = Some(super::errors::request_error("Anthropic", &error));
                         continue;
                     }
                 };
@@ -281,17 +279,17 @@ impl AnthropicClient {
             let status = response.status();
             if Self::should_rotate(status) {
                 let body_text = response.text().await.unwrap_or_default();
-                last_err = Some(Error::Any(anyhow::anyhow!(
-                    "Anthropic key/provider error (status {status}): {body_text}"
-                )));
+                last_err = Some(super::errors::http_error(
+                    "Anthropic", &self.model, status, &body_text,
+                ));
                 continue;
             }
 
             if !status.is_success() {
                 let body_text = response.text().await.unwrap_or_default();
-                return Err(Error::Any(anyhow::anyhow!(
-                    "Anthropic API error ({status}): {body_text}"
-                )));
+                return Err(super::errors::http_error(
+                    "Anthropic", &self.model, status, &body_text,
+                ));
             }
 
             let parsed: AnthropicResponse = response.json().await.map_err(|error| {
@@ -347,9 +345,7 @@ impl AnthropicClient {
                 {
                     Ok(response) => response,
                     Err(error) => {
-                        last_err = Some(Error::Any(anyhow::anyhow!(
-                            "Anthropic request failed: {error}"
-                        )));
+                        last_err = Some(super::errors::request_error("Anthropic", &error));
                         continue;
                     }
                 };
@@ -357,17 +353,17 @@ impl AnthropicClient {
             let status = response.status();
             if Self::should_rotate(status) {
                 let body_text = response.text().await.unwrap_or_default();
-                last_err = Some(Error::Any(anyhow::anyhow!(
-                    "Anthropic key/provider error (status {status}): {body_text}"
-                )));
+                last_err = Some(super::errors::http_error(
+                    "Anthropic", &self.model, status, &body_text,
+                ));
                 continue;
             }
 
             if !status.is_success() {
                 let body_text = response.text().await.unwrap_or_default();
-                return Err(Error::Any(anyhow::anyhow!(
-                    "Anthropic API error ({status}): {body_text}"
-                )));
+                return Err(super::errors::http_error(
+                    "Anthropic", &self.model, status, &body_text,
+                ));
             }
 
             let mut stream = response.bytes_stream();

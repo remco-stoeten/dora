@@ -11,7 +11,8 @@ import {
 	RefreshCw,
 	Sparkles,
 	Copy,
-	Upload
+	Upload,
+	Gauge
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
@@ -25,12 +26,19 @@ import {
 } from '@studio/shared/ui/dropdown-menu'
 import { Input } from '@studio/shared/ui/input'
 import { cn } from '@studio/shared/utils/cn'
-import { ViewMode, PaginationState, FilterConjunction, FilterDescriptor, ColumnDefinition } from '../types'
+import { ViewMode, PaginationState, FilterGroup, ColumnDefinition, isFilterGroup } from '../types'
 import type { LiveMonitorConfig, ChangeEvent } from '@studio/core/live-monitor'
 import { LiveMonitorPopover } from './live-monitor-popover'
 import { ChangeFeed } from './change-feed'
 import { FilterBar } from './filter-bar'
 import type { ReactNode } from 'react'
+
+/** Counts leaf conditions in a filter group, recursing into nested groups. */
+function countConditions(group: FilterGroup): number {
+	return group.conditions.reduce(function (total, node) {
+		return total + (isFilterGroup(node) ? countConditions(node) : 1)
+	}, 0)
+}
 
 type Props = {
 	tableName: string
@@ -44,10 +52,8 @@ type Props = {
 	onRestore?: () => void
 	onAddRecord?: () => void
 	isLoading?: boolean
-	filters?: FilterDescriptor[]
-	onFiltersChange?: (filters: FilterDescriptor[]) => void
-	conjunction?: FilterConjunction
-	onConjunctionChange?: (conjunction: FilterConjunction) => void
+	filterGroup?: FilterGroup
+	onFilterGroupChange?: (group: FilterGroup) => void
 	columns?: ColumnDefinition[]
 	visibleColumns?: Set<string>
 	onToggleColumn?: (columnName: string, visible: boolean) => void
@@ -58,6 +64,7 @@ type Props = {
 	onSeed?: () => void
 	onCopySchema?: () => void
 	onCopyDrizzleSchema?: () => void
+	onSuggestIndexes?: () => void
 	liveMonitorConfig?: LiveMonitorConfig
 	onLiveMonitorConfigChange?: (config: LiveMonitorConfig) => void
 	isLiveMonitorPolling?: boolean
@@ -79,10 +86,8 @@ export function StudioToolbar({
 	onRestore,
 	onAddRecord,
 	isLoading,
-	filters = [],
-	onFiltersChange,
-	conjunction = 'AND',
-	onConjunctionChange,
+	filterGroup = { logic: 'AND', conditions: [] },
+	onFilterGroupChange,
 	columns = [],
 	visibleColumns,
 	onToggleColumn,
@@ -91,6 +96,7 @@ export function StudioToolbar({
 	onSeed,
 	onCopySchema,
 	onCopyDrizzleSchema,
+	onSuggestIndexes,
 	liveMonitorConfig,
 	onLiveMonitorConfigChange,
 	isLiveMonitorPolling,
@@ -101,13 +107,14 @@ export function StudioToolbar({
 	onClearChangeEvents,
 	onMarkChangesRead
 }: Props) {
-	const [showFilters, setShowFilters] = useState(filters.length > 0)
+	const filterCount = countConditions(filterGroup)
+	const [showFilters, setShowFilters] = useState(filterCount > 0)
 
 	useEffect(() => {
-		if (filters.length > 0) {
+		if (filterCount > 0) {
 			setShowFilters(true)
 		}
-	}, [filters.length])
+	}, [filterCount])
 
 	return (
 		<div className='flex flex-col shrink-0 bg-sidebar border-b border-sidebar-border'>
@@ -159,20 +166,20 @@ export function StudioToolbar({
 					</div>
 					<div className='h-4 w-px bg-sidebar-border mx-1' />
 					<Button
-						variant={showFilters || filters.length > 0 ? 'secondary' : 'ghost'}
+						variant={showFilters || filterCount > 0 ? 'secondary' : 'ghost'}
 						size='sm'
 						className={cn(
 							'h-7 px-2 text-xs gap-1.5 ml-1',
-							(showFilters || filters.length > 0) &&
+							(showFilters || filterCount > 0) &&
 								'text-sidebar-foreground bg-sidebar-accent'
 						)}
 						onClick={() => setShowFilters(!showFilters)}
 					>
 						<Filter className='h-3.5 w-3.5' />
 						<span className='hidden sm:inline'>Filters</span>
-						{filters.length > 0 && (
+						{filterCount > 0 && (
 							<span className='bg-primary text-primary-foreground text-[10px] px-1 rounded-full min-w-[14px] h-3.5 flex items-center justify-center'>
-								{filters.length}
+								{filterCount}
 							</span>
 						)}
 					</Button>
@@ -252,6 +259,19 @@ export function StudioToolbar({
 						>
 							<Sparkles className='h-3.5 w-3.5 text-blue-400' />
 							<span className='hidden sm:inline'>Seed Data</span>
+						</Button>
+					)}
+
+					{onSuggestIndexes && (
+						<Button
+							variant='ghost'
+							size='sm'
+							className='h-7 px-2 text-xs gap-1.5'
+							onClick={onSuggestIndexes}
+							title='Suggest indexes for this table using AI'
+						>
+							<Gauge className='h-3.5 w-3.5 text-blue-400' />
+							<span className='hidden sm:inline'>Suggest indexes</span>
 						</Button>
 					)}
 
@@ -383,10 +403,8 @@ export function StudioToolbar({
 			{/* Filter Bar */}
 			<FilterBar
 				isVisible={showFilters}
-				filters={filters}
-				onFiltersChange={onFiltersChange || (() => {})}
-				conjunction={conjunction}
-				onConjunctionChange={onConjunctionChange}
+				group={filterGroup}
+				onGroupChange={onFilterGroupChange || (() => {})}
 				columns={columns}
 			/>
 		</div>

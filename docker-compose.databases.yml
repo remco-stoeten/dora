@@ -27,8 +27,9 @@ services:
     command:
       - start-single-node
       - --insecure
-      - --listen-addr=0.0.0.0:26257
-      - --http-addr=0.0.0.0:8080
+      # CockroachDB v24+ rejects an explicit 0.0.0.0 host; ":port" binds all interfaces.
+      - --listen-addr=:26257
+      - --http-addr=:8080
       - --advertise-addr=cockroach:26257
       - --store=/cockroach-data
     ports:

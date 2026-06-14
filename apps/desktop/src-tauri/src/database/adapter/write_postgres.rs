@@ -206,6 +206,36 @@ impl WriteAdapter for PostgresAdapter {
         self.insert_row(table, schema, data).await
     }
 
+    async fn get_blob_bytes(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+        column: String,
+    ) -> Result<Vec<u8>, Error> {
+        let query = format!(
+            "SELECT \"{}\" FROM {} WHERE \"{}\" = $1 LIMIT 1",
+            column,
+            qualified_table_name(&table, schema.as_deref()),
+            pk_column
+        );
+        let pk_param = json_to_pg_param(&pk_value);
+        let row = self
+            .client()
+            .query_opt(&query, &[pk_param.as_ref()])
+            .await?
+            .ok_or_else(|| {
+                Error::Any(anyhow!(
+                    "No row found in {} where {} matches the provided primary key",
+                    qualified_table_name(&table, schema.as_deref()),
+                    pk_column
+                ))
+            })?;
+        let bytes: Option<Vec<u8>> = row.try_get(0)?;
+        Ok(bytes.unwrap_or_default())
+    }
+
     async fn truncate_table(
         &self,
         table: String,

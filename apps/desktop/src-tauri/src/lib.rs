@@ -192,6 +192,7 @@ pub fn run() {
             database::commands::get_connection_history,
             // Mutation API commands
             database::commands::update_cell,
+            database::commands::get_blob_bytes,
             database::commands::delete_rows,
             database::commands::insert_row,
             database::commands::duplicate_row,

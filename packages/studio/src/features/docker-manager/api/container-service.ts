@@ -123,6 +123,13 @@ type DatabaseImageConfig = {
 	command?: string[]
 }
 
+// CockroachDB publishes its images under `v`-prefixed tags (e.g. `v25.1.1`).
+// The UI stores the bare version (`25.1.1`), so prepend `v` unless it's already
+// there or a non-numeric tag like `latest` was supplied.
+function normalizeCockroachTag(tag: string): string {
+	return /^\d/.test(tag) ? `v${tag}` : tag
+}
+
 function getDatabaseImageConfig(config: DatabaseContainerConfig): DatabaseImageConfig {
 	switch (config.provider) {
 		case 'mariadb':
@@ -157,7 +164,9 @@ function getDatabaseImageConfig(config: DatabaseContainerConfig): DatabaseImageC
 		case 'cockroach':
 			return {
 				image: COCKROACH_IMAGE,
-				imageTag: config.cockroachVersion || '25.1.1',
+				// CockroachDB image tags require a leading `v` (e.g. `v25.1.1`); the
+				// version stored from the UI omits it, so normalize here or the pull 404s.
+				imageTag: normalizeCockroachTag(config.cockroachVersion || '25.1.1'),
 				displayName: 'CockroachDB',
 				buildArgs: [
 					'-p',
@@ -178,8 +187,10 @@ function getDatabaseImageConfig(config: DatabaseContainerConfig): DatabaseImageC
 				command: [
 					'start-single-node',
 					'--insecure',
-					'--listen-addr=0.0.0.0:26257',
-					'--http-addr=0.0.0.0:8080',
+					// CockroachDB v24+ rejects an explicit `0.0.0.0` host in --listen-addr;
+					// an empty host (`:port`) binds all interfaces and is accepted.
+					'--listen-addr=:26257',
+					'--http-addr=:8080',
 					'--store=/cockroach-data'
 				]
 			}

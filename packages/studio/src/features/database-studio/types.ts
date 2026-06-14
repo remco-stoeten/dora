@@ -35,6 +35,28 @@ export type FilterDescriptor = {
 /** How multiple filter conditions are joined together. */
 export type FilterConjunction = 'AND' | 'OR'
 
+/**
+ * A single leaf condition inside a filter group. Identical shape to
+ * {@link FilterDescriptor}; aliased for clarity within the group model.
+ */
+export type FilterCondition = FilterDescriptor
+
+/**
+ * A nestable group of filter conditions joined by a single logic operator.
+ * The root group defaults to `AND`. Nesting is supported one level deep
+ * (i.e. two levels total): a child group may contain only leaf conditions.
+ * Fully serializable for tab persistence (#98).
+ */
+export type FilterGroup = {
+	logic: FilterConjunction
+	conditions: Array<FilterCondition | FilterGroup>
+}
+
+/** Narrows a group member to a nested group (vs a leaf condition). */
+export function isFilterGroup(node: FilterCondition | FilterGroup): node is FilterGroup {
+	return typeof (node as FilterGroup).logic === 'string' && Array.isArray((node as FilterGroup).conditions)
+}
+
 export type TableQueryParams = {
 	tableId: string
 	limit: number
@@ -42,6 +64,12 @@ export type TableQueryParams = {
 	sort?: SortDescriptor
 	filters?: FilterDescriptor[]
 	conjunction?: FilterConjunction
+	/**
+	 * Structured AND/OR filter tree. When present it supersedes the flat
+	 * `filters`/`conjunction` pair. The flat fields are kept for backward
+	 * compatibility with persisted state.
+	 */
+	filterGroup?: FilterGroup
 }
 
 export type ViewMode = 'content' | 'structure' | 'chart'

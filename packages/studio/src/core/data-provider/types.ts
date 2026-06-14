@@ -3,6 +3,7 @@ import type {
 	SortDescriptor,
 	FilterDescriptor,
 	FilterConjunction,
+	FilterGroup,
 	ColumnDefinition
 } from '@studio/features/database-studio/types'
 import {
@@ -86,7 +87,8 @@ export type DataAdapter = {
 		pageSize: number,
 		sort?: SortDescriptor,
 		filters?: FilterDescriptor[],
-		conjunction?: FilterConjunction
+		conjunction?: FilterConjunction,
+		filterGroup?: FilterGroup
 	): Promise<AdapterResult<TableData>>
 
 	executeQuery(connectionId: string, query: string): Promise<AdapterResult<QueryResult>>

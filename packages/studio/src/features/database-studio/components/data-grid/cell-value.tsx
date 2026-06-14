@@ -1,6 +1,8 @@
 import { Check, X, ChevronRight, ChevronDown } from 'lucide-react'
 import React, { useState } from 'react'
 import { ColumnDefinition } from '../../types'
+import { BlobCell } from '../cells/blob-cell'
+import { detectBlob } from '../cells/blob-utils'
 import { DateCell } from '../cells/date-cell'
 import { IpCell } from '../cells/ip-cell'
 import { TokenCell } from '../cells/token-cell'
@@ -80,6 +82,13 @@ function tryParseJson(value: string): object | null {
 export function formatCellValue(value: unknown, column: ColumnDefinition): React.ReactNode {
 	if (value === null || value === undefined) {
 		return <span className='text-muted-foreground italic'>NULL</span>
+	}
+
+	// Binary/blob cells: the backend renders these as `0x…` hex (small) or a
+	// `<type — size>` summary (large). Detect both and render a dedicated cell.
+	const blobInfo = detectBlob(value, column)
+	if (blobInfo) {
+		return <BlobCell info={blobInfo} />
 	}
 
 	const colName = column.name.toLowerCase()

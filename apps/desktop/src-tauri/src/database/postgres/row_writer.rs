@@ -236,6 +236,14 @@ impl RowWriter {
                 self.buf.push_str(&value.json);
             }
 
+            Type::BYTEA => {
+                // Binary column: render via the shared blob describer so small
+                // values show inline hex and larger ones a `<type — size>`
+                // summary with magic-byte detection.
+                let bytes = row.try_get::<_, PgBytes>(column_index)?;
+                self.write_json_string(&crate::database::blob_display::describe_blob(bytes.bytes));
+            }
+
             // TODO(vini): BPCHAR and NAME are correct here?
             Type::TEXT | Type::VARCHAR | Type::BPCHAR | Type::NAME => {
                 let value: &str = row.try_get(column_index)?;

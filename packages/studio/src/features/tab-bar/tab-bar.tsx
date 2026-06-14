@@ -115,6 +115,7 @@ export function TabBar({
                   ) : null}
                   <button
                     onClick={() => onTabClick(tab.id)}
+                    onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onTabClose(tab.id) } }}
                     className="flex items-center gap-1.5 h-full px-2 pl-3 text-xs font-medium"
                     data-tauri-drag-region="false"
                   >

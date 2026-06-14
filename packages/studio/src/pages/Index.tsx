@@ -32,6 +32,7 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@studio/shared/ui/button";
 import { TabsProvider, useTabs } from "@studio/core/tabs";
 import { TabBar } from "@studio/features/tab-bar";
+import { ConnectionTabBar } from "@studio/features/connection-tab-bar";
 const DatabaseStudio = lazy(function () {
   return import("@studio/features/database-studio/database-studio").then(function (m) {
     return { default: m.DatabaseStudio };
@@ -80,7 +81,8 @@ function IndexInner() {
 
   const { data: connections = [], isLoading: isConnectionsLoading } = useConnections();
   const isLoading = isSettingsLoading || isConnectionsLoading;
-  const { addConnection, updateConnection, removeConnection } = useConnectionMutations();
+  const { addConnection, updateConnection, removeConnection, disconnectFromDatabase } =
+    useConnectionMutations();
   const isTauri = useIsTauri();
 
   const urlView = searchParams.get("view");
@@ -93,7 +95,10 @@ function IndexInner() {
 
   const {
     tabs,
+    visibleTabs,
     activeTabId,
+    activeConnectionId,
+    openConnectionIds,
     openTab,
     closeTab,
     closeOtherTabs,
@@ -103,15 +108,52 @@ function IndexInner() {
     togglePinTab,
     reorderTab,
     closeTabsForConnection,
+    hydrateSession,
+    setActiveConnection,
+    openConnection,
+    closeConnection,
   } = useTabs();
+  const sessionHydratedRef = useRef(false);
+
+  // Restore tabs persisted from the last session (issue #98). Tabs render
+  // synchronously from storage on first paint; this one-shot effect prunes them
+  // once we know the user's preference and which connections still exist:
+  // unpinned tabs are dropped when "restore on launch" is off, and any tab whose
+  // connection no longer exists is dropped. Pinned tabs always restore.
+  useEffect(
+    function hydrateTabSessionOnce() {
+      if (sessionHydratedRef.current) return;
+      if (isSettingsLoading || isConnectionsLoading) return;
+      sessionHydratedRef.current = true;
+      hydrateSession({
+        restoreUnpinned: settings.restoreTabsOnLaunch,
+        knownConnectionIds: new Set(connections.map((c) => c.id)),
+      });
+    },
+    [
+      isSettingsLoading,
+      isConnectionsLoading,
+      settings.restoreTabsOnLaunch,
+      connections,
+      hydrateSession,
+    ],
+  );
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeTabConnectionId = activeTab?.connectionId ?? "";
 
   const autoSelectFirstTableRef = useRef(false);
   const connectionInitializedRef = useRef(false);
-  const previousConnectionIdRef = useRef<string>("");
 
-  const [activeConnectionId, setActiveConnectionId] = useState<string>("");
+  // `activeConnectionId` now lives in the tabs store so each connection keeps its
+  // own tab group (issue #96). This bridge keeps the existing call sites that
+  // expect a setter working: selecting a connection opens + activates it, and
+  // passing "" is a no-op (use closeConnection to actually close one).
+  const setActiveConnectionId = useCallback(
+    function (connectionId: string) {
+      if (connectionId) setActiveConnection(connectionId);
+    },
+    [setActiveConnection],
+  );
   const [sqlConsoleEditorContext, setSqlConsoleEditorContext] =
     useState<AiAssistantEditorContext | null>(null);
   const selectedTableId =
@@ -264,6 +306,24 @@ function IndexInner() {
         setActiveNavId("docker");
       },
       { description: shortcuts.gotoDocker.description },
+    );
+
+  // Cycle through open connection tab groups (issue #96).
+  $.bind(shortcuts.prevConnection.combo)
+    .except("typing")
+    .on(
+      function () {
+        cycleConnection(-1);
+      },
+      { description: shortcuts.prevConnection.description },
+    );
+  $.bind(shortcuts.nextConnection.combo)
+    .except("typing")
+    .on(
+      function () {
+        cycleConnection(1);
+      },
+      { description: shortcuts.nextConnection.description },
     );
 
   // Connection switching by index (1-9)
@@ -596,9 +656,8 @@ function IndexInner() {
     if (!connection) return;
     try {
       await removeConnection.mutateAsync(connection.id);
-      if (activeConnectionId === connection.id) {
-        setActiveConnectionId("");
-      }
+      // Removing a connection also closes its tab group and clears it as active.
+      closeConnection(connection.id);
       closeTabsForConnection(connection.id);
       toast({
         title: "Connection Deleted",
@@ -617,9 +676,32 @@ function IndexInner() {
   }
 
   async function handleConnectionSelect(connectionId: string) {
-    setActiveConnectionId(connectionId);
+    setActiveConnection(connectionId);
     autoSelectFirstTableRef.current = false;
   }
+
+  // Close a connection tab (issue #96): disconnect its backend session and drop
+  // its tab group. The store picks the nearest remaining connection as active,
+  // or the empty state when none remain. The connection itself is NOT deleted —
+  // it stays in the saved connection list and can be reopened.
+  function handleCloseConnection(connectionId: string) {
+    closeConnection(connectionId);
+    closeTabsForConnection(connectionId);
+    disconnectFromDatabase.mutate(connectionId);
+  }
+
+  // Cycle through open connection tabs (Ctrl+Shift+[ / Ctrl+Shift+]).
+  const cycleConnection = useCallback(
+    function (direction: 1 | -1) {
+      if (openConnectionIds.length < 2) return;
+      const currentIndex = openConnectionIds.indexOf(activeConnectionId);
+      const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+      const nextIndex =
+        (baseIndex + direction + openConnectionIds.length) % openConnectionIds.length;
+      setActiveConnection(openConnectionIds[nextIndex]);
+    },
+    [openConnectionIds, activeConnectionId, setActiveConnection],
+  );
 
   const handleTabClick = useCallback(
     function (tabId: string) {
@@ -709,17 +791,11 @@ function IndexInner() {
     [activeNavId],
   );
 
-  useEffect(
-    function clearTabsFromPreviousConnection() {
-      const previousConnectionId = previousConnectionIdRef.current;
-      if (previousConnectionId && previousConnectionId !== activeConnectionId) {
-        closeTabsForConnection(previousConnectionId);
-      }
-
-      previousConnectionIdRef.current = activeConnectionId;
-    },
-    [activeConnectionId, closeTabsForConnection],
-  );
+  // Issue #96: switching connections no longer tears down the previous
+  // connection's tabs — each connection keeps its own isolated tab group. The
+  // table TabBar renders only the active connection's tabs (`visibleTabs`), so
+  // switching simply changes which group is shown and naturally preserves each
+  // connection's open tabs, active tab, filter and scroll state.
 
   // Show database panel for sql-console and database-studio views
   const showDatabasePanel =
@@ -730,6 +806,32 @@ function IndexInner() {
     activeNavId === "docker" || activeNavId === "sql-console" || activeNavId === "settings"
       ? activeNavId
       : "database-studio";
+
+  // The connections the user has open, resolved to full Connection objects in
+  // the order their connection tabs appear (issue #96). Stale ids (a connection
+  // deleted elsewhere) are filtered out.
+  const openConnections = openConnectionIds
+    .map(function (id) {
+      return connections.find(function (c) {
+        return c.id === id;
+      });
+    })
+    .filter(function (c): c is Connection {
+      return Boolean(c);
+    });
+  const showConnectionTabBar =
+    openConnections.length > 0 &&
+    (activeNavId === "database-studio" || activeNavId === "sql-console");
+
+  const connectionTabBar = showConnectionTabBar ? (
+    <ConnectionTabBar
+      connections={openConnections}
+      activeConnectionId={activeConnectionId}
+      onSelect={handleConnectionSelect}
+      onClose={handleCloseConnection}
+      onAddConnection={handleOpenNewConnection}
+    />
+  ) : null;
 
   return (
     <LiveMonitorProvider activeConnectionId={activeConnectionId || undefined}>
@@ -814,8 +916,9 @@ function IndexInner() {
                     </div>
                   ) : activeNavId === "database-studio" ? (
                     <div className="flex flex-col flex-1 min-h-0">
+                      {connectionTabBar}
                       <TabBar
-                        tabs={tabs}
+                        tabs={visibleTabs}
                         activeTabId={activeTabId}
                         onTabClick={handleTabClick}
                         onTabClose={closeTab}
@@ -851,19 +954,22 @@ function IndexInner() {
                       </ErrorBoundary>
                     </div>
                   ) : activeNavId === "sql-console" ? (
-                    <ErrorBoundary feature="SQL Console">
-                      <SqlConsole
-                        activeConnectionId={activeConnectionId}
-                        onEditorContextChange={setSqlConsoleEditorContext}
-                        getConnectionName={function (id) {
-                          return (
-                            connections.find(function (c) {
-                              return c.id === id;
-                            })?.name ?? id.slice(0, 8)
-                          );
-                        }}
-                      />
-                    </ErrorBoundary>
+                    <div className="flex flex-col flex-1 min-h-0">
+                      {connectionTabBar}
+                      <ErrorBoundary feature="SQL Console">
+                        <SqlConsole
+                          activeConnectionId={activeConnectionId}
+                          onEditorContextChange={setSqlConsoleEditorContext}
+                          getConnectionName={function (id) {
+                            return (
+                              connections.find(function (c) {
+                                return c.id === id;
+                              })?.name ?? id.slice(0, 8)
+                            );
+                          }}
+                        />
+                      </ErrorBoundary>
+                    </div>
                   ) : activeNavId === "schema-visualizer" ? (
                     <ErrorBoundary feature="Schema Visualizer">
                       <SchemaVisualizer

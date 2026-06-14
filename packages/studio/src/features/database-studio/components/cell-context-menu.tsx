@@ -5,10 +5,14 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger
 } from '@studio/shared/ui/context-menu'
-import { Copy, FileJson, Filter, Pencil, Trash2 } from 'lucide-react'
+import { Binary, Copy, FileDown, FileJson, Filter, Pencil, Trash2 } from 'lucide-react'
 import { ColumnDefinition } from '../types'
+import { detectBlob } from './cells/blob-utils'
 
 type CellAction = 'copy' | 'copy-json' | 'filter-by-value' | 'edit' | 'set-null' | 'set-null-batch'
+
+/** Blob-specific actions that need the original bytes, resolved by the parent. */
+type BlobAction = 'copy-hex' | 'copy-base64' | 'save-file'
 
 type BatchAction = {
 	action: 'set-null-batch'
@@ -21,6 +25,7 @@ type Props = {
 	column: ColumnDefinition
 	rowIndex: number
 	colIndex?: number
+	row?: Record<string, unknown>
 	selectedRows?: Set<number>
 	hasFilter?: boolean
 	onAction?: (
@@ -28,6 +33,12 @@ type Props = {
 		value: unknown,
 		column: ColumnDefinition,
 		batchAction?: BatchAction
+	) => void
+	/** Handle a blob action; the parent re-fetches the original bytes. */
+	onBlobAction?: (
+		action: BlobAction,
+		column: ColumnDefinition,
+		row: Record<string, unknown>
 	) => void
 	onOpenChange?: (open: boolean, rowIndex: number, colIndex: number) => void
 	children: React.ReactNode
@@ -38,9 +49,11 @@ export function CellContextMenu({
 	column,
 	rowIndex,
 	colIndex = 0,
+	row,
 	selectedRows,
 	hasFilter = false,
 	onAction,
+	onBlobAction,
 	onOpenChange,
 	children
 }: Props) {
@@ -85,8 +98,14 @@ export function CellContextMenu({
 		onOpenChange?.(open, rowIndex, colIndex)
 	}
 
+	function handleBlobAction(action: BlobAction) {
+		if (row && onBlobAction) onBlobAction(action, column, row)
+	}
+
 	const hasSelectedRows = selectedRows && selectedRows.size > 1 && selectedRows.has(rowIndex)
 	const isComplexType = typeof value === 'object' && value !== null
+	const blobInfo = detectBlob(value, column)
+	const showBlobActions = !!blobInfo && !!row && !!onBlobAction
 
 	return (
 		<ContextMenu onOpenChange={handleOpenChange}>
@@ -107,6 +126,23 @@ export function CellContextMenu({
 						<span>Copy as JSON</span>
 					</ContextMenuItem>
 				)}
+				{showBlobActions && (
+					<>
+						<ContextMenuSeparator />
+						<ContextMenuItem onClick={function () { handleBlobAction('copy-hex') }}>
+							<Binary />
+							<span>Copy as hex</span>
+						</ContextMenuItem>
+						<ContextMenuItem onClick={function () { handleBlobAction('copy-base64') }}>
+							<Copy />
+							<span>Copy as base64</span>
+						</ContextMenuItem>
+						<ContextMenuItem onClick={function () { handleBlobAction('save-file') }}>
+							<FileDown />
+							<span>Save to file…</span>
+						</ContextMenuItem>
+					</>
+				)}
 				<ContextMenuSeparator />
 				<ContextMenuItem onClick={handleFilterByValue} disabled={!hasFilter}>
 					<Filter />
@@ -126,4 +162,4 @@ export function CellContextMenu({
 	)
 }
 
-export type { CellAction }
+export type { CellAction, BlobAction }

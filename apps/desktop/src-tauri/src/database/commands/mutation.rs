@@ -58,6 +58,29 @@ pub async fn update_cell(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_blob_bytes(
+    connection_id: Uuid,
+    table_name: String,
+    schema_name: Option<String>,
+    primary_key_column: String,
+    primary_key_value: serde_json::Value,
+    column_name: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, Error> {
+    let svc = mutation_service(state.inner());
+    svc.get_blob_bytes(
+        connection_id,
+        table_name,
+        schema_name,
+        primary_key_column,
+        primary_key_value,
+        column_name,
+    )
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn delete_rows(
     connection_id: Uuid,
     table_name: String,
@@ -106,11 +129,21 @@ pub async fn export_table(
     schema_name: Option<String>,
     format: ExportFormat,
     limit: Option<u32>,
+    where_clause: Option<String>,
+    order_by: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, Error> {
     let svc = mutation_service(state.inner());
-    svc.export_table(connection_id, table_name, schema_name, format, limit)
-        .await
+    svc.export_table(
+        connection_id,
+        table_name,
+        schema_name,
+        format,
+        limit,
+        where_clause,
+        order_by,
+    )
+    .await
 }
 
 #[tauri::command]

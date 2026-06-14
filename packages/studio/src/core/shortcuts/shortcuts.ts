@@ -84,6 +84,8 @@ export const APP_SHORTCUTS = {
 	switchConnection7: { combo: 'mod+7', description: 'Switch to connection 7', scope: 'global' },
 	switchConnection8: { combo: 'mod+8', description: 'Switch to connection 8', scope: 'global' },
 	switchConnection9: { combo: 'mod+9', description: 'Switch to connection 9', scope: 'global' },
+	prevConnection: { combo: 'ctrl+shift+bracketleft', description: 'Previous open connection', scope: 'global' },
+	nextConnection: { combo: 'ctrl+shift+bracketright', description: 'Next open connection', scope: 'global' },
 
 	// ── Go-To chords (G → key) ───────────────────────────────────────────────
 	gotoDashboard:   { combo: 'g d', description: 'Go to dashboard',   scope: 'global' },
@@ -243,6 +245,7 @@ export const SHORTCUT_CATEGORIES: Record<string, ShortcutName[]> = {
 		'switchConnection1', 'switchConnection2', 'switchConnection3',
 		'switchConnection4', 'switchConnection5', 'switchConnection6',
 		'switchConnection7', 'switchConnection8', 'switchConnection9',
+		'prevConnection', 'nextConnection',
 	],
 	'Go To (G → key)': [
 		'gotoDashboard', 'gotoSettings', 'gotoConnections', 'gotoEditor', 'gotoDocker',

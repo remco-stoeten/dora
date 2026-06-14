@@ -86,6 +86,26 @@ pub trait WriteAdapter: Send + Sync {
     async fn dump_database(&self, output_path: String) -> Result<DumpResult, Error>;
 
     async fn execute_batch(&self, statements: Vec<String>) -> Result<MutationResult, Error>;
+
+    /// Re-select a single binary cell and return its raw bytes.
+    ///
+    /// The data grid renders blobs as a display string (`describe_blob`), which
+    /// discards the original bytes; "Copy as base64" / "Save to file" need them
+    /// back. The cell is addressed by primary key, reusing the same parameter
+    /// binding as the other write methods so the lookup is injection-safe.
+    ///
+    /// Drivers without a meaningful binary type (or not yet wired) return
+    /// [`Error::NotImplemented`].
+    async fn get_blob_bytes(
+        &self,
+        _table: String,
+        _schema: Option<String>,
+        _pk_column: String,
+        _pk_value: serde_json::Value,
+        _column: String,
+    ) -> Result<Vec<u8>, Error> {
+        Err(Error::NotImplemented("WriteAdapter::get_blob_bytes"))
+    }
 }
 
 // -----------------------------------------------------------------------------

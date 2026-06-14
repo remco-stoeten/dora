@@ -453,18 +453,12 @@ impl OllamaClient {
             .json(&chat_request)
             .send()
             .await
-            .map_err(|error| {
-                Error::Any(anyhow::anyhow!(
-                    "Ollama request failed: {error}. Is Ollama running?"
-                ))
-            })?;
+            .map_err(|error| super::errors::request_error("Ollama", &error))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(Error::Any(anyhow::anyhow!(
-                "Ollama API error ({status}): {body}"
-            )));
+            return Err(super::errors::http_error("Ollama", &self.model, status, &body));
         }
 
         let parsed: OllamaChatResponse = response.json().await.map_err(|error| {
@@ -501,14 +495,12 @@ impl OllamaClient {
             .json(&chat_request)
             .send()
             .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Ollama request failed: {error}")))?;
+            .map_err(|error| super::errors::request_error("Ollama", &error))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(Error::Any(anyhow::anyhow!(
-                "Ollama API error ({status}): {body}"
-            )));
+            return Err(super::errors::http_error("Ollama", &self.model, status, &body));
         }
 
         let mut stream = response.bytes_stream();

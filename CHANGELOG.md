@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Features
+
+- keep multiple database connections open at once, each with its own isolated tab group; a connection tab bar above the table tabs switches between them (with status dots and per-connection close), and switching preserves each connection's open tabs, active tab, filters and scroll state. Cycle connections with `Ctrl+Shift+[` / `Ctrl+Shift+]` (#96)
+
+### Bug Fixes
+
+- AI provider errors now use clear, consistent copy across all providers (Groq, OpenAI, Anthropic, Gemini, Ollama): rate limits, invalid keys, missing models, and an offline Ollama daemon each surface an actionable message instead of a raw HTTP status and response body (#82)
+- the AI rate-limit message includes a retry hint so the user knows to wait and try again (#82)
+
+### Documentation
+
+- AI Keys settings now spell out that Groq/OpenAI/Anthropic/Gemini need an API key while Ollama runs locally with no key, pointing to `docs/ai-providers.md` for setup (#82)
+
 ## [v0.28.0] - 2026-06-14
 
 ### Features

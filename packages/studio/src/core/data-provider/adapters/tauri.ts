@@ -3,9 +3,10 @@ import type {
 	SortDescriptor,
 	FilterDescriptor,
 	FilterConjunction,
+	FilterGroup,
 	ColumnDefinition
 } from '@studio/features/database-studio/types'
-import { buildWhereClause } from '../filter-sql'
+import { buildWhereClauseFrom } from '../filter-sql'
 import type {
 	ConnectionInfo,
 	DatabaseSchema,
@@ -244,13 +245,14 @@ export function createTauriAdapter(): DataAdapter {
 			pageSize: number,
 			sort?: SortDescriptor,
 			filters?: FilterDescriptor[],
-			conjunction?: FilterConjunction
+			conjunction?: FilterConjunction,
+			filterGroup?: FilterGroup
 		): Promise<AdapterResult<TableData>> {
 			const startTime = performance.now()
 			const dialect = await resolveConnectionDialect(connectionId)
 			let query = `SELECT * FROM ${getTableSqlIdentifier(tableName, dialect)}`
 
-			const whereClause = buildWhereClause(filters, conjunction)
+			const whereClause = buildWhereClauseFrom(filterGroup, filters, conjunction)
 			if (whereClause) {
 				query += ' WHERE ' + whereClause
 			}

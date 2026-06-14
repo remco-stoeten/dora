@@ -21,7 +21,19 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
 		date: "2026-06-14",
 		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/vUnreleased",
 		groups: [
-
+			{
+				name: "Bug Fixes",
+				items: [
+				"AI provider errors now use clear, consistent copy across all providers (Groq, OpenAI, Anthropic, Gemini, Ollama): rate limits, invalid keys, missing models, and an offline Ollama daemon each surface an actionable message instead of a raw HTTP status and response body (#82)",
+				"the AI rate-limit message includes a retry hint so the user knows to wait and try again (#82)",
+				]
+			},
+			{
+				name: "Documentation",
+				items: [
+				"AI Keys settings now spell out that Groq/OpenAI/Anthropic/Gemini need an API key while Ollama runs locally with no key, pointing to `docs/ai-providers.md` for setup (#82)",
+				]
+			}
 		]
 	},
 	{

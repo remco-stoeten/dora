@@ -1,6 +1,8 @@
-import { lazy, Suspense, useState, useCallback, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useAdapter, useIsTauri } from "@studio/core/data-provider/context";
+import { useConnections } from "@studio/core/data-provider";
+import { askAi, buildExplainQueryPrompt } from "@studio/features/ai-assistant/ai-actions";
 import { getAdapterError } from "@studio/core/data-provider/types";
 import { useShortcut, useActiveScope, useEffectiveShortcuts } from "@studio/core/shortcuts";
 import {
@@ -73,6 +75,7 @@ function SqlConsoleInner({
 }: Props) {
   const adapter = useAdapter();
   const isTauri = useIsTauri();
+  const { data: connections } = useConnections();
   const tabStore = useQueryTabs();
   const { activeTab } = tabStore;
   const shortcuts = useEffectiveShortcuts();
@@ -399,6 +402,7 @@ function SqlConsoleInner({
               queryType,
               columnDefinitions,
               sourceTable: extractMutationSourceTable(queryToRun),
+              executedQuery: queryToRun,
             });
             // Auto-title the tab from the query
             tabStore.autoTitleTab(activeTab.id, queryToRun);
@@ -452,6 +456,7 @@ function SqlConsoleInner({
               queryType: getQueryType(sqlToRun),
               columnDefinitions: res.data.columnDefinitions,
               sourceTable: extractMutationSourceTable(queryToRun),
+              executedQuery: sqlToRun,
             });
 
             // Drizzle queries may also mutate data (insert, update, delete).
@@ -523,6 +528,48 @@ function SqlConsoleInner({
       await adapter.cancelActiveQuery(activeConnectionId);
     }
   }, [adapter, activeConnectionId]);
+
+  const activeDialect = useMemo(() => {
+    const connection = connections?.find(function (c) {
+      return c.id === activeConnectionId;
+    });
+    if (!connection) return "unknown";
+    const type = connection.type;
+    if (type === "sqlite" || type === "libsql" || type === "duckdb") return "sqlite";
+    if (type === "postgres" || type === "cockroach") return "postgres";
+    if (type === "mysql" || type === "mariadb") return "mysql";
+    return "unknown";
+  }, [connections, activeConnectionId]);
+
+  const handleExplainQuery = useCallback(() => {
+    const query = (mode === "sql" ? currentSqlQuery : currentDrizzleQuery).trim();
+    if (!query) return;
+    askAi(buildExplainQueryPrompt(query));
+  }, [mode, currentSqlQuery, currentDrizzleQuery]);
+
+  const handleExplainAnalyze = useCallback(() => {
+    const baseQuery = currentSqlQuery.trim().replace(/;\s*$/, "");
+    if (!baseQuery) return;
+
+    let explained: string;
+    if (activeDialect === "sqlite") {
+      // SQLite does not support EXPLAIN ANALYZE; use EXPLAIN QUERY PLAN.
+      explained = `EXPLAIN QUERY PLAN ${baseQuery}`;
+    } else if (activeDialect === "postgres") {
+      explained = `EXPLAIN (ANALYZE, FORMAT JSON) ${baseQuery}`;
+    } else {
+      // MySQL / MariaDB / unknown: best-effort text plan.
+      explained = `EXPLAIN ANALYZE ${baseQuery}`;
+    }
+
+    if (mode !== "sql") {
+      setMode("sql");
+    }
+    handleExecute(explained, "sql").catch(function (error) {
+      console.error("Failed to run EXPLAIN ANALYZE:", error);
+      notifyFailure("Failed to run EXPLAIN ANALYZE", error);
+    });
+  }, [activeDialect, currentSqlQuery, mode, handleExecute]);
 
   useEffect(
     function registerCaptureHelpers() {
@@ -1165,6 +1212,8 @@ function SqlConsoleInner({
                         setShowFilter(!showFilter);
                       }}
                       onSave={handleSaveSnippet}
+                      onExplainQuery={handleExplainQuery}
+                      onExplainAnalyze={mode === "sql" ? handleExplainAnalyze : undefined}
                     />
                   </div>
                 }

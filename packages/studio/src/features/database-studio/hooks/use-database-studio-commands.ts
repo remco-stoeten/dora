@@ -9,7 +9,7 @@ import { useToast } from '@studio/shared/ui/use-toast'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import type { ColumnFormData } from '../components/add-column-dialog'
 import { rowsToCsv, rowsToSqlInsert, splitSqlStatements } from '../utils/studio-data'
-import type { FilterConjunction, FilterDescriptor, SortDescriptor, TableData } from '../types'
+import type { FilterConjunction, FilterDescriptor, FilterGroup, SortDescriptor, TableData } from '../types'
 
 type Args = {
 	adapter: DataAdapter
@@ -21,6 +21,7 @@ type Args = {
 	sort?: SortDescriptor
 	filters?: FilterDescriptor[]
 	filterConjunction?: FilterConjunction
+	filterGroup?: FilterGroup
 	loadTableData: () => void
 	setIsDdlLoading: (value: boolean) => void
 	setShowAddColumnDialog: (value: boolean) => void
@@ -54,6 +55,7 @@ export function useDatabaseStudioCommands(args: Args) {
 		sort,
 		filters,
 		filterConjunction,
+		filterGroup,
 		loadTableData,
 		setIsDdlLoading,
 		setShowAddColumnDialog,
@@ -61,10 +63,17 @@ export function useDatabaseStudioCommands(args: Args) {
 		notifyActionFailure
 	} = args
 
+	// True when any filter is active (flat list or structured group). Drives the
+	// "Export N matching rows" vs "Export all rows" choice in the export dialog.
+	const hasActiveFilters =
+		(filters?.length ?? 0) > 0 || (filterGroup?.conditions.length ?? 0) > 0
+
 	// Fetches every row matching the active filters/sort (up to a cap) so an
 	// export reflects what the user is looking at, not the whole table or just
-	// the loaded page. Returns null on failure (caller already notified).
-	async function fetchRowsForExport(): Promise<TableData | null> {
+	// the loaded page. When `ignoreFilters` is set the filters are dropped so the
+	// full table is exported (sort is still honored). Returns null on failure
+	// (caller already notified).
+	async function fetchRowsForExport(ignoreFilters = false): Promise<TableData | null> {
 		if (!activeConnectionId || !tableRefName) return null
 		const result = await adapter.fetchTableData(
 			activeConnectionId,
@@ -72,8 +81,9 @@ export function useDatabaseStudioCommands(args: Args) {
 			0,
 			EXPORT_ROW_CAP,
 			sort,
-			filters,
-			filterConjunction
+			ignoreFilters ? undefined : filters,
+			ignoreFilters ? undefined : filterConjunction,
+			ignoreFilters ? undefined : filterGroup
 		)
 		if (!result.ok) {
 			notifyActionFailure('Export failed', getAdapterError(result))
@@ -82,8 +92,8 @@ export function useDatabaseStudioCommands(args: Args) {
 		return result.data
 	}
 
-	async function handleExport() {
-		const data = await fetchRowsForExport()
+	async function handleExport(ignoreFilters = false) {
+		const data = await fetchRowsForExport(ignoreFilters)
 		if (!data || data.rows.length === 0) return
 		downloadTextFile(
 			JSON.stringify(data.rows, null, 2),
@@ -92,8 +102,8 @@ export function useDatabaseStudioCommands(args: Args) {
 		)
 	}
 
-	async function handleExportCsvAll() {
-		const data = await fetchRowsForExport()
+	async function handleExportCsvAll(ignoreFilters = false) {
+		const data = await fetchRowsForExport(ignoreFilters)
 		if (!data || data.rows.length === 0) return
 		const csvString = rowsToCsv(
 			data.rows,
@@ -104,8 +114,8 @@ export function useDatabaseStudioCommands(args: Args) {
 		downloadTextFile(csvString, `${tableName || 'data'}.csv`, 'text/csv')
 	}
 
-	async function handleExportSqlAll() {
-		const data = await fetchRowsForExport()
+	async function handleExportSqlAll(ignoreFilters = false) {
+		const data = await fetchRowsForExport(ignoreFilters)
 		if (!data || data.rows.length === 0) return
 		const sqlString = rowsToSqlInsert(
 			data.rows,
@@ -302,6 +312,7 @@ export function useDatabaseStudioCommands(args: Args) {
 		handleExport,
 		handleExportCsvAll,
 		handleExportSqlAll,
+		hasActiveFilters,
 		handleBackupDatabase,
 		handleRestoreDatabase,
 		handleCopySchema,

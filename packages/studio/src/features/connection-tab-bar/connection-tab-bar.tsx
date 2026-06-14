@@ -1,0 +1,124 @@
+import type { ReactNode } from 'react'
+import { Plus, X } from 'lucide-react'
+import { cn } from '@studio/shared/utils/cn'
+import type { Connection } from '@studio/features/connections/types'
+
+// Connection tab bar (issue #96). Renders one tab per open connection above the
+// table TabBar so the user can keep several databases open at once and switch
+// between their isolated tab groups. A status dot mirrors the connection's live
+// state; the trailing + opens the existing connection dialog.
+
+type Props = {
+  // Connections the user has open, in display order.
+  connections: Connection[]
+  activeConnectionId: string
+  onSelect: (connectionId: string) => void
+  onClose: (connectionId: string) => void
+  onAddConnection: () => void
+  rightSlot?: ReactNode
+}
+
+function statusColor(status: Connection['status']): string {
+  switch (status) {
+    case 'connected':
+      return 'bg-green-500'
+    case 'error':
+      return 'bg-red-500'
+    case 'idle':
+    default:
+      // No definitive state yet — treat as connecting/idle.
+      return 'bg-amber-500'
+  }
+}
+
+function statusLabel(status: Connection['status']): string {
+  switch (status) {
+    case 'connected':
+      return 'Connected'
+    case 'error':
+      return 'Connection error'
+    default:
+      return 'Connecting'
+  }
+}
+
+export function ConnectionTabBar({
+  connections,
+  activeConnectionId,
+  onSelect,
+  onClose,
+  onAddConnection,
+  rightSlot,
+}: Props) {
+  return (
+    <div
+      className="flex items-center h-8 border-b border-border bg-sidebar shrink-0 select-none"
+      data-tauri-drag-region="true"
+    >
+      <div className="flex h-full min-w-0 flex-1 items-center overflow-x-auto scrollbar-none">
+        {connections.map((connection) => {
+          const isActive = connection.id === activeConnectionId
+          return (
+            <div
+              key={connection.id}
+              className={cn(
+                'relative flex items-center h-full shrink-0 border-r border-border transition-colors',
+                isActive
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
+              )}
+              data-tauri-drag-region="false"
+            >
+              <button
+                onClick={() => onSelect(connection.id)}
+                className="flex items-center gap-1.5 h-full px-2 pl-3 text-xs font-medium"
+                data-tauri-drag-region="false"
+                title={`${connection.name} — ${statusLabel(connection.status)}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(connection.status))}
+                />
+                <span className="max-w-[140px] truncate">{connection.name}</span>
+              </button>
+              <button
+                aria-label={`Close ${connection.name}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose(connection.id)
+                }}
+                onAuxClick={(e) => {
+                  if (e.button === 1) {
+                    e.preventDefault()
+                    onClose(connection.id)
+                  }
+                }}
+                className="h-full px-1 pr-2 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
+                data-tauri-drag-region="false"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )
+        })}
+        <button
+          aria-label="Add connection"
+          onClick={onAddConnection}
+          className="flex items-center justify-center h-full px-2 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+          data-tauri-drag-region="false"
+          title="Add connection"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {rightSlot ? (
+        <div
+          className="flex h-full shrink-0 items-center border-l border-border px-1"
+          data-tauri-drag-region="false"
+        >
+          {rightSlot}
+        </div>
+      ) : null}
+    </div>
+  )
+}

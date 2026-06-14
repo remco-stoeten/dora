@@ -1,9 +1,13 @@
 import type {
 	TableData,
 	SortDescriptor,
+	FilterCondition,
+	FilterConjunction,
 	FilterDescriptor,
+	FilterGroup,
 	ColumnDefinition
 } from '@studio/features/database-studio/types'
+import { isFilterGroup } from '@studio/features/database-studio/types'
 import type {
 	ConnectionInfo,
 	DatabaseSchema,
@@ -165,6 +169,61 @@ function delay(ms: number): Promise<void> {
 
 function randomDelay(): Promise<void> {
 	return delay(50 + Math.random() * 100)
+}
+
+/** Evaluates a single leaf condition against a row (mock in-memory filtering). */
+function evalCondition(row: Record<string, unknown>, f: FilterCondition): boolean {
+	const val = row[f.column]
+	const target = f.value
+	switch (f.operator) {
+		case 'eq':
+			return val === target
+		case 'neq':
+			return val !== target
+		case 'gt':
+			return Number(val) > Number(target)
+		case 'gte':
+			return Number(val) >= Number(target)
+		case 'lt':
+			return Number(val) < Number(target)
+		case 'lte':
+			return Number(val) <= Number(target)
+		case 'contains':
+		case 'ilike':
+			return String(val).toLowerCase().includes(String(target).toLowerCase())
+		default:
+			return true
+	}
+}
+
+/** Recursively evaluates a structured filter group against a row. */
+function evalGroup(row: Record<string, unknown>, group: FilterGroup): boolean {
+	const results = group.conditions
+		.map(function (node) {
+			return isFilterGroup(node) ? evalGroup(row, node) : evalCondition(row, node)
+		})
+	if (results.length === 0) return true
+	return group.logic === 'OR' ? results.some(Boolean) : results.every(Boolean)
+}
+
+/** Builds a row predicate from either a structured group or a legacy flat list. */
+function buildRowPredicate(
+	filterGroup: FilterGroup | undefined,
+	filters: FilterDescriptor[] | undefined,
+	conjunction: FilterConjunction
+): ((row: Record<string, unknown>) => boolean) | null {
+	if (filterGroup && filterGroup.conditions.length > 0) {
+		return function (row) {
+			return evalGroup(row, filterGroup)
+		}
+	}
+	if (filters && filters.length > 0) {
+		const group: FilterGroup = { logic: conjunction, conditions: filters }
+		return function (row) {
+			return evalGroup(row, group)
+		}
+	}
+	return null
 }
 
 function getTableLookupCandidates(tableName: string): string[] {
@@ -446,7 +505,9 @@ CREATE TABLE posts (
 			page: number,
 			pageSize: number,
 			sort?: SortDescriptor,
-			filters?: FilterDescriptor[]
+			filters?: FilterDescriptor[],
+			conjunction?: FilterConjunction,
+			filterGroup?: FilterGroup
 		): Promise<AdapterResult<TableData>> {
 			await randomDelay()
 
@@ -460,35 +521,9 @@ CREATE TABLE posts (
 
 			let filtered = rows.slice()
 
-			if (filters && filters.length > 0) {
-				filtered = filtered.filter(function (row) {
-					return filters.every(function (f) {
-						const val = row[f.column]
-						const target = f.value
-
-						switch (f.operator) {
-							case 'eq':
-								return val === target
-							case 'neq':
-								return val !== target
-							case 'gt':
-								return Number(val) > Number(target)
-							case 'gte':
-								return Number(val) >= Number(target)
-							case 'lt':
-								return Number(val) < Number(target)
-							case 'lte':
-								return Number(val) <= Number(target)
-							case 'contains':
-							case 'ilike':
-								return String(val)
-									.toLowerCase()
-									.includes(String(target).toLowerCase())
-							default:
-								return true
-						}
-					})
-				})
+			const predicate = buildRowPredicate(filterGroup, filters, conjunction ?? 'AND')
+			if (predicate) {
+				filtered = filtered.filter(predicate)
 			}
 
 			if (sort) {

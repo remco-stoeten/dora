@@ -1,4 +1,5 @@
 mod anthropic;
+mod errors;
 mod gemini;
 mod groq;
 mod models;

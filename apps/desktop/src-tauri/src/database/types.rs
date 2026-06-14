@@ -177,6 +177,11 @@ pub struct DatabaseConnection {
     pub updated_at: i64,
     pub pin_hash: Option<String>,
     pub database: Database,
+    /// Engine detected at connect time via `version()`. `None` until the
+    /// connection has been opened and probed. This is *runtime-confirmed*
+    /// information, distinct from the user's `Database` variant choice, and is
+    /// the source of truth for dialect-specific capability gating.
+    pub detected_dialect: Option<crate::database::dialect::DetectedDialect>,
 }
 
 #[derive(Clone)]
@@ -386,6 +391,7 @@ impl DatabaseConnection {
             updated_at: chrono::Utc::now().timestamp_millis(),
             pin_hash: None,
             database,
+            detected_dialect: None,
         }
     }
 
@@ -461,6 +467,27 @@ impl DatabaseConnection {
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()),
             pin_hash: info.pin_hash,
             database,
+            detected_dialect: None,
+        }
+    }
+
+    /// Source capabilities for this connection, derived from the
+    /// runtime-detected dialect when available, otherwise from a safe default
+    /// based on the wire protocol (the existing vanilla behaviour).
+    pub fn source_caps(&self) -> crate::database::dialect::SourceCaps {
+        use crate::database::dialect::SourceCaps;
+        if let Some(dialect) = self.detected_dialect {
+            return SourceCaps::for_dialect(dialect);
+        }
+        match &self.database {
+            Database::Postgres { .. } | Database::CockroachDB { .. } => {
+                SourceCaps::postgres_default()
+            }
+            Database::MySQL { .. } | Database::MariaDB { .. } => SourceCaps::mysql_default(),
+            // Non Postgres/MySQL engines do not use LISTEN/NOTIFY live monitoring.
+            _ => SourceCaps {
+                supports_listen_notify: false,
+            },
         }
     }
 

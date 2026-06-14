@@ -19,6 +19,7 @@ import {
 	MIN_COLUMN_WIDTH,
 	useColumnResize
 } from './data-grid/use-column-resize'
+import { BlobAction } from './cell-context-menu'
 import { RowAction } from './row-context-menu'
 import { ScrollHint } from './scroll-hint'
 import { useRowVirtualizer } from './data-grid/use-row-virtualizer'
@@ -35,6 +36,7 @@ type Props = {
 	sort?: SortDescriptor
 	onSortChange?: (sort: SortDescriptor | undefined) => void
 	onFilterAdd?: (filter: FilterDescriptor) => void
+	onBlobAction?: (action: BlobAction, column: ColumnDefinition, row: Record<string, unknown>) => void
 	onCellEdit?: (rowIndex: number, columnName: string, newValue: unknown) => void
 	onDeleteSelectedRows?: () => void
 	onBatchCellEdit?: (rowIndexes: number[], columnName: string, newValue: unknown) => void
@@ -69,6 +71,7 @@ export function DataGrid({
 	sort,
 	onSortChange,
 	onFilterAdd,
+	onBlobAction,
 	onCellEdit,
 	onDeleteSelectedRows,
 	onBatchCellEdit,
@@ -370,6 +373,7 @@ export function DataGrid({
 						onDraftChange={onDraftChange}
 						onDraftSave={onDraftSave}
 						onFilterAdd={onFilterAdd}
+						onBlobAction={onBlobAction}
 						onFKNavigate={onFKNavigate}
 						onRowAction={onRowAction}
 						onRowSelect={onRowSelect}

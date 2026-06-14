@@ -531,8 +531,24 @@ impl<'a> ConnectionService<'a> {
 
                 match connect(&config, certificates, verify_tls).await {
                     Ok((pg_client, conn_check)) => {
+                        // Detect the real engine (Postgres vs CockroachDB) so
+                        // capability gating (e.g. LISTEN/NOTIFY) is based on the
+                        // server, not the user's variant choice. Detection
+                        // failures are non-fatal: we keep the safe Postgres
+                        // default.
+                        let detected = match pg_client.query_one("SELECT version()", &[]).await {
+                            Ok(row) => row.try_get::<usize, String>(0).ok().map(|version| {
+                                crate::database::dialect::detect_pg_dialect(&version).into()
+                            }),
+                            Err(e) => {
+                                log::warn!("Failed to detect Postgres dialect via version(): {}", e);
+                                None
+                            }
+                        };
+
                         *client = Some(Arc::new(pg_client));
                         connection.connected = true;
+                        connection.detected_dialect = detected;
 
                         if let Err(e) = self.storage.update_last_connected(&connection_id) {
                             log::warn!("Failed to update last connected timestamp: {}", e);
@@ -609,8 +625,27 @@ impl<'a> ConnectionService<'a> {
                 match mysql_pool.get_conn().await {
                     Ok(mut conn) => {
                         conn.ping().await?;
+
+                        // Detect the real engine (MySQL vs MariaDB). Non-fatal:
+                        // on failure we keep the safe MySQL default.
+                        let detected = match conn
+                            .query_first::<String, _>("SELECT VERSION()")
+                            .await
+                        {
+                            Ok(Some(version)) => Some(
+                                crate::database::dialect::detect_mysql_dialect(&version).into(),
+                            ),
+                            Ok(None) => None,
+                            Err(e) => {
+                                log::warn!("Failed to detect MySQL dialect via VERSION(): {}", e);
+                                None
+                            }
+                        };
+                        drop(conn);
+
                         *pool = Some(Arc::new(mysql_pool));
                         connection.connected = true;
+                        connection.detected_dialect = detected;
 
                         if let Err(e) = self.storage.update_last_connected(&connection_id) {
                             log::warn!("Failed to update last connected timestamp: {}", e);

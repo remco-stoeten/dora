@@ -18,6 +18,7 @@ export type SettingsState = {
 	editorTheme: EditorTheme
 	enableVimMode: boolean
 	restoreLastConnection: boolean
+	restoreTabsOnLaunch: boolean
 	startupConnectionMode: 'auto' | 'empty'
 	lastConnectionId: string | null
 	lastTableId: string | null
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
 	editorTheme: 'auto',
 	enableVimMode: false,
 	restoreLastConnection: true,
+	restoreTabsOnLaunch: true,
 	startupConnectionMode: 'auto',
 	lastConnectionId: null,
 	lastTableId: null,
@@ -112,6 +114,10 @@ export function sanitizeSettings(value: unknown): SettingsState {
 				? value.enableVimMode
 				: DEFAULT_SETTINGS.enableVimMode,
 		restoreLastConnection: startupConnectionMode === 'auto',
+		restoreTabsOnLaunch:
+			typeof value.restoreTabsOnLaunch === 'boolean'
+				? value.restoreTabsOnLaunch
+				: DEFAULT_SETTINGS.restoreTabsOnLaunch,
 		startupConnectionMode,
 		lastConnectionId: optionalString(value.lastConnectionId),
 		lastTableId: optionalString(value.lastTableId),

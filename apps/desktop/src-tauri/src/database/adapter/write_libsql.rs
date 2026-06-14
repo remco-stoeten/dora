@@ -174,6 +174,47 @@ impl WriteAdapter for LibSqlAdapter {
         self.insert_row(table, schema, data).await
     }
 
+    async fn get_blob_bytes(
+        &self,
+        table: String,
+        _schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+        column: String,
+    ) -> Result<Vec<u8>, Error> {
+        let query = format!(
+            "SELECT \"{}\" FROM \"{}\" WHERE \"{}\" = ? LIMIT 1",
+            column, table, pk_column
+        );
+        let params = vec![json_to_libsql_value(&pk_value)];
+        let mut rows = self
+            .connection()
+            .query(&query, params)
+            .await
+            .map_err(|e| Error::Any(anyhow!("LibSQL blob lookup failed: {}", e)))?;
+        let row = rows
+            .next()
+            .await
+            .map_err(|e| Error::Any(anyhow!("LibSQL blob fetch failed: {}", e)))?
+            .ok_or_else(|| {
+                Error::Any(anyhow!(
+                    "No row found in \"{}\" where {} matches the provided primary key",
+                    table,
+                    pk_column
+                ))
+            })?;
+        match row.get_value(0) {
+            Ok(libsql::Value::Blob(b)) => Ok(b),
+            Ok(libsql::Value::Null) => Ok(Vec::new()),
+            Ok(libsql::Value::Text(s)) => Ok(s.into_bytes()),
+            Ok(_) => Err(Error::Any(anyhow!(
+                "Column \"{}\" is not a binary value",
+                column
+            ))),
+            Err(e) => Err(Error::Any(anyhow!("LibSQL blob read failed: {}", e))),
+        }
+    }
+
     async fn truncate_table(
         &self,
         table: String,
