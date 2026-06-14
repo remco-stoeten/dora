@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useReducer, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useReducer, ReactNode } from 'react'
 
 export type Tab = {
   id: string
@@ -165,8 +165,57 @@ function reducer(state: State, action: Action): State {
 
 const initialState: State = { tabs: [], activeTabId: null }
 
+// Persist open tabs so Dora reopens where you left off. localStorage works in
+// both the Tauri webview and the web build and needs no async plumbing.
+const STORAGE_KEY = 'dora.tabs.v1'
+
+function isValidTab(value: unknown): value is Tab {
+  if (!value || typeof value !== 'object') return false
+  const tab = value as Record<string, unknown>
+  return (
+    typeof tab.id === 'string' &&
+    typeof tab.connectionId === 'string' &&
+    typeof tab.tableId === 'string' &&
+    typeof tab.tableName === 'string' &&
+    typeof tab.label === 'string'
+  )
+}
+
+function loadInitialState(): State {
+  if (typeof window === 'undefined') return initialState
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return initialState
+    const parsed = JSON.parse(raw) as { tabs?: unknown; activeTabId?: unknown }
+    if (!Array.isArray(parsed.tabs)) return initialState
+    const tabs = parsed.tabs.filter(isValidTab)
+    const activeTabId =
+      typeof parsed.activeTabId === 'string' && tabs.some((t) => t.id === parsed.activeTabId)
+        ? parsed.activeTabId
+        : (tabs[tabs.length - 1]?.id ?? null)
+    return { tabs, activeTabId }
+  } catch {
+    return initialState
+  }
+}
+
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, undefined, loadInitialState)
+
+  useEffect(
+    function persistTabs() {
+      if (typeof window === 'undefined') return
+      try {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ tabs: state.tabs, activeTabId: state.activeTabId })
+        )
+      } catch {
+        // Ignore quota/serialization errors — persistence is best-effort.
+      }
+    },
+    [state.tabs, state.activeTabId]
+  )
 
   const openTab = useCallback((args: OpenTabArgs) => dispatch({ type: 'OPEN_TAB', args }), [])
   const closeTab = useCallback((id: string) => dispatch({ type: 'CLOSE_TAB', id }), [])

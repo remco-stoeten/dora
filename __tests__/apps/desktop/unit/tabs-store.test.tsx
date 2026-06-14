@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { TabsProvider, useTabs } from '@/core/tabs/tabs-store'
@@ -8,6 +8,11 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('useTabs', () => {
+  // Tabs persist to localStorage; clear it so each case starts isolated.
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
   it('starts empty', () => {
     const { result } = renderHook(() => useTabs(), { wrapper })
     expect(result.current.tabs).toHaveLength(0)
@@ -152,5 +157,20 @@ describe('useTabs', () => {
     const unpinnedLast = result.current.tabs[result.current.tabs.length - 1]
     act(() => { result.current.reorderTab(unpinnedLast.id, pinned.id) })
     expect(result.current.tabs[0].id).toBe(pinned.id)
+  })
+
+  it('restores persisted tabs on a fresh provider', () => {
+    const first = renderHook(() => useTabs(), { wrapper })
+    act(() => {
+      first.result.current.openTab({ connectionId: 'c1', tableId: 'public.users', tableName: 'users', label: 'users' })
+      first.result.current.openTab({ connectionId: 'c1', tableId: 'public.orders', tableName: 'orders', label: 'orders' })
+    })
+    const activeId = first.result.current.activeTabId
+    first.unmount()
+
+    // A brand-new provider reads the persisted state back from localStorage.
+    const second = renderHook(() => useTabs(), { wrapper })
+    expect(second.result.current.tabs.map((tab) => tab.label)).toEqual(['users', 'orders'])
+    expect(second.result.current.activeTabId).toBe(activeId)
   })
 })
