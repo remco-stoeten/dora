@@ -303,7 +303,7 @@ jobs:
     needs: preflight
     permissions:
       contents: write
-    runs-on: macos-15-intel
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
 
