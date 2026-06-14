@@ -84,9 +84,70 @@ function escapeXml(value: string) {
 		.replace(/'/g, '&apos;')
 }
 
+type DiagramPalette = {
+	canvas: string
+	nodeBody: string
+	nodeHeader: string
+	nodeBorder: string
+	title: string
+	columnName: string
+	columnType: string
+	edge: string
+}
+
+// Matches the previous hardcoded dark values; used when no document is
+// available (e.g. tests) so buildDiagramSvg stays callable without a DOM.
+const FALLBACK_PALETTE: DiagramPalette = {
+	canvas: '#0f0f14',
+	nodeBody: '#17171d',
+	nodeHeader: '#202029',
+	nodeBorder: '#33333b',
+	title: '#f1f1f3',
+	columnName: '#d7d7dd',
+	columnType: '#85858f',
+	edge: '#7c6ff6',
+}
+
+// CSS custom properties read via getComputedStyle come back as unresolved
+// `var(...)` chains, and the exported SVG is rendered in a fresh document with
+// no access to the app's tokens. So we resolve each expression to a concrete
+// rgb/rgba string by letting the browser compute `color` on a probe element.
+function resolveDiagramPalette(): DiagramPalette {
+	if (typeof document === 'undefined') return FALLBACK_PALETTE
+
+	const probe = document.createElement('span')
+	probe.style.position = 'absolute'
+	probe.style.visibility = 'hidden'
+	probe.style.pointerEvents = 'none'
+	document.body.appendChild(probe)
+
+	function resolve(expr: string, fallback: string): string {
+		probe.style.color = ''
+		probe.style.color = expr
+		const value = getComputedStyle(probe).color
+		return value || fallback
+	}
+
+	try {
+		return {
+			canvas: resolve('hsl(var(--background))', FALLBACK_PALETTE.canvas),
+			nodeBody: resolve('var(--sv-node-bg)', FALLBACK_PALETTE.nodeBody),
+			nodeHeader: resolve('hsl(var(--accent))', FALLBACK_PALETTE.nodeHeader),
+			nodeBorder: resolve('var(--sv-node-border)', FALLBACK_PALETTE.nodeBorder),
+			title: resolve('hsl(var(--foreground))', FALLBACK_PALETTE.title),
+			columnName: resolve('var(--sv-text)', FALLBACK_PALETTE.columnName),
+			columnType: resolve('var(--sv-text-muted)', FALLBACK_PALETTE.columnType),
+			edge: resolve('var(--sv-line-one)', FALLBACK_PALETTE.edge),
+		}
+	} finally {
+		probe.remove()
+	}
+}
+
 function buildDiagramSvg(
 	nodes: Node<TableNodeData>[],
 	edges: Edge<RelationshipEdgeData>[],
+	palette: DiagramPalette = FALLBACK_PALETTE,
 ) {
 	const nodeWidth = 260
 	const headerHeight = 34
@@ -123,7 +184,7 @@ function buildDiagramSvg(
 			const x2 = target.position.x + offsetX
 			const y2 = target.position.y + offsetY + targetHeight / 2
 			const midX = x1 + (x2 - x1) / 2
-			return `<path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" fill="none" stroke="#7c6ff6" stroke-opacity="0.66" stroke-width="1.8" />`
+			return `<path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" fill="none" stroke="${palette.edge}" stroke-width="1.8" />`
 		})
 		.join('')
 
@@ -135,14 +196,14 @@ function buildDiagramSvg(
 			const rows = node.data.columns
 				.map((column, index) => {
 					const rowY = y + headerHeight + index * rowHeight
-					return `<text x="${x + 14}" y="${rowY + 16}" fill="#d7d7dd" font-family="monospace" font-size="11">${escapeXml(column.name)}</text><text x="${x + nodeWidth - 14}" y="${rowY + 16}" fill="#85858f" text-anchor="end" font-family="monospace" font-size="10">${escapeXml(column.data_type)}</text>`
+					return `<text x="${x + 14}" y="${rowY + 16}" fill="${palette.columnName}" font-family="monospace" font-size="11">${escapeXml(column.name)}</text><text x="${x + nodeWidth - 14}" y="${rowY + 16}" fill="${palette.columnType}" text-anchor="end" font-family="monospace" font-size="10">${escapeXml(column.data_type)}</text>`
 				})
 				.join('')
-			return `<g><rect x="${x}" y="${y}" width="${nodeWidth}" height="${height}" rx="6" fill="#17171d" stroke="#33333b"/><rect x="${x}" y="${y}" width="${nodeWidth}" height="${headerHeight}" rx="6" fill="#202029"/><text x="${x + 14}" y="${y + 22}" fill="#f1f1f3" font-family="system-ui, sans-serif" font-size="12" font-weight="600">${escapeXml(node.data.tableName)}</text>${rows}</g>`
+			return `<g><rect x="${x}" y="${y}" width="${nodeWidth}" height="${height}" rx="6" fill="${palette.nodeBody}" stroke="${palette.nodeBorder}"/><rect x="${x}" y="${y}" width="${nodeWidth}" height="${headerHeight}" rx="6" fill="${palette.nodeHeader}"/><text x="${x + 14}" y="${y + 22}" fill="${palette.title}" font-family="system-ui, sans-serif" font-size="12" font-weight="600">${escapeXml(node.data.tableName)}</text>${rows}</g>`
 		})
 		.join('')
 
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#0f0f14"/>${edgeMarkup}${nodeMarkup}</svg>`
+	return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${palette.canvas}"/>${edgeMarkup}${nodeMarkup}</svg>`
 }
 
 const TABLE_NODE_WIDTH = 280
@@ -402,11 +463,15 @@ function SchemaVisualizerInner({
 	}
 
 	function handleExportSvg() {
-		downloadTextFile('schema-diagram.svg', buildDiagramSvg(nodes, edges), 'image/svg+xml')
+		downloadTextFile(
+			'schema-diagram.svg',
+			buildDiagramSvg(nodes, edges, resolveDiagramPalette()),
+			'image/svg+xml',
+		)
 	}
 
 	async function handleExportPng() {
-		const svg = buildDiagramSvg(nodes, edges)
+		const svg = buildDiagramSvg(nodes, edges, resolveDiagramPalette())
 		const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
 		const image = new Image()
 		image.onload = function () {
