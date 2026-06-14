@@ -7,7 +7,7 @@ type NoConnectionProps = {
 
 export function DatabaseStudioNoConnection({ onAddConnection }: NoConnectionProps) {
 	return (
-		<div className='flex flex-1 flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300'>
+		<div className='flex flex-1 flex-col items-center justify-center p-6'>
 			<div className='w-20 h-20 bg-sidebar-accent/30 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/50 shadow-sm backdrop-blur-sm'>
 				<Database className='w-10 h-10 text-primary/60' strokeWidth={1.5} />
 			</div>
@@ -66,7 +66,7 @@ export function DatabaseStudioConnectionFailed({
 	onEditConnection
 }: ConnectionFailedProps) {
 	return (
-		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
 			<div className='w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mb-6 ring-1 ring-destructive/20'>
 				<PlugZap className='h-10 w-10 text-destructive/80' strokeWidth={1.5} />
 			</div>
@@ -115,7 +115,7 @@ export function DatabaseStudioNoTable({
 	const recordLabel = totalRecords === 1 ? 'record' : 'records'
 
 	return (
-		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
 			<div className='w-20 h-20 bg-sidebar-accent/20 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/30'>
 				<svg
 					className='h-10 w-10 text-muted-foreground/50'
@@ -162,7 +162,7 @@ type NoTablesFoundProps = {
 
 export function DatabaseStudioNoTablesFound({ connectionName }: NoTablesFoundProps) {
 	return (
-		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-300'>
+		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
 			<div className='w-20 h-20 bg-sidebar-accent/20 rounded-full flex items-center justify-center mb-6 ring-1 ring-sidebar-border/30'>
 				<Table2 className='h-10 w-10 text-muted-foreground/50' strokeWidth={1.5} />
 			</div>

@@ -133,7 +133,7 @@ export function SqlConsoleLoadingShell() {
 							})}
 						</div>
 					</div>
-					<div className='bg-[#0e0e12] p-4'>
+					<div className='bg-editor p-4'>
 						<div className='h-full rounded-xl border border-border/60 bg-black/20 p-4'>
 							<div className='space-y-3'>
 								{['w-5/12', 'w-8/12', 'w-6/12', 'w-7/12', 'w-4/12'].map(function (width, index) {

@@ -1,8 +1,61 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
-import type React from 'react'
+import React, { useLayoutEffect, useRef, useState } from 'react'
 import { Checkbox } from '@studio/shared/ui/checkbox'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 import { ColumnDefinition, SortDescriptor } from '../../types'
+
+type ColumnHeaderLabelProps = {
+	name: string
+	type?: string
+}
+
+// Shows the full column name + type in a tooltip, but only when the header
+// label is actually clipped — measuring scrollWidth against clientWidth so we
+// don't add hover noise to columns that already fit.
+function ColumnHeaderLabel({ name, type }: ColumnHeaderLabelProps) {
+	const ref = useRef<HTMLDivElement>(null)
+	const [isTruncated, setIsTruncated] = useState(false)
+
+	useLayoutEffect(function measureOverflow() {
+		const el = ref.current
+		if (!el) return
+		function update() {
+			if (ref.current) {
+				setIsTruncated(ref.current.scrollWidth > ref.current.clientWidth)
+			}
+		}
+		update()
+		const observer = new ResizeObserver(update)
+		observer.observe(el)
+		return function cleanup() {
+			observer.disconnect()
+		}
+	}, [])
+
+	const label = (
+		<div ref={ref} className='flex items-center gap-1.5 overflow-hidden min-w-0'>
+			<span className='text-foreground text-xs truncate min-w-0'>{name}</span>
+			{type && type !== 'unknown' && (
+				<span className='text-muted-foreground/50 text-[10px] font-normal font-mono lowercase truncate min-w-0 shrink-0'>
+					{type}
+				</span>
+			)}
+		</div>
+	)
+
+	if (!isTruncated) return label
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{label}</TooltipTrigger>
+			<TooltipContent>
+				{name}
+				{type && type !== 'unknown' ? ` · ${type}` : ''}
+			</TooltipContent>
+		</Tooltip>
+	)
+}
 
 type GridHeaderProps = {
 	allSelected: boolean
@@ -67,16 +120,7 @@ export function GridHeader({
 							}}
 						>
 							<div className='flex items-center gap-1.5 justify-between group px-3 py-2 overflow-hidden'>
-								<div className='flex items-center gap-1.5 overflow-hidden min-w-0'>
-									<span className='text-foreground text-xs truncate min-w-0'>
-										{col.name}
-									</span>
-									{col.type && col.type !== 'unknown' && (
-										<span className='text-muted-foreground/50 text-[10px] font-normal font-mono lowercase truncate min-w-0 shrink-0'>
-											{col.type}
-										</span>
-									)}
-								</div>
+								<ColumnHeaderLabel name={col.name} type={col.type} />
 								{isSorted && sort ? (
 									sort.direction === 'asc' ? (
 										<ArrowUp className='h-3 w-3 text-primary shrink-0' />

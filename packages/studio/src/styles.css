@@ -92,6 +92,8 @@ layer(base);
 	--color-table-row-selected: hsl(var(--table-row-selected));
 	--color-table-border: hsl(var(--table-border));
 
+	--color-editor: hsl(var(--editor));
+
 	--radius-lg: var(--radius);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-sm: calc(var(--radius) - 4px);
@@ -179,6 +181,7 @@ layer(base);
 		--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
 		--background: 0 0% 6.7%;
+		--editor: 240 9% 6%;
 		--foreground: 0 0% 95%;
 
 		--card: 0 0% 8%;
@@ -233,6 +236,7 @@ layer(base);
 
 	.light {
 		--background: 0 0% 100%;
+		--editor: 0 0% 98%;
 		--foreground: 0 0% 3.9%;
 
 		--card: 0 0% 100%;
@@ -285,6 +289,7 @@ layer(base);
 
 	.midnight {
 		--background: calc(226 + var(--hue-shift)) 25% 10%;
+		--editor: calc(226 + var(--hue-shift)) 28% 7%;
 		--foreground: calc(226 + var(--hue-shift)) 25% 98%;
 
 		--card: calc(226 + var(--hue-shift)) 25% 12%;
@@ -330,6 +335,7 @@ layer(base);
 
 	.forest {
 		--background: calc(150 + var(--hue-shift)) 20% 8%;
+		--editor: calc(150 + var(--hue-shift)) 22% 6%;
 		--foreground: calc(150 + var(--hue-shift)) 20% 95%;
 
 		--card: calc(150 + var(--hue-shift)) 20% 10%;
@@ -377,6 +383,7 @@ layer(base);
 	   warm purple-gray borders, lilac mids, and a rose-pink accent/glow. */
 	.bloom {
 		--background: calc(280 + var(--hue-shift)) 14% 8%;
+		--editor: calc(280 + var(--hue-shift)) 16% 6%;
 		--foreground: calc(300 + var(--hue-shift)) 15% 96%;
 
 		--card: calc(280 + var(--hue-shift)) 12% 11%;
@@ -422,6 +429,7 @@ layer(base);
 
 	.claude {
 		--background: calc(32 + var(--hue-shift)) 30% 96%;
+		--editor: calc(32 + var(--hue-shift)) 30% 93%;
 		/* Warm Bisque/Beige */
 		--foreground: calc(25 + var(--hue-shift)) 10% 15%;
 		/* Deep warm charcoal */
@@ -471,6 +479,7 @@ layer(base);
 
 	.night {
 		--background: 0 0% 0%;
+		--editor: 0 0% 1%;
 		/* #000000 */
 		--foreground: 0 0% 93%;
 		/* #ededed */
@@ -527,6 +536,7 @@ layer(base);
 
 	.claude-dark {
 		--background: calc(30 + var(--hue-shift)) 15% 12%;
+		--editor: calc(30 + var(--hue-shift)) 15% 9%;
 		--foreground: calc(30 + var(--hue-shift)) 30% 96%;
 
 		--card: calc(30 + var(--hue-shift)) 15% 13%;
@@ -800,6 +810,19 @@ layer(base);
 
 	.async-count-reveal {
 		animation: asyncReveal 0.3s ease-out forwards;
+	}
+
+	.ai-thinking-label {
+		background: linear-gradient(
+			90deg,
+			hsl(var(--muted-foreground) / 0.45) 0%,
+			hsl(var(--muted-foreground) / 0.95) 45%,
+			hsl(var(--muted-foreground) / 0.45) 90%
+		);
+		background-size: 200% 100%;
+		background-clip: text;
+		color: transparent;
+		animation: asyncShimmer 1.8s ease-in-out infinite;
 	}
 }
 
