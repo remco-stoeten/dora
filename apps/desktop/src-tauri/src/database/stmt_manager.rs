@@ -34,17 +34,29 @@ fn log_query_exec_outcome(engine: &str, result: Result<(), Error>) {
     }
 }
 
+/// Row-result storage for a statement. Only row-returning statements (a SELECT,
+/// a `… RETURNING` DML, etc.) carry pages and columns; everything else carries
+/// no row data, so those fields cannot be touched for it. Replaces a former
+/// `returns_values: bool` that left page/column state representable for
+/// statements that never produce rows.
+enum ExecResult {
+    /// The statement streams rows back: collected pages, received-row count, and
+    /// the resolved column metadata.
+    Rows {
+        pages: RwLock<Vec<Page>>,
+        rows_received: RwLock<usize>,
+        columns: RwLock<Option<Box<RawValue>>>,
+    },
+    /// The statement returns no rows (DML/DDL without `RETURNING`); only the
+    /// shared `rows_affected` on `ExecState` is meaningful.
+    NoRows,
+}
+
 /// The storage/state for an individual statement being executed
 struct ExecState {
     status: AtomicU8,
-    pages: RwLock<Vec<Page>>,
-    rows_received: RwLock<usize>,
     error: RwLock<Option<String>>,
-    columns: RwLock<Option<Box<RawValue>>>,
-    /// True if this query is expected to return some amount of rows
-    /// False if this is a query that will never return anything (e.g. an UPDATE without a RETURNING clause)
-    // TODO(vini): we could refactor this into an enum with a variant with `pages`, `columns`, and one with just `rows_affected`
-    returns_values: bool,
+    result: ExecResult,
     rows_affected: RwLock<Option<usize>>,
     sqlite_interrupt_handle: RwLock<Option<rusqlite::InterruptHandle>>,
 }
@@ -142,20 +154,31 @@ impl StatementManager {
     /// Useful for the front-end to poll the execution status, mainly when it is still trying to load the first page of results
     pub fn fetch_query(&self, query_id: QueryId) -> Result<StatementInfo, Error> {
         let exec_state = self.get(query_id)?;
-        let returns_values = exec_state.returns_values;
-        let pages = exec_state.pages.read().expect("RwLock poisoned");
+
+        let (returns_values, first_page, page_count, rows_received) = match &exec_state.result {
+            ExecResult::Rows {
+                pages,
+                rows_received,
+                ..
+            } => {
+                let pages = pages.read().expect("RwLock poisoned");
+                (
+                    true,
+                    pages.first().cloned(),
+                    pages.len(),
+                    *rows_received.read().expect("RwLock poisoned"),
+                )
+            }
+            ExecResult::NoRows => (false, None, 0, 0),
+        };
 
         let info = StatementInfo {
             returns_values,
             status: exec_state.status.load(Ordering::Relaxed).into(),
-            first_page: if returns_values {
-                pages.first().cloned()
-            } else {
-                None
-            },
+            first_page,
             affected_rows: *exec_state.rows_affected.read().expect("RwLock poisoned"),
-            page_count: pages.len(),
-            rows_received: *exec_state.rows_received.read().expect("RwLock poisoned"),
+            page_count,
+            rows_received,
             error: exec_state.error.read().expect("RwLock poisoned").clone(),
         };
 
@@ -165,8 +188,12 @@ impl StatementManager {
     /// Fetches a page of results for a given query.
     pub fn fetch_page(&self, query_id: QueryId, page_idx: usize) -> Result<Option<Page>, Error> {
         let exec_state = self.get(query_id)?;
-        let pages = exec_state.pages.read().expect("RwLock poisoned");
-        Ok(pages.get(page_idx).cloned())
+        match &exec_state.result {
+            ExecResult::Rows { pages, .. } => {
+                Ok(pages.read().expect("RwLock poisoned").get(page_idx).cloned())
+            }
+            ExecResult::NoRows => Ok(None),
+        }
     }
 
     pub fn get_query_status(&self, query_id: QueryId) -> Result<QueryStatus, Error> {
@@ -177,29 +204,40 @@ impl StatementManager {
 
     pub fn get_page_count(&self, query_id: QueryId) -> Result<usize, Error> {
         let exec_state = self.get(query_id)?;
-        let page_count = exec_state.pages.read().expect("RwLock poisoned").len();
-        Ok(page_count)
+        match &exec_state.result {
+            ExecResult::Rows { pages, .. } => Ok(pages.read().expect("RwLock poisoned").len()),
+            ExecResult::NoRows => Ok(0),
+        }
     }
 
     pub fn get_columns(&self, query_id: QueryId) -> Result<Option<Box<RawValue>>, Error> {
         let exec_state = self.get(query_id)?;
-
-        let columns = exec_state.columns.read().expect("RwLock poisoned");
-
-        Ok(columns.clone())
+        match &exec_state.result {
+            ExecResult::Rows { columns, .. } => {
+                Ok(columns.read().expect("RwLock poisoned").clone())
+            }
+            ExecResult::NoRows => Ok(None),
+        }
     }
 }
 
 /// Impl block for internal methods
 impl StatementManager {
     fn create_worker(&self, id: QueryId, client: DatabaseClient, stmt: ParsedStatement) {
+        let result = if stmt.returns_values {
+            ExecResult::Rows {
+                pages: RwLock::new(vec![]),
+                rows_received: RwLock::new(0),
+                columns: RwLock::new(None),
+            }
+        } else {
+            ExecResult::NoRows
+        };
+
         let exec_storage = ExecState {
             status: AtomicU8::new(QueryStatus::Pending as u8),
-            pages: RwLock::new(vec![]),
-            rows_received: RwLock::new(0),
             error: RwLock::new(None),
-            columns: RwLock::new(None),
-            returns_values: stmt.returns_values,
+            result,
             rows_affected: RwLock::new(None),
             sqlite_interrupt_handle: RwLock::new(None),
         };
@@ -279,17 +317,26 @@ impl StatementManager {
             while let Some(event) = recv.recv().await {
                 match event {
                     QueryExecEvent::TypesResolved { columns } => {
-                        *exec_storage.columns.write().expect("RwLock poisoned") = Some(columns);
+                        if let ExecResult::Rows { columns: slot, .. } = &exec_storage.result {
+                            *slot.write().expect("RwLock poisoned") = Some(columns);
+                        } else {
+                            log::warn!(
+                                "Received column metadata for a non-row-returning query; ignoring"
+                            );
+                        }
                     }
                     QueryExecEvent::Page { page_amount, page } => {
-                        exec_storage
-                            .pages
-                            .write()
-                            .expect("RwLock poisoned")
-                            .push(page);
-
-                        *exec_storage.rows_received.write().expect("RwLock poisoned") +=
-                            page_amount;
+                        if let ExecResult::Rows {
+                            pages,
+                            rows_received,
+                            ..
+                        } = &exec_storage.result
+                        {
+                            pages.write().expect("RwLock poisoned").push(page);
+                            *rows_received.write().expect("RwLock poisoned") += page_amount;
+                        } else {
+                            log::warn!("Received a result page for a non-row-returning query; ignoring");
+                        }
                     }
                     QueryExecEvent::Finished {
                         elapsed_ms: _,
