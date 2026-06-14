@@ -57,7 +57,7 @@ export type ConsoleState = {
 export type QueryTab = {
 	id: string
 	title: string
-	mode: 'sql' | 'drizzle'
+	mode: 'sql' | 'drizzle' | 'prisma'
 	sqlContent: string
 	drizzleContent: string
 	result: SqlQueryResult | null
