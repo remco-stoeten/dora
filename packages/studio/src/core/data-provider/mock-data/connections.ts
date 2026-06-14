@@ -1,6 +1,18 @@
 import type { ConnectionInfo } from '@studio/lib/bindings'
 
-export const MOCK_CONNECTIONS: ConnectionInfo[] = [
+/**
+ * Mock connections may carry extra dev-only fields the mock adapter reads to
+ * simulate data-file sessions. These are not part of the generated
+ * `ConnectionInfo` bindings, so they live on this mock-only superset.
+ */
+export type MockConnection = ConnectionInfo & {
+	/** Registered data-file paths, when this mock is a data-file session. */
+	fileSources?: string[]
+	/** Flat engine discriminator used by mock data-file branches. */
+	type?: string
+}
+
+export const MOCK_CONNECTIONS: MockConnection[] = [
 	{
 		id: 'demo-ecommerce-001',
 		name: 'Demo E-Commerce (PostgreSQL)',

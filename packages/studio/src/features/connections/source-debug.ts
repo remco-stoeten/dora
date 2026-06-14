@@ -1,3 +1,4 @@
+import { ENV_DEV } from '@studio/core/env'
 import type { ConnectionSourceInput } from './resolve-source'
 import { describeConnectionSource, resolvePresetToEngine } from './resolve-source'
 import { getSourceCaps, type SourceCaps } from './source-caps'
@@ -38,7 +39,7 @@ export function logSourceDebugInfo(
 ): SourceDebugInfo {
 	const info = resolveSourceDebugInfo(connection)
 
-	if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+	if (ENV_DEV) {
 		console.group(label ?? `Source debug · ${info.engine}`)
 		console.table({
 			kind: info.kind,
