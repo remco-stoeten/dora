@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   generate-manifests:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
@@ -104,7 +104,7 @@ jobs:
   submit-update:
     needs: generate-manifests
     if: ${{ inputs.submit_update }}
-    runs-on: blacksmith-4vcpu-windows-2025
+    runs-on: windows-latest
     env:
       WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
     steps:
