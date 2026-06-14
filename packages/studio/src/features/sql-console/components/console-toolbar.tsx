@@ -112,8 +112,8 @@ function ModeTab({
 }
 
 type HeaderProps = {
-	mode: 'sql' | 'drizzle'
-	onModeChange: (mode: 'sql' | 'drizzle') => void
+	mode: 'sql' | 'drizzle' | 'prisma'
+	onModeChange: (mode: 'sql' | 'drizzle' | 'prisma') => void
 	showHistory?: boolean
 	onToggleHistory?: () => void
 	connectionName?: string
@@ -163,6 +163,13 @@ export function ConsoleHeader({
 						shortcut={formatShortcut('alt+d')}
 					>
 						Drizzle
+					</ModeTab>
+					<ModeTab
+						active={mode === 'prisma'}
+						onClick={() => onModeChange?.('prisma')}
+						shortcut={formatShortcut('alt+p')}
+					>
+						Prisma
 					</ModeTab>
 				</div>
 			</div>

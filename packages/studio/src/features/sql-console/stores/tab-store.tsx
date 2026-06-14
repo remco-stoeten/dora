@@ -84,7 +84,7 @@ type TabAction =
 	| { type: 'SET_ACTIVE_TAB'; tabId: string }
 	| { type: 'RENAME_TAB'; tabId: string; title: string }
 	| { type: 'UPDATE_TAB_CONTENT'; tabId: string; field: 'sqlContent' | 'drizzleContent'; value: string }
-	| { type: 'SET_TAB_MODE'; tabId: string; mode: 'sql' | 'drizzle' }
+	| { type: 'SET_TAB_MODE'; tabId: string; mode: 'sql' | 'drizzle' | 'prisma' }
 	| { type: 'SET_TAB_RESULT'; tabId: string; result: SqlQueryResult | null }
 	| { type: 'SET_TAB_EXECUTING'; tabId: string; isExecuting: boolean }
 	| { type: 'SET_TAB_VIEW_MODE'; tabId: string; viewMode: ResultViewMode }
@@ -265,7 +265,7 @@ type TabContextValue = {
 	setActiveTab: (tabId: string) => void
 	renameTab: (tabId: string, title: string) => void
 	updateTabContent: (tabId: string, field: 'sqlContent' | 'drizzleContent', value: string) => void
-	setTabMode: (tabId: string, mode: 'sql' | 'drizzle') => void
+	setTabMode: (tabId: string, mode: 'sql' | 'drizzle' | 'prisma') => void
 	setTabResult: (tabId: string, result: SqlQueryResult | null) => void
 	setTabExecuting: (tabId: string, isExecuting: boolean) => void
 	setTabViewMode: (tabId: string, viewMode: ResultViewMode) => void
@@ -387,7 +387,7 @@ export function QueryTabProvider({ children, connectionId }: TProps) {
 		dispatch({ type: 'UPDATE_TAB_CONTENT', tabId, field, value })
 	}, [])
 
-	const setTabMode = useCallback(function (tabId: string, mode: 'sql' | 'drizzle') {
+	const setTabMode = useCallback(function (tabId: string, mode: 'sql' | 'drizzle' | 'prisma') {
 		dispatch({ type: 'SET_TAB_MODE', tabId, mode })
 	}, [])
 

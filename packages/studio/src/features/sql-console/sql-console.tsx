@@ -11,6 +11,7 @@ import {
 } from "@studio/features/command-palette/events";
 import type { AiAssistantEditorContext } from "@studio/features/ai-assistant/types";
 import { ResizablePanels } from "@studio/features/drizzle-runner/components/resizable-panels";
+import { PrismaRunner } from "@studio/features/prisma-runner";
 import type { SavedQuery } from "@studio/lib/bindings";
 
 import { DEFAULT_QUERY } from "../../features/drizzle-runner/data";
@@ -90,7 +91,7 @@ function SqlConsoleInner({
   const chartConfig = activeTab.chartConfig;
   const historyEntryId = activeTab.historyEntryId;
 
-  function setMode(m: "sql" | "drizzle") {
+  function setMode(m: "sql" | "drizzle" | "prisma") {
     tabStore.setTabMode(activeTab.id, m);
   }
   function setCurrentSqlQuery(v: string) {
@@ -150,6 +151,10 @@ function SqlConsoleInner({
   useEffect(
     function syncAiEditorContext() {
       if (!onEditorContextChange) return;
+      if (mode === "prisma") {
+        onEditorContextChange(null);
+        return;
+      }
       onEditorContextChange({
         mode,
         content: mode === "sql" ? currentSqlQuery : currentDrizzleQuery,
@@ -357,6 +362,8 @@ function SqlConsoleInner({
   const handleExecute = useCallback(
     async (codeOverride?: string, modeOverride?: "sql" | "drizzle") => {
       if (isExecuting) return;
+      // Prisma mode is handled by the self-contained PrismaRunner.
+      if (!modeOverride && mode === "prisma") return;
 
       cancelledRef.current = false;
       setIsExecuting(true);
@@ -988,6 +995,7 @@ function SqlConsoleInner({
 
   $.bind(sqlShortcuts.runSelection.combo).on(
     function () {
+      if (mode === "prisma") return;
       handleExecute(undefined, mode);
     },
     { description: sqlShortcuts.runSelection.description },
@@ -1030,6 +1038,13 @@ function SqlConsoleInner({
       setMode("drizzle");
     },
     { description: sqlShortcuts.switchToDrizzle.description },
+  );
+
+  $.bind(sqlShortcuts.switchToPrisma.combo).on(
+    function () {
+      setMode("prisma");
+    },
+    { description: sqlShortcuts.switchToPrisma.description },
   );
 
   $.key("h")
@@ -1151,6 +1166,9 @@ function SqlConsoleInner({
 
             {/* Editor and Results */}
             <div className="flex-1 overflow-hidden">
+              {mode === "prisma" ? (
+                <PrismaRunner connectionId={activeConnectionId} />
+              ) : (
               <ResizablePanels
                 defaultSplit={55}
                 minSize={100}
@@ -1232,6 +1250,7 @@ function SqlConsoleInner({
                   />
                 }
               />
+              )}
             </div>
           </div>
         </Panel>
@@ -1294,7 +1313,7 @@ function SqlConsoleInner({
           } else {
             setCurrentDrizzleQuery(sql);
           }
-          if (execute) {
+          if (execute && mode !== "prisma") {
             requestAnimationFrame(function () {
               handleExecute(sql, mode).catch(function (e) {
                 console.error("AI insert+run failed:", e);
