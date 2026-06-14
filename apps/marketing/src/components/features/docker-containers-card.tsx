@@ -10,7 +10,7 @@ import {
     RESTART_JITTER,
     RESTART_MIN_DELAY
 } from './docker-containers-motion'
-import { EqualizerBars } from './docker-containers-equalizer'
+import { ActivitySparkline } from './docker-containers-sparkline'
 import { useGate } from './use-scroll-motion'
 
 /* ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
 
                             {/* live activity / boot spinner */}
                             <div className="relative flex h-7 w-full items-center justify-center">
-                                <EqualizerBars
+                                <ActivitySparkline
                                     active={!starting}
                                     animate={running}
                                     color={color}

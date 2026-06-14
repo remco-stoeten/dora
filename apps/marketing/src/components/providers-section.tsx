@@ -5,6 +5,7 @@ import { CornerTick } from '@/components/corner-tick'
 import { SectionFrame } from '@/components/section-frame'
 import { HubSphere, ProviderRowGraph } from '@/components/provider-row-graph'
 import { ProviderLogoMark, type ProviderLogoId } from '@/components/provider-logo'
+import { ProviderInfoPopover } from '@/components/provider-info-popover'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
@@ -14,16 +15,60 @@ type TProvider = {
     id: ProviderLogoId
     name: string
     connectionString: string
+    tag: string
+    blurb: string
 }
 
 const PROVIDERS: TProvider[] = [
-    { id: 'postgres', name: 'PostgreSQL', connectionString: 'postgresql://user:pass@db.neon.tech/mydb' },
-    { id: 'sqlite', name: 'SQLite', connectionString: 'file:///path/to/database.db' },
-    { id: 'duckdb', name: 'DuckDB', connectionString: 'duckdb:///analytics.duckdb · or any .csv/.parquet' },
-    { id: 'libsql', name: 'libSQL', connectionString: 'libsql://database.turso.io?authToken=…' },
-    { id: 'mysql', name: 'MySQL', connectionString: 'mysql://user:pass@localhost:3306/mydb' },
-    { id: 'mariadb', name: 'MariaDB', connectionString: 'mysql://user:pass@mariadb.internal/mydb' },
-    { id: 'cockroach', name: 'CockroachDB', connectionString: 'postgresql://user:pass@cockroach.internal:26257/defaultdb' },
+    {
+        id: 'postgres',
+        name: 'PostgreSQL',
+        connectionString: 'postgresql://user:pass@db.neon.tech/mydb',
+        tag: 'Relational',
+        blurb: 'The advanced open-source standard. Browse schemas, edit rows, and query JSONB with full read and write support.',
+    },
+    {
+        id: 'sqlite',
+        name: 'SQLite',
+        connectionString: 'file:///path/to/database.db',
+        tag: 'Embedded file',
+        blurb: 'Serverless and file-based. Point Dora at a .db file and start querying instantly, no server required.',
+    },
+    {
+        id: 'duckdb',
+        name: 'DuckDB',
+        connectionString: 'duckdb:///analytics.duckdb · or any .csv/.parquet',
+        tag: 'Analytical',
+        blurb: 'In-process analytics that flies. Query Parquet, CSV, and JSON as fast columnar tables, then save as .duckdb.',
+    },
+    {
+        id: 'libsql',
+        name: 'libSQL',
+        connectionString: 'libsql://database.turso.io?authToken=…',
+        tag: 'Edge SQLite',
+        blurb: 'SQLite reimagined for the edge. Connect to a distributed Turso database over HTTP with an auth token.',
+    },
+    {
+        id: 'mysql',
+        name: 'MySQL',
+        connectionString: 'mysql://user:pass@localhost:3306/mydb',
+        tag: 'Relational',
+        blurb: 'The most widely deployed open-source database for the web. Full schema browsing and write support.',
+    },
+    {
+        id: 'mariadb',
+        name: 'MariaDB',
+        connectionString: 'mysql://user:pass@mariadb.internal/mydb',
+        tag: 'Relational',
+        blurb: 'A community-driven MySQL fork. Same wire protocol, so your MySQL connection string just works.',
+    },
+    {
+        id: 'cockroach',
+        name: 'CockroachDB',
+        connectionString: 'postgresql://user:pass@cockroach.internal:26257/defaultdb',
+        tag: 'Distributed SQL',
+        blurb: 'Horizontally scalable SQL that speaks Postgres. Strongly consistent, survives failures, no rewrites.',
+    },
 ]
 
 /**
@@ -98,8 +143,10 @@ export function ProvidersSection() {
     const rowRef = useRef<HTMLDivElement>(null)
     const hubRef = useRef<HTMLDivElement>(null)
     const nodeRefs = useRef<(HTMLDivElement | null)[]>([])
+    const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
 
     const [hoveredId, setHoveredId] = useState<ProviderLogoId | null>(null)
+    const [canHover, setCanHover] = useState(false)
     const [scrollProgress, setScrollProgress] = useState(0)
     const scrollProgressRef = useRef(0)
     const [isInView, setIsInView] = useState(false)
@@ -113,22 +160,50 @@ export function ProvidersSection() {
             setScrollProgress(1)
             return
         }
-        if (!isInView) return
 
-        const DURATION = 5500
-        const startTime = performance.now()
         let raf = 0
 
-        const tick = (now: number) => {
-            const progress = Math.min(1, (now - startTime) / DURATION)
+        // Map the fill to the scroll range that's actually reachable. Filling
+        // starts as the row enters from the bottom of the viewport, and the
+        // "full" point (line at CockroachDB, the last node) is capped at the
+        // document's max scroll — so it always lands full at the end of the
+        // page even when the section can't scroll any higher.
+        const compute = () => {
+            raf = 0
+            const el = rowRef.current
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            const vh = window.innerHeight || 1
+            const scrollY = window.scrollY
+            const doc = document.documentElement
+            const maxScroll = Math.max(0, doc.scrollHeight - vh)
+
+            const rowCenterDoc = rect.top + scrollY + rect.height / 2
+            // begin when the row's top reaches the bottom of the viewport
+            const startScroll = rowCenterDoc - rect.height / 2 - vh
+            // natural completion: the row's center reaches the top — but never
+            // ask for more scroll than the page actually has
+            const endScroll = Math.min(rowCenterDoc, maxScroll)
+            const span = Math.max(1, endScroll - startScroll)
+
+            const progress = Math.max(0, Math.min(1, (scrollY - startScroll) / span))
             scrollProgressRef.current = progress
             setScrollProgress((prev) => (Math.abs(prev - progress) > 0.001 ? progress : prev))
-            if (progress < 1) raf = requestAnimationFrame(tick)
         }
 
-        raf = requestAnimationFrame(tick)
-        return () => cancelAnimationFrame(raf)
-    }, [isInView, reducedMotion])
+        const onScroll = () => {
+            if (!raf) raf = requestAnimationFrame(compute)
+        }
+
+        compute()
+        window.addEventListener('scroll', onScroll, { passive: true })
+        window.addEventListener('resize', onScroll)
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            window.removeEventListener('resize', onScroll)
+            if (raf) cancelAnimationFrame(raf)
+        }
+    }, [reducedMotion])
 
     const scrollIndex = Math.min(
         PROVIDERS.length - 1,
@@ -148,6 +223,26 @@ export function ProvidersSection() {
         if (sectionRef.current) observer.observe(sectionRef.current)
         return () => observer.disconnect()
     }, [])
+
+    useEffect(() => {
+        const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+        const update = () => setCanHover(mq.matches)
+        update()
+        mq.addEventListener('change', update)
+        return () => mq.removeEventListener('change', update)
+    }, [])
+
+    const hoveredIndex = hoveredId
+        ? PROVIDERS.findIndex((p) => p.id === hoveredId)
+        : -1
+    const hoveredProvider = hoveredIndex >= 0 ? PROVIDERS[hoveredIndex] : null
+    const popoverInfo = hoveredProvider
+        ? {
+              name: hoveredProvider.name,
+              tag: hoveredProvider.tag,
+              blurb: hoveredProvider.blurb,
+          }
+        : null
 
     function focusProvider(id: ProviderLogoId) {
         setHoveredId(id)
@@ -245,6 +340,7 @@ export function ProvidersSection() {
                                 <button
                                     key={provider.id}
                                     type="button"
+                                    ref={(el) => { buttonRefs.current[i] = el }}
                                     className={[
                                         'relative flex flex-col items-center justify-center gap-2 border-r border-[#2b252c] px-1 py-6 transition-colors duration-300 last:border-r-0 sm:gap-3 sm:px-2 sm:py-10',
                                         isActive ? 'bg-[rgba(245,192,192,0.04)]' : 'hover:bg-[rgba(245,192,192,0.02)]',
@@ -274,6 +370,12 @@ export function ProvidersSection() {
                     </div>
                 </div>
             </div>
+
+            <ProviderInfoPopover
+                info={popoverInfo}
+                anchor={hoveredIndex >= 0 ? buttonRefs.current[hoveredIndex] : null}
+                open={canHover && hoveredId !== null}
+            />
 
             <div style={revealStyle(marqueeDelay)}>
                 <ConnectionStringMarquee activeId={activeId} reducedMotion={reducedMotion} />

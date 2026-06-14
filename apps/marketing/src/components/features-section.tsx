@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRef, useEffect, useState, type ReactNode } from 'react'
 
 import { CornerTick } from '@/components/corner-tick'
@@ -9,11 +8,10 @@ import { useScrollMotion } from '@/components/features/use-scroll-motion'
 import { DatabaseConnectionCard } from '@/components/features/database-connection-card'
 import { RegionGlobeCard } from '@/components/features/region-globe-card'
 import { NativePerformanceCard } from '@/components/features/native-performance-card'
-import { QueryHistoryCard } from '@/components/features/query-history-card'
+import { PasteConnectCard } from '@/components/features/paste-connect-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
 import { ScrollReveal } from '@/components/scroll-reveal'
-import { getFeaturePath } from '@/core/config/features'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
@@ -23,12 +21,10 @@ const FEATURE_REVEAL_CLASS = 'flex h-full w-full'
 
 function FeatureCell({
     id,
-    href,
     delay,
     children
 }: {
     id: string
-    href?: string
     delay: number
     children: ReactNode
 }) {
@@ -37,14 +33,6 @@ function FeatureCell({
             <ScrollReveal className={FEATURE_REVEAL_CLASS} delay={delay}>
                 {children}
             </ScrollReveal>
-            {href ? (
-                <Link
-                    className="absolute bottom-4 right-4 z-10 text-[11px] text-[#ad8eb6] transition-colors hover:text-[#f5c0c0]"
-                    href={href}
-                >
-                    Learn more →
-                </Link>
-            ) : null}
         </div>
     )
 }
@@ -92,47 +80,23 @@ export function FeaturesSection() {
                 <CornerTick className="hidden md:block left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-2/3 top-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="hidden md:block left-full top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <FeatureCell
-                    id="feature-multi-database"
-                    href={getFeaturePath('multi-database')}
-                    delay={0}
-                >
+                <FeatureCell id="feature-multi-database" delay={0}>
                     <DatabaseConnectionCard animate={animate} motion={motion} />
                 </FeatureCell>
-                <FeatureCell
-                    id="feature-regions"
-                    href={getFeaturePath('multi-database')}
-                    delay={55}
-                >
+                <FeatureCell id="feature-regions" delay={55}>
                     <RegionGlobeCard animate={animate} motion={motion} />
                 </FeatureCell>
-                <FeatureCell
-                    id="feature-docker"
-                    href={getFeaturePath('docker-containers')}
-                    delay={110}
-                >
+                <FeatureCell id="feature-docker" delay={110}>
                     <DockerContainersCard animate={animate} />
                 </FeatureCell>
-                <FeatureCell
-                    id="feature-schema"
-                    href={getFeaturePath('schema-visualization')}
-                    delay={165}
-                >
+                <FeatureCell id="feature-schema" delay={165}>
                     <SchemaDiagramCard animate={animate} />
                 </FeatureCell>
-                <FeatureCell
-                    id="feature-performance"
-                    href={getFeaturePath('ssh-tunneling')}
-                    delay={220}
-                >
+                <FeatureCell id="feature-performance" delay={220}>
                     <NativePerformanceCard animate={animate} motion={motion} />
                 </FeatureCell>
-                <FeatureCell
-                    id="feature-query-history"
-                    href={getFeaturePath('query-history')}
-                    delay={275}
-                >
-                    <QueryHistoryCard animate={animate} />
+                <FeatureCell id="feature-paste-connect" delay={275}>
+                    <PasteConnectCard animate={animate} />
                 </FeatureCell>
             </div>
         </section>

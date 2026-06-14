@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { CornerTick } from "@/components/corner-tick";
 import { SectionFrame } from "@/components/section-frame";
 import { FileQueryCard } from "@/components/features/file-query-card";
+import { DuckMaterialize } from "@/components/duck-materialize";
+import { FormatSwapper } from "@/components/format-swapper";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { usePageVisible } from "@/shared/hooks/use-page-visible";
 import { usePrefersReducedMotion } from "@/shared/hooks/use-prefers-reduced-motion";
@@ -12,10 +14,24 @@ import { usePrefersReducedMotion } from "@/shared/hooks/use-prefers-reduced-moti
 const CELL_CLASS =
   "relative min-h-[340px] scroll-mt-28 border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]";
 
+function Ext({ children }: { children: string }) {
+  return (
+    <code className="rounded-[3px] border border-[#2b252c] bg-[#0d0a0f] px-1 py-px font-mono text-[11px] text-[#cdb4bd] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+      {children}
+    </code>
+  );
+}
+
 const POINTS = [
   {
     head: "No import step",
-    body: "Point Dora at a .csv, .tsv, .parquet, .json, or .ndjson file — it reads the schema in place.",
+    body: (
+      <>
+        Point Dora at a <Ext>.csv</Ext>, <Ext>.tsv</Ext>, <Ext>.parquet</Ext>,{" "}
+        <Ext>.json</Ext>, or <Ext>.ndjson</Ext> file. It reads the schema in
+        place.
+      </>
+    ),
   },
   {
     head: "Real SQL, real joins",
@@ -54,7 +70,7 @@ export function FileQuerySection() {
       <div className="border-b border-r border-[#2b252c] px-6 py-12 sm:px-8">
         <ScrollReveal delay={40}>
           <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-[#7a7a7a]">
-            That CSV doesn&apos;t need a database first.
+            That <FormatSwapper /> doesn&apos;t need a database first.
           </h2>
           <h3 className="text-balance font-[family-name:var(--font-pixel)] text-3xl font-semibold text-[#f0f0f0]">
             Drop a file. Query it like a table.
@@ -87,6 +103,25 @@ export function FileQuerySection() {
                   </div>
                 </div>
               ))}
+
+              <div className="flex gap-3">
+                <span
+                  aria-hidden
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: "#f5c0c0" }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-[family-name:var(--font-pixel)] text-[13px] font-medium text-[#e8e0e8]">
+                    Keep it as DuckDB
+                  </p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-[#8a8a8a]">
+                    Files open as in-memory views. When one&apos;s worth
+                    keeping, save the session to a real, editable{" "}
+                    <Ext>.duckdb</Ext> file on disk.
+                  </p>
+                  <DuckMaterialize />
+                </div>
+              </div>
             </div>
           </ScrollReveal>
         </div>

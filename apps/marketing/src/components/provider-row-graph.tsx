@@ -139,6 +139,7 @@ export function ProviderRowGraph({
     const packetRef = useRef<SVGCircleElement>(null)
     const [layout, setLayout] = useState<ReturnType<typeof measureLayout>>(null)
     const [fillProgress, setFillProgress] = useState(0)
+    const displayFillRef = useRef(0)
 
     useEffect(() => {
         const container = containerRef.current
@@ -185,8 +186,13 @@ export function ProviderRowGraph({
         let pulse = 0
 
         const tick = () => {
-            const next =
-                fillOverride ?? fillProgressRef.current ?? 0
+            const target = fillOverride ?? fillProgressRef.current ?? 0
+            // Ease the displayed fill toward its target so a hover glides the
+            // line in (and back out on release) instead of snapping to the tile.
+            const cur = displayFillRef.current
+            const eased = reducedMotion ? target : cur + (target - cur) * 0.12
+            const next = Math.abs(target - eased) < 0.0005 ? target : eased
+            displayFillRef.current = next
             setFillProgress(next)
 
             if (layout && running) {
@@ -211,7 +217,7 @@ export function ProviderRowGraph({
 
         raf = requestAnimationFrame(tick)
         return () => cancelAnimationFrame(raf)
-    }, [fillOverride, fillProgressRef, layout, running])
+    }, [fillOverride, fillProgressRef, layout, running, reducedMotion])
 
     if (!layout || layout.w === 0) return null
 

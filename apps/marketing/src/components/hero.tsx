@@ -1,5 +1,6 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { Download, Terminal } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
@@ -113,100 +114,154 @@ function OsIcon({ platform, className }: { platform: OsPlatform; className?: str
     return <Terminal className={className} />
 }
 
+type OsName = (typeof PLATFORM_GROUPS)[number]['os']
+
+const OS_FOR_PLATFORM: Record<OsPlatform, OsName> = {
+    'mac-arm': 'macOS',
+    'mac-x64': 'macOS',
+    windows: 'Windows',
+    linux: 'Linux'
+}
+
+// A representative platform per OS tab, used purely to pick the right glyph.
+const ICON_FOR_OS: Record<OsName, OsPlatform> = {
+    macOS: 'mac-arm',
+    Windows: 'windows',
+    Linux: 'linux'
+}
+
 function HeroDownload({ release }: { release: TLatest | null }) {
-    const [platform, setPlatform] = useState<OsPlatform | null>(null)
+    const [detected, setDetected] = useState<OsPlatform | null>(null)
+    const [activeOs, setActiveOs] = useState<OsName>('Linux')
 
     useEffect(() => {
-        setPlatform(detectPlatform())
+        const p = detectPlatform()
+        setDetected(p)
+        setActiveOs(OS_FOR_PLATFORM[p])
     }, [])
 
     const assets = release?.assets ?? []
     const releaseUrl = release?.htmlUrl ?? LATEST_RELEASE_URL
-    const primary = platform ? PRIMARY[platform] : null
-    const primaryUrl = primary ? assetUrl(assets, primary, releaseUrl) : '/downloads'
+
+    const group = PLATFORM_GROUPS.find((g) => g.os === activeOs) ?? PLATFORM_GROUPS[0]
+    const detectedInTab = detected ? group.platforms.includes(detected) : false
+
+    // The primary action follows the active tab. When the tab matches the
+    // visitor's own OS we honour the detected arch; otherwise lead with the
+    // group's first (recommended) format.
+    const primary: TDownload & { os: string } =
+        detectedInTab && detected
+            ? PRIMARY[detected]
+            : { ...group.downloads[0], os: group.os }
+    const primaryUrl = assetUrl(assets, primary, releaseUrl)
+    const iconPlatform = ICON_FOR_OS[activeOs]
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-5">
             <a
                 href={primaryUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center gap-4 border border-[rgba(173,142,182,0.35)] px-5 py-4 transition-all hover:border-[rgba(173,142,182,0.6)] hover:bg-[rgba(173,142,182,0.05)]"
+                className="group relative flex items-center gap-4 border border-[rgba(173,142,182,0.45)] px-6 py-5 transition-colors duration-200 hover:border-[rgba(173,142,182,0.75)] hover:bg-[rgba(173,142,182,0.05)]"
             >
-                <div className="shrink-0 text-[#ad8eb6]/60 transition-colors group-hover:text-[#ad8eb6]">
-                    {platform ? (
-                        <OsIcon platform={platform} className="h-6 w-6" />
-                    ) : (
-                        <Download className="h-6 w-6" />
-                    )}
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-sm bg-[rgba(173,142,182,0.1)] text-[#ad8eb6] transition-colors group-hover:bg-[rgba(173,142,182,0.16)]">
+                    <OsIcon platform={iconPlatform} className="h-6 w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[13px] uppercase tracking-[0.12em] text-foreground">
-                        {primary ? `Download for ${primary.os}` : 'Download'}
+                    <div className="font-mono text-[15px] font-medium uppercase tracking-[0.1em] text-foreground">
+                        Download for {primary.os}
                     </div>
-                    {primary && primary.label !== primary.os && (
-                        <div className="mt-0.5 font-mono text-[11px] text-muted-foreground/50">
-                            {primary.label}
-                        </div>
-                    )}
+                    <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-muted-foreground/60">
+                        <span>{primary.label}</span>
+                        {release && (
+                            <>
+                                <span className="text-muted-foreground/30">·</span>
+                                <span>{release.tagName}</span>
+                            </>
+                        )}
+                    </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2.5">
-                    {release && (
-                        <span className="font-mono text-[10px] text-muted-foreground/30">
-                            {release.tagName}
-                        </span>
-                    )}
-                    <Download className="h-3.5 w-3.5 text-[#ad8eb6]/40 transition-colors group-hover:text-[#ad8eb6]/80" />
-                </div>
+                <Download className="h-5 w-5 shrink-0 text-[#ad8eb6]/50 transition-all duration-300 group-hover:translate-y-0.5 group-hover:text-[#ad8eb6]" />
             </a>
 
-            <div className="border border-[#2b252c] bg-background/20 px-4 py-3 space-y-2">
-                {PLATFORM_GROUPS.map((group) => {
-                    const isActive = platform ? group.platforms.includes(platform) : false
-                    return (
-                        <div key={group.os} className="flex items-start gap-3">
-                            <span
-                                className={`w-14 shrink-0 pt-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
-                                    isActive ? 'text-[#ad8eb6]/70' : 'text-muted-foreground/35'
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
+                    {PLATFORM_GROUPS.map((g) => {
+                        const isActive = g.os === activeOs
+                        const isDetected =
+                            detected !== null && OS_FOR_PLATFORM[detected] === g.os
+                        return (
+                            <button
+                                key={g.os}
+                                type="button"
+                                onClick={() => setActiveOs(g.os)}
+                                className={`group/tab relative flex items-center gap-1.5 border border-[#2b252c] px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-300 ${
+                                    isActive
+                                        ? 'text-[#ad8eb6]'
+                                        : 'text-muted-foreground/45 hover:text-muted-foreground/80'
                                 }`}
                             >
-                                {group.os}
-                            </span>
-                            <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                {group.downloads.map((d) => {
-                                    const isPrimary =
-                                        primary &&
-                                        d.suffix === primary.suffix &&
-                                        (d.archPattern?.source ?? '') === (primary.archPattern?.source ?? '')
-                                    return (
-                                        <a
-                                            key={d.label}
-                                            href={assetUrl(assets, d, releaseUrl)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className={`font-mono text-[11px] transition-colors hover:text-[#ad8eb6] ${
-                                                isPrimary
-                                                    ? 'text-[#ad8eb6]/60'
-                                                    : 'text-muted-foreground/50'
-                                            }`}
-                                        >
-                                            {d.label}
-                                        </a>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
+                                {isActive && (
+                                    <motion.span
+                                        layoutId="os-tab-pill"
+                                        className="absolute inset-0 border border-[rgba(173,142,182,0.5)] bg-[rgba(173,142,182,0.1)]"
+                                        transition={{
+                                            type: 'spring',
+                                            stiffness: 320,
+                                            damping: 26,
+                                            mass: 0.9
+                                        }}
+                                    />
+                                )}
+                                <OsIcon
+                                    platform={ICON_FOR_OS[g.os]}
+                                    className="relative z-10 h-3.5 w-3.5"
+                                />
+                                <span className="relative z-10">{g.os}</span>
+                                {isDetected && (
+                                    <span
+                                        className="relative z-10 ml-0.5 h-1.5 w-1.5 rounded-full bg-[#f5c0c0] [box-shadow:0_0_8px_rgba(245,192,192,0.7)]"
+                                        title="Detected on your system"
+                                    />
+                                )}
+                            </button>
+                        )
+                    })}
+                </div>
 
-            <div className="flex justify-end">
-                <a
-                    href="/downloads"
-                    className="font-mono text-[11px] text-muted-foreground/40 transition-colors hover:text-[#ad8eb6]"
-                >
-                    All downloads →
-                </a>
+                <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
+                    {group.downloads.map((d, i) => {
+                        const isPrimary =
+                            d.suffix === primary.suffix &&
+                            (d.archPattern?.source ?? '') ===
+                                (primary.archPattern?.source ?? '')
+                        return (
+                            <span key={d.label} className="flex items-center">
+                                {i > 0 && (
+                                    <span className="px-2 text-muted-foreground/20">/</span>
+                                )}
+                                <a
+                                    href={assetUrl(assets, d, releaseUrl)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={`font-mono text-[12px] transition-colors hover:text-[#ad8eb6] ${
+                                        isPrimary
+                                            ? 'text-[#ad8eb6]/70'
+                                            : 'text-muted-foreground/50'
+                                    }`}
+                                >
+                                    {d.label}
+                                </a>
+                            </span>
+                        )
+                    })}
+                    <a
+                        href="/downloads"
+                        className="ml-auto font-mono text-[11px] text-muted-foreground/40 transition-colors hover:text-[#ad8eb6]"
+                    >
+                        All downloads →
+                    </a>
+                </div>
             </div>
         </div>
     )
@@ -300,10 +355,15 @@ export function Hero({
                 className="hero-frame overflow-visible px-6 sm:px-8"
             >
                 <div className="hero-frame grid min-w-0 grid-cols-1 items-center gap-10 overflow-visible pt-[64px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <ScrollReveal rootMargin="0px 0px" delay={HERO_CONTENT_START}>
+                    <ScrollReveal
+                        className="relative z-20"
+                        rootMargin="0px 0px"
+                        delay={HERO_CONTENT_START}
+                    >
                         <HeroText release={release} />
                     </ScrollReveal>
                     <ScrollReveal
+                        className="relative z-0"
                         rootMargin="0px 0px"
                         delay={HERO_CONTENT_START + HERO_STAGGER}
                     >

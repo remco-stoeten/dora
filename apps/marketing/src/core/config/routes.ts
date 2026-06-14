@@ -59,6 +59,16 @@ export const routeConfig = [
         changeFrequency: 'weekly'
     },
     {
+        path: '/docs/go-cli-runner',
+        title: 'Dora manager executor',
+        description:
+            'Developer docs for the Dora manager executor: TUI usage, VM workflows, and CI dispatch commands.',
+        sitemap: true,
+        index: true,
+        priority: 0.55,
+        changeFrequency: 'monthly'
+    },
+    {
         path: '/privacy',
         title: 'Dora privacy',
         description: 'Read how Dora handles privacy and product data.',

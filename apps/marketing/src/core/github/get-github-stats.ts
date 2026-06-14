@@ -62,6 +62,8 @@ export interface GitHubStatsData {
     versionUrl: string
     startedAt: string
     latestCommitAt: string
+    latestCommitDateTime: string
+    latestCommitMessage: string
     latestCommitSha: string
     totalCommits: number
     stars: number
@@ -285,18 +287,18 @@ export async function getGitHubStats(): Promise<GitHubStatsData | null> {
             latestRelease?.html_url ||
             `https://github.com/${REPO_OWNER}/${REPO_NAME}`
 
-        const latestCommitDate = allCommits[0]
-            ? new Date(allCommits[0].commit.author.date).toLocaleDateString(
-                  'en-US',
-                  {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                  }
-              )
+        const latestCommit = allCommits[0]
+        const latestCommitDateTime = latestCommit?.commit.author.date || ''
+        const latestCommitDate = latestCommitDateTime
+            ? new Date(latestCommitDateTime).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+              })
             : 'Unknown'
-
-        const latestCommitSha = allCommits[0]?.sha.slice(0, 7) || ''
+        const latestCommitSha = latestCommit?.sha.slice(0, 7) || ''
+        const latestCommitMessage =
+            latestCommit?.commit.message.split('\n')[0] || ''
 
         const startedAt = new Date(repo.created_at).toLocaleDateString('en-US', {
             month: 'short',
@@ -308,6 +310,8 @@ export async function getGitHubStats(): Promise<GitHubStatsData | null> {
             versionUrl,
             startedAt,
             latestCommitAt: latestCommitDate,
+            latestCommitDateTime,
+            latestCommitMessage,
             latestCommitSha,
             totalCommits,
             stars: repo.stargazers_count,

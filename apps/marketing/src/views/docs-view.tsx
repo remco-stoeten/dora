@@ -11,6 +11,24 @@ export default function DocsView() {
             lead={GUIDES_INDEX.lead}
         >
             <div className="mx-auto max-w-3xl">
+                <section className="mb-10">
+                    <h2 className="mb-4 font-pixel text-xl font-medium text-foreground">
+                        Developer docs
+                    </h2>
+                    <Link
+                        href="/docs/go-cli-runner"
+                        className="block border border-[#2b252c] bg-background/30 px-4 py-4 transition-colors hover:border-[#3a3138]"
+                    >
+                        <span className="block text-sm font-medium text-foreground">
+                            Dora manager executor
+                        </span>
+                        <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">
+                            Go-based CLI and TUI executor for VM workflows, CI
+                            dispatch, and local automation.
+                        </span>
+                    </Link>
+                </section>
+
                 <h2 className="mb-5 font-pixel text-xl font-medium text-foreground">
                     Connection guides
                 </h2>

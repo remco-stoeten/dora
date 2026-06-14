@@ -243,7 +243,7 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
           Query files like tables
         </h3>
         <p className="text-xs leading-relaxed text-[#8a8a8a]">
-          Drop a CSV, Parquet, or JSON file and Dora opens it as a table — run
+          Drop a CSV, Parquet, or JSON file and Dora opens it as a table. Run
           SQL, even JOIN across files, powered by an embedded DuckDB engine.
         </p>
       </div>

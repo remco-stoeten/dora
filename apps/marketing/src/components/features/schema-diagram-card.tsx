@@ -11,48 +11,64 @@ type TCol = { name: string; type: string; pk?: boolean; fk?: string }
 type TTable = { id: string; x: number; y: number; w: number; cols: TCol[] }
 type TEdge = { a: string; aCol: number; b: string; bCol: number }
 
+// Deliberately uneven — different widths, column counts, and vertical offsets
+// so the diagram reads like a real schema rather than a 2x2 grid.
 const TABLES: TTable[] = [
     {
         id: 'users',
         x: 4,
-        y: 5,
-        w: 66,
+        y: 4,
+        w: 72,
         cols: [
             { name: 'id', type: 'int', pk: true },
             { name: 'email', type: 'text' },
             { name: 'name', type: 'text' },
+            { name: 'created_at', type: 'date' },
         ],
     },
     {
         id: 'orders',
         x: 104,
-        y: 34,
-        w: 64,
+        y: 4,
+        w: 58,
         cols: [
             { name: 'id', type: 'int', pk: true },
             { name: 'user_id', type: 'int', fk: 'users' },
-            { name: 'product_id', type: 'int', fk: 'products' },
+            { name: 'total', type: 'numeric' },
         ],
     },
     {
         id: 'products',
         x: 4,
-        y: 64,
-        w: 66,
+        y: 65,
+        w: 62,
         cols: [
             { name: 'id', type: 'int', pk: true },
             { name: 'name', type: 'text' },
             { name: 'price', type: 'numeric' },
         ],
     },
+    {
+        id: 'reviews',
+        x: 104,
+        y: 56,
+        w: 66,
+        cols: [
+            { name: 'id', type: 'int', pk: true },
+            { name: 'user_id', type: 'int', fk: 'users' },
+            { name: 'product_id', type: 'int', fk: 'products' },
+            { name: 'rating', type: 'int' },
+        ],
+    },
 ]
 
 const EDGES: TEdge[] = [
     { a: 'users', aCol: 0, b: 'orders', bCol: 1 },
-    { a: 'products', aCol: 0, b: 'orders', bCol: 2 },
+    { a: 'users', aCol: 0, b: 'reviews', bCol: 1 },
+    { a: 'products', aCol: 0, b: 'reviews', bCol: 2 },
 ]
 
-const CYCLE = ['users', 'orders', 'products']
+const CYCLE = ['users', 'orders', 'products', 'reviews']
 
 const PARTICLES = [
     { left: '22%', top: '30%', size: 1.5, opacity: 0.36 },
@@ -70,9 +86,13 @@ function rowCenterY(table: TTable, colIndex: number): number {
     return table.y + HEADER_H + colIndex * ROW_H + ROW_H / 2
 }
 
+function tableById(id: string): TTable {
+    return TABLES.find((t) => t.id === id)!
+}
+
 function edgePath(edge: TEdge): string {
-    const src = TABLES.find((t) => t.id === edge.a)!
-    const dst = TABLES.find((t) => t.id === edge.b)!
+    const src = tableById(edge.a)
+    const dst = tableById(edge.b)
     const x1 = src.x + src.w
     const y1 = rowCenterY(src, edge.aCol)
     const x2 = dst.x
@@ -112,6 +132,18 @@ function colColor(col: TCol, tableId: string, active: string | null): string {
     return '#9a9a9a'
 }
 
+// The relationship surfaced in the readout: prefer an edge where the active
+// table is the referenced (PK) side, else one where it is the FK side.
+function readoutEdge(active: string | null): TEdge {
+    if (active) {
+        const asPk = EDGES.find((e) => e.a === active)
+        if (asPk) return asPk
+        const asFk = EDGES.find((e) => e.b === active)
+        if (asFk) return asFk
+    }
+    return EDGES[0]
+}
+
 export function SchemaDiagramCard({ animate }: { animate: boolean }) {
     const ref = useRef<HTMLDivElement>(null)
     const gate = useGate(ref)
@@ -130,6 +162,12 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
     }, [running])
 
     const active = hover ?? (running ? CYCLE[focusIdx] : null)
+
+    const relEdge = readoutEdge(active)
+    const relSrc = tableById(relEdge.a)
+    const relDst = tableById(relEdge.b)
+    const relSrcCol = relSrc.cols[relEdge.aCol]
+    const relDstCol = relDst.cols[relEdge.bCol]
 
     return (
         <div ref={ref} className="relative h-full flex flex-col overflow-hidden">
@@ -158,24 +196,46 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                 />
             ))}
 
-            <div className="relative flex-1 flex items-center justify-center px-4 pt-4">
+            <div className="relative flex-1 min-h-0 flex items-center justify-center px-3 pt-3">
                 <svg
                     viewBox="0 0 172 114"
-                    className="w-full h-[114px]"
+                    preserveAspectRatio="xMidYMid meet"
+                    className="w-full h-full max-h-[210px]"
                     aria-hidden="true"
                 >
                     <defs>
+                        {/* crow's-foot "many" end */}
                         <marker
-                            id="fk-arrow-lit"
-                            markerWidth="5"
-                            markerHeight="4"
-                            refX="4"
-                            refY="2"
+                            id="card-many"
+                            markerWidth="8"
+                            markerHeight="8"
+                            refX="6.5"
+                            refY="4"
                             orient="auto"
                         >
-                            <polygon
-                                points="0 0, 5 2, 0 4"
-                                fill="rgba(227,178,179,0.65)"
+                            <path
+                                d="M0 4 L6.5 1 M0 4 L6.5 4 M0 4 L6.5 7"
+                                stroke="rgba(227,178,179,0.75)"
+                                strokeWidth="0.8"
+                                fill="none"
+                            />
+                        </marker>
+                        {/* "one" tick at the PK end */}
+                        <marker
+                            id="card-one"
+                            markerWidth="6"
+                            markerHeight="8"
+                            refX="2"
+                            refY="4"
+                            orient="auto"
+                        >
+                            <line
+                                x1="2"
+                                y1="1.5"
+                                x2="2"
+                                y2="6.5"
+                                stroke="rgba(227,178,179,0.75)"
+                                strokeWidth="0.8"
                             />
                         </marker>
                         <marker
@@ -196,6 +256,7 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                         return (
                             <path
                                 key={edgeIndex}
+                                id={`schema-edge-${edgeIndex}`}
                                 d={edgePath(edge)}
                                 fill="none"
                                 stroke={
@@ -203,9 +264,12 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                                 }
                                 strokeWidth="1.2"
                                 strokeDasharray={lit ? '3 3' : undefined}
+                                markerStart={
+                                    lit ? 'url(#card-one)' : undefined
+                                }
                                 markerEnd={
                                     lit
-                                        ? 'url(#fk-arrow-lit)'
+                                        ? 'url(#card-many)'
                                         : 'url(#fk-arrow-dim)'
                                 }
                             >
@@ -219,6 +283,31 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                                     />
                                 ) : null}
                             </path>
+                        )
+                    })}
+
+                    {/* data packets streaming PK -> FK along lit edges */}
+                    {EDGES.map((edge, edgeIndex) => {
+                        const lit = isEdgeLit(edge, active)
+                        if (!lit || !running) return null
+                        const dur = `${1.5 + edgeIndex * 0.25}s`
+                        return (
+                            <circle key={`p-${edgeIndex}`} r="1.5" fill="#f5c0c0">
+                                <animateMotion
+                                    dur={dur}
+                                    repeatCount="indefinite"
+                                    calcMode="linear"
+                                >
+                                    <mpath href={`#schema-edge-${edgeIndex}`} />
+                                </animateMotion>
+                                <animate
+                                    attributeName="opacity"
+                                    values="0;1;1;0"
+                                    keyTimes="0;0.12;0.82;1"
+                                    dur={dur}
+                                    repeatCount="indefinite"
+                                />
+                            </circle>
                         )
                     })}
 
@@ -374,7 +463,23 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                 </svg>
             </div>
 
-            <div className="relative px-5 pb-5">
+            {/* active relationship readout */}
+            <div className="relative px-5">
+                <div className="flex h-4 items-center gap-2 overflow-hidden font-mono text-[10px] leading-none [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#e3b2b3]" />
+                    <span className="truncate whitespace-nowrap">
+                        <span style={{ color: '#ad8eb6' }}>
+                            {relSrc.id}.{relSrcCol.name}
+                        </span>
+                        <span className="px-1.5 text-[#6a6a6a]">─&lt;</span>
+                        <span style={{ color: '#e3b2b3' }}>
+                            {relDst.id}.{relDstCol.name}
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            <div className="relative px-5 pb-5 pt-3">
                 <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
                     Schema Visualization
                 </h3>
