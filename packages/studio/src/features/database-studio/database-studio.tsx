@@ -578,6 +578,8 @@ export function DatabaseStudio({
 		handleExport,
 		handleExportCsvAll,
 		handleExportSqlAll,
+		handleBackupDatabase,
+		handleRestoreDatabase,
 		handleCopySchema,
 		handleCopyDrizzleSchema,
 		handleAddColumn,
@@ -656,6 +658,8 @@ export function DatabaseStudio({
 				onExport={canExportFile ? handleExport : function () {}}
 				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
 				onExportSql={canExportFile ? handleExportSqlAll : undefined}
+				onBackup={handleBackupDatabase}
+				onRestore={handleRestoreDatabase}
 				isLoading={isLoading}
 				onCopySchema={handleCopySchema}
 				onCopyDrizzleSchema={handleCopyDrizzleSchema}
@@ -693,6 +697,8 @@ export function DatabaseStudio({
 					onExport={canExportFile ? handleExport : function () {}}
 					onExportCsv={canExportFile ? handleExportCsvAll : undefined}
 					onExportSql={canExportFile ? handleExportSqlAll : undefined}
+					onBackup={handleBackupDatabase}
+					onRestore={handleRestoreDatabase}
 					onAddRecord={canEditRows ? handleAddRecord : undefined}
 					onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
 					importFilesAction={importFilesAction}
@@ -743,6 +749,8 @@ export function DatabaseStudio({
 				onExport={canExportFile ? handleExport : function () {}}
 				onExportCsv={canExportFile ? handleExportCsvAll : undefined}
 				onExportSql={canExportFile ? handleExportSqlAll : undefined}
+				onBackup={handleBackupDatabase}
+				onRestore={handleRestoreDatabase}
 				onAddRecord={canEditRows ? handleAddRecord : undefined}
 				onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
 				importFilesAction={importFilesAction}

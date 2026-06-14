@@ -17,6 +17,8 @@ type Props = {
 	onExport: () => void
 	onExportCsv?: () => void
 	onExportSql?: () => void
+	onBackup?: () => void
+	onRestore?: () => void
 	isLoading: boolean
 	onCopySchema: () => void
 	onCopyDrizzleSchema: () => void
@@ -50,6 +52,8 @@ export function DatabaseStudioStructureView({
 	onExport,
 	onExportCsv,
 	onExportSql,
+	onBackup,
+	onRestore,
 	isLoading,
 	onCopySchema,
 	onCopyDrizzleSchema,
@@ -83,6 +87,8 @@ export function DatabaseStudioStructureView({
 				onExport={onExport}
 				onExportCsv={onExportCsv}
 				onExportSql={onExportSql}
+				onBackup={onBackup}
+				onRestore={onRestore}
 				isLoading={isLoading}
 				onCopySchema={onCopySchema}
 				onCopyDrizzleSchema={onCopyDrizzleSchema}

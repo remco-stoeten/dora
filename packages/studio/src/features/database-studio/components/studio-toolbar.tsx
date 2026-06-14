@@ -40,6 +40,8 @@ type Props = {
 	onExport: () => void
 	onExportCsv?: () => void
 	onExportSql?: () => void
+	onBackup?: () => void
+	onRestore?: () => void
 	onAddRecord?: () => void
 	isLoading?: boolean
 	filters?: FilterDescriptor[]
@@ -73,6 +75,8 @@ export function StudioToolbar({
 	onExport,
 	onExportCsv,
 	onExportSql,
+	onBackup,
+	onRestore,
 	onAddRecord,
 	isLoading,
 	filters = [],
@@ -329,6 +333,19 @@ export function StudioToolbar({
 							{onExportSql && (
 								<DropdownMenuItem onClick={onExportSql}>
 									Export SQL INSERT
+								</DropdownMenuItem>
+							)}
+							{(onBackup || onRestore) && <DropdownMenuSeparator />}
+							{onBackup && (
+								<DropdownMenuItem onClick={onBackup}>
+									<Download className='h-3.5 w-3.5' />
+									Backup database…
+								</DropdownMenuItem>
+							)}
+							{onRestore && (
+								<DropdownMenuItem onClick={onRestore}>
+									<Upload className='h-3.5 w-3.5' />
+									Restore from backup…
 								</DropdownMenuItem>
 							)}
 						</DropdownMenuContent>

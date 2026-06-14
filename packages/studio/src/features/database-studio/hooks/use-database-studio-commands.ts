@@ -1,11 +1,14 @@
+import { ask, open, save } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import { convertSchemaToDrizzle } from '@studio/core/data-generation/sql-to-drizzle'
+import { useIsTauri } from '@studio/core/data-provider'
 import { getAdapterError, type DataAdapter } from '@studio/core/data-provider/types'
 import { tableDataCache } from '@studio/core/table-cache'
 import { commands } from '@studio/lib/bindings'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import type { ColumnFormData } from '../components/add-column-dialog'
-import { rowsToCsv, rowsToSqlInsert } from '../utils/studio-data'
+import { rowsToCsv, rowsToSqlInsert, splitSqlStatements } from '../utils/studio-data'
 import type { FilterConjunction, FilterDescriptor, SortDescriptor, TableData } from '../types'
 
 type Args = {
@@ -40,6 +43,7 @@ function downloadTextFile(content: string, fileName: string, mimeType: string) {
 
 export function useDatabaseStudioCommands(args: Args) {
 	const { toast } = useToast()
+	const isTauri = useIsTauri()
 	const {
 		adapter,
 		activeConnectionId,
@@ -111,6 +115,90 @@ export function useDatabaseStudioCommands(args: Args) {
 			})
 		)
 		downloadTextFile(sqlString, `${tableName || 'data'}.sql`, 'text/sql')
+	}
+
+	async function handleBackupDatabase() {
+		if (!activeConnectionId) return
+		if (!isTauri) {
+			toast({
+				title: 'Backup unavailable',
+				description: 'Backing up a database requires the desktop app.',
+				variant: 'destructive'
+			})
+			return
+		}
+
+		const outputPath = await save({
+			filters: [{ name: 'SQL dump', extensions: ['sql'] }],
+			defaultPath: 'backup.sql'
+		})
+		if (!outputPath) return
+
+		setIsDdlLoading(true)
+		try {
+			const result = await commands.dumpDatabase(activeConnectionId, outputPath)
+			if (result.status !== 'ok') {
+				throw new Error(result.error.detail)
+			}
+			const sizeKb = (result.data.size_bytes / 1024).toFixed(1)
+			toast({
+				title: 'Backup created',
+				description: `${result.data.tables_dumped} tables, ${result.data.rows_dumped} rows (${sizeKb} KB) → ${result.data.file_path}`,
+				variant: 'success'
+			})
+		} catch (error) {
+			notifyActionFailure('Backup failed', error)
+		} finally {
+			setIsDdlLoading(false)
+		}
+	}
+
+	async function handleRestoreDatabase() {
+		if (!activeConnectionId) return
+		if (!isTauri) {
+			toast({
+				title: 'Restore unavailable',
+				description: 'Restoring from a backup requires the desktop app.',
+				variant: 'destructive'
+			})
+			return
+		}
+
+		const selected = await open({
+			multiple: false,
+			filters: [{ name: 'SQL dump', extensions: ['sql'] }]
+		})
+		if (!selected || typeof selected !== 'string') return
+
+		const confirmed = await ask(
+			'Restoring runs every statement in the selected file against this connection and can overwrite existing data. Continue?',
+			{ title: 'Restore from backup', kind: 'warning' }
+		)
+		if (!confirmed) return
+
+		setIsDdlLoading(true)
+		try {
+			const sql = await readTextFile(selected)
+			const statements = splitSqlStatements(sql)
+			if (statements.length === 0) {
+				toast({ title: 'Nothing to restore', description: 'The file has no SQL statements.' })
+				return
+			}
+			const result = await commands.executeBatch(activeConnectionId, statements)
+			if (result.status !== 'ok') {
+				throw new Error(result.error.detail)
+			}
+			toast({
+				title: 'Restore complete',
+				description: `Ran ${statements.length} statements from the backup.`,
+				variant: 'success'
+			})
+			loadTableData()
+		} catch (error) {
+			notifyActionFailure('Restore failed', error)
+		} finally {
+			setIsDdlLoading(false)
+		}
 	}
 
 	async function handleCopySchema() {
@@ -214,6 +302,8 @@ export function useDatabaseStudioCommands(args: Args) {
 		handleExport,
 		handleExportCsvAll,
 		handleExportSqlAll,
+		handleBackupDatabase,
+		handleRestoreDatabase,
 		handleCopySchema,
 		handleCopyDrizzleSchema,
 		handleAddColumn,

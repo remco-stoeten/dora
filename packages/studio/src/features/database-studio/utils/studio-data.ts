@@ -140,6 +140,49 @@ export function rowsToCsv(rows: Record<string, unknown>[], columns?: string[]): 
 	return csvRows.join('\n')
 }
 
+/**
+ * Splits a SQL script into individual statements on top-level semicolons,
+ * honouring single/double-quoted strings and line comments. Used to feed a
+ * restored `.sql` dump to the batch-execute command.
+ */
+export function splitSqlStatements(sql: string): string[] {
+	const statements: string[] = []
+	let current = ''
+	let inSingle = false
+	let inDouble = false
+	let inLineComment = false
+
+	for (let i = 0; i < sql.length; i++) {
+		const char = sql[i]
+
+		if (inLineComment) {
+			if (char === '\n') inLineComment = false
+			current += char
+			continue
+		}
+
+		if (!inSingle && !inDouble && char === '-' && sql[i + 1] === '-') {
+			inLineComment = true
+			current += char
+			continue
+		}
+
+		if (char === "'" && !inDouble) inSingle = !inSingle
+		else if (char === '"' && !inSingle) inDouble = !inDouble
+
+		if (char === ';' && !inSingle && !inDouble) {
+			if (current.trim()) statements.push(current.trim())
+			current = ''
+			continue
+		}
+
+		current += char
+	}
+
+	if (current.trim()) statements.push(current.trim())
+	return statements
+}
+
 /** Renders a single value as a SQL literal for an INSERT statement. */
 function toSqlLiteral(value: unknown): string {
 	if (value === null || value === undefined) return 'NULL'
