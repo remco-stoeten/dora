@@ -16,19 +16,31 @@ function isError(value: unknown): value is TranslateError {
 	return typeof value === 'object' && value !== null && 'error' in value
 }
 
+// The execution adapter (adapter.executeQuery) accepts a SQL string only — it
+// has no bound-parameter channel — so values are inlined as SQL literals here,
+// the same way the Drizzle runner does. `list()` is always empty: the emitted
+// SQL is self-contained.
 class ParamBuilder {
-	private values: unknown[] = []
 	constructor(private dialect: Dialect) {}
 
 	add(value: unknown): string {
-		this.values.push(value)
-		if (this.dialect === 'postgresql') return `$${this.values.length}`
-		return '?'
+		return inlineLiteral(value, this.dialect)
 	}
 
 	list(): unknown[] {
-		return this.values
+		return []
 	}
+}
+
+function inlineLiteral(value: unknown, dialect: Dialect): string {
+	if (value === null || value === undefined) return 'NULL'
+	if (typeof value === 'boolean') {
+		if (dialect === 'postgresql') return value ? 'TRUE' : 'FALSE'
+		return value ? '1' : '0'
+	}
+	if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL'
+	if (typeof value === 'bigint') return value.toString()
+	return `'${String(value).replace(/'/g, "''")}'`
 }
 
 function quoteIdent(name: string, dialect: Dialect): string {

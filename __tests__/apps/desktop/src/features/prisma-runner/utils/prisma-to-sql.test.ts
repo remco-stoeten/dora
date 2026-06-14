@@ -72,17 +72,17 @@ describe('prismaToSql - findMany', function () {
 			)
 		)
 		expect(r.sql).toBe(
-			'SELECT * FROM "users" WHERE "active" = $1 ORDER BY "email" ASC LIMIT 10 OFFSET 5'
+			'SELECT * FROM "users" WHERE "active" = TRUE ORDER BY "email" ASC LIMIT 10 OFFSET 5'
 		)
-		expect(r.params).toEqual([true])
+		expect(r.params).toEqual([])
 	})
 
 	it('uses ? placeholders and 1/0 booleans for mysql', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.findMany({ where: { active: true } })', buildSchema, 'mysql')
 		)
-		expect(r.sql).toBe('SELECT * FROM `users` WHERE `active` = ?')
-		expect(r.params).toEqual([1])
+		expect(r.sql).toBe('SELECT * FROM `users` WHERE `active` = 1')
+		expect(r.params).toEqual([])
 	})
 
 	it('supports select with named columns', function () {
@@ -126,15 +126,15 @@ describe('prismaToSql - findFirst / findUnique / count', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.findUnique({ where: { id: 1 } })', buildSchema, 'postgresql')
 		)
-		expect(r.sql).toBe('SELECT * FROM "users" WHERE "id" = $1 LIMIT 1')
-		expect(r.params).toEqual([1])
+		expect(r.sql).toBe('SELECT * FROM "users" WHERE "id" = 1 LIMIT 1')
+		expect(r.params).toEqual([])
 	})
 
 	it('count with where', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.count({ where: { active: true } })', buildSchema, 'postgresql')
 		)
-		expect(r.sql).toBe('SELECT COUNT(*) FROM "users" WHERE "active" = $1')
+		expect(r.sql).toBe('SELECT COUNT(*) FROM "users" WHERE "active" = TRUE')
 	})
 })
 
@@ -145,35 +145,39 @@ describe('prismaToSql - where operators', function () {
 
 	it('equals / not', function () {
 		expect(whereSql('{ email: { equals: "a" } }').sql).toBe(
-			'SELECT * FROM "users" WHERE "email" = $1'
+			'SELECT * FROM "users" WHERE "email" = \'a\''
 		)
 		expect(whereSql('{ email: { not: "a" } }').sql).toBe(
-			'SELECT * FROM "users" WHERE "email" != $1'
+			'SELECT * FROM "users" WHERE "email" != \'a\''
 		)
 	})
 
 	it('lt lte gt gte', function () {
 		expect(whereSql('{ age: { lt: 1, lte: 2, gt: 3, gte: 4 } }').sql).toBe(
-			'SELECT * FROM "users" WHERE ("age" < $1 AND "age" <= $2 AND "age" > $3 AND "age" >= $4)'
+			'SELECT * FROM "users" WHERE ("age" < 1 AND "age" <= 2 AND "age" > 3 AND "age" >= 4)'
 		)
 	})
 
 	it('in / notIn', function () {
 		const r = whereSql('{ age: { in: [1, 2, 3] } }')
-		expect(r.sql).toBe('SELECT * FROM "users" WHERE "age" IN ($1, $2, $3)')
-		expect(r.params).toEqual([1, 2, 3])
+		expect(r.sql).toBe('SELECT * FROM "users" WHERE "age" IN (1, 2, 3)')
+		expect(r.params).toEqual([])
 		expect(whereSql('{ age: { notIn: [1, 2] } }').sql).toBe(
-			'SELECT * FROM "users" WHERE "age" NOT IN ($1, $2)'
+			'SELECT * FROM "users" WHERE "age" NOT IN (1, 2)'
 		)
 	})
 
 	it('contains / startsWith / endsWith', function () {
-		expect(whereSql('{ email: { contains: "x" } }').params).toEqual(['%x%'])
-		expect(whereSql('{ email: { startsWith: "x" } }').params).toEqual(['x%'])
-		expect(whereSql('{ email: { endsWith: "x" } }').params).toEqual(['%x'])
 		expect(whereSql('{ email: { contains: "x" } }').sql).toBe(
-			'SELECT * FROM "users" WHERE "email" LIKE $1'
+			'SELECT * FROM "users" WHERE "email" LIKE \'%x%\''
 		)
+		expect(whereSql('{ email: { startsWith: "x" } }').sql).toBe(
+			'SELECT * FROM "users" WHERE "email" LIKE \'x%\''
+		)
+		expect(whereSql('{ email: { endsWith: "x" } }').sql).toBe(
+			'SELECT * FROM "users" WHERE "email" LIKE \'%x\''
+		)
+		expect(whereSql('{ email: { contains: "x" } }').params).toEqual([])
 	})
 
 	it('nested AND / OR / NOT', function () {
@@ -181,7 +185,7 @@ describe('prismaToSql - where operators', function () {
 			'{ AND: [{ active: true }, { OR: [{ age: { gt: 18 } }, { name: "bob" }] }], NOT: { email: "spam" } }'
 		)
 		expect(r.sql).toBe(
-			'SELECT * FROM "users" WHERE ("active" = $1 AND ("age" > $2 OR "name" = $3)) AND NOT ("email" = $4)'
+			'SELECT * FROM "users" WHERE ("active" = TRUE AND ("age" > 18 OR "name" = \'bob\')) AND NOT ("email" = \'spam\')'
 		)
 	})
 
@@ -213,15 +217,17 @@ describe('prismaToSql - create / createMany / update / delete', function () {
 				'postgresql'
 			)
 		)
-		expect(r.sql).toBe('INSERT INTO "users" ("email", "age") VALUES ($1, $2) RETURNING *')
-		expect(r.params).toEqual(['a@b.c', 30])
+		expect(r.sql).toBe(
+			'INSERT INTO "users" ("email", "age") VALUES (\'a@b.c\', 30) RETURNING *'
+		)
+		expect(r.params).toEqual([])
 	})
 
 	it('create without RETURNING on sqlite', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.create({ data: { email: "a" } })', buildSchema, 'sqlite')
 		)
-		expect(r.sql).toBe('INSERT INTO "users" ("email") VALUES (?)')
+		expect(r.sql).toBe('INSERT INTO "users" ("email") VALUES (\'a\')')
 	})
 
 	it('createMany multi-row', function () {
@@ -232,8 +238,8 @@ describe('prismaToSql - create / createMany / update / delete', function () {
 				'mysql'
 			)
 		)
-		expect(r.sql).toBe('INSERT INTO `users` (`email`) VALUES (?), (?)')
-		expect(r.params).toEqual(['a', 'b'])
+		expect(r.sql).toBe('INSERT INTO `users` (`email`) VALUES (\'a\'), (\'b\')')
+		expect(r.params).toEqual([])
 	})
 
 	it('update with where', function () {
@@ -244,23 +250,23 @@ describe('prismaToSql - create / createMany / update / delete', function () {
 				'postgresql'
 			)
 		)
-		expect(r.sql).toBe('UPDATE "users" SET "name" = $1 WHERE "id" = $2')
-		expect(r.params).toEqual(['x', 1])
+		expect(r.sql).toBe('UPDATE "users" SET "name" = \'x\' WHERE "id" = 1')
+		expect(r.params).toEqual([])
 	})
 
 	it('updateMany without where', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.updateMany({ data: { active: false } })', buildSchema, 'sqlite')
 		)
-		expect(r.sql).toBe('UPDATE "users" SET "active" = ?')
-		expect(r.params).toEqual([0])
+		expect(r.sql).toBe('UPDATE "users" SET "active" = 0')
+		expect(r.params).toEqual([])
 	})
 
 	it('delete with where', function () {
 		const r = asSql(
 			prismaToSql('prisma.user.delete({ where: { id: 1 } })', buildSchema, 'postgresql')
 		)
-		expect(r.sql).toBe('DELETE FROM "users" WHERE "id" = $1')
+		expect(r.sql).toBe('DELETE FROM "users" WHERE "id" = 1')
 	})
 
 	it('deleteMany with where', function () {
@@ -271,7 +277,7 @@ describe('prismaToSql - create / createMany / update / delete', function () {
 				'postgresql'
 			)
 		)
-		expect(r.sql).toBe('DELETE FROM "users" WHERE "active" = $1')
+		expect(r.sql).toBe('DELETE FROM "users" WHERE "active" = FALSE')
 	})
 
 	it('delete requires where', function () {

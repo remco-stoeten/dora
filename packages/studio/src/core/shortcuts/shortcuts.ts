@@ -130,6 +130,11 @@ export const APP_SHORTCUTS = {
 		description: 'Switch to Drizzle mode',
 		scope: 'sql-console'
 	},
+	switchToPrisma: {
+		combo: 'alt+p',
+		description: 'Switch to Prisma mode',
+		scope: 'sql-console'
+	},
 	saveScript: {
 		combo: 'mod+s',
 		description: 'Save script',
@@ -252,7 +257,7 @@ export const SHORTCUT_CATEGORIES: Record<string, ShortcutName[]> = {
 	],
 	'SQL Console': [
 		'runQuery', 'runSelection', 'formatQuery', 'saveScript', 'openQueryHistory', 'newTab', 'aiCmdK',
-		'switchToSql', 'switchToDrizzle',
+		'switchToSql', 'switchToDrizzle', 'switchToPrisma',
 	],
 	'Editor': [
 		'find', 'replace', 'toggleComment', 'selectNextOccurrence',

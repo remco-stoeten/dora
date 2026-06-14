@@ -238,6 +238,23 @@ pub async fn seed_system_snippets(state: State<'_, AppState>) -> Result<usize, E
             language: Some("drizzle".to_string()),
             folder_id: None,
         },
+        // Prisma Templates
+        SavedQuery {
+            id: 0,
+            name: "Find all (Prisma)".to_string(),
+            description: Some("Basic Prisma findMany template".to_string()),
+            query_text: "prisma.{model}.findMany({ take: 100 })".to_string(),
+            connection_id: None,
+            tags: Some("select,basic".to_string()),
+            category: Some("Templates".to_string()),
+            created_at: chrono::Utc::now().timestamp(),
+            updated_at: chrono::Utc::now().timestamp(),
+            favorite: true,
+            is_snippet: true,
+            is_system: true,
+            language: Some("prisma".to_string()),
+            folder_id: None,
+        },
     ];
 
     let mut count = 0;
