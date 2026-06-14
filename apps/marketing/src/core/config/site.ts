@@ -20,7 +20,22 @@ export const siteConfig = {
         'SQL client',
         'Supabase GUI',
         'Neon database client',
-        'Turso desktop client'
+        'Turso desktop client',
+        'Railway database GUI',
+        'Fly.io postgres client',
+        'Aiven database client',
+        'Render postgres GUI',
+        'DigitalOcean database client',
+        'PlanetScale GUI',
+        'AWS RDS desktop client',
+        'CockroachDB GUI',
+        'TiDB Cloud client',
+        'Vercel Postgres GUI',
+        'Crunchy Bridge client',
+        'Timescale Cloud GUI',
+        'Azure Database client',
+        'Google Cloud SQL GUI',
+        'YugabyteDB client'
     ],
     assets: {
         icon: '/icons/icon.png',
