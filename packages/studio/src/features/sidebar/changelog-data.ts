@@ -15,52 +15,12 @@ export const CURRENT_VERSION = "0.27.0"
 
 export const CHANGELOG: ChangelogEntry[] = [
 	{
-		version: "Unreleased",
-		date: "2026-06-14",
-		commit: "vUnreleased",
-		title: "Add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
-		description: "Add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks. **Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files.",
-		type: "feature",
-		details: [
-			"add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
-			"open CSV, JSON, Parquet, TSV, and NDJSON as readonly **data files** (DuckDB-backed sessions) with health indicators, recovery actions, and connection summaries",
-			"**Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files",
-			"**Import files** — import CSV/JSON/Parquet as physical tables in native DuckDB file connections",
-			"open SQLite and DuckDB files as editable embedded databases",
-			"drag tabs to reorder them (pinned tabs stay grouped first) (#105)",
-			"open tabs are persisted and restored across relaunch (#98)",
-			"binary/blob cells now show inline hex for small values and a `<type — size>` summary (with magic-byte detection) for large ones, instead of a bare byte count (#90)",
-			"data-grid filters can be joined with OR via an AND/OR toggle, not only AND (#102)",
-			"JSON/CSV/SQL export now respects the active filters and sort order instead of dumping the whole table or just the loaded page (#99)",
-			"back up a database to a `.sql` dump and restore from one via the data-grid actions menu (#103)",
-			"\"Fix with AI\" on a failed query sends the query and error to the AI assistant (#104)",
-			"README support matrix and **Local files** section explaining database files vs data files",
-			"add `docs/ai-providers.md` — per-provider setup, recommended models, key storage, and troubleshooting (#91)",
-		]
-	},
-	{
 		version: "0.27.0",
 		date: "2026-06-07",
 		commit: "v0.27.0",
-		title: "Add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
-		description: "Add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama. Add in-app Ollama setup flow with installer, runtime helpers, and model management.",
-		type: "feature",
-		details: [
-			"add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
-			"add encrypted API key storage, provider/model selection, and usage history",
-			"add in-app Ollama setup flow with installer, runtime helpers, and model management",
-			"feed live table indexes into assistant schema context",
-			"extract Dora Studio into `@dora/studio` for desktop and marketing web demo",
-			"render shared Studio at `/app` and refresh marketing landing with live demos and release-aware downloads",
-			"add `Ctrl+Shift+B` to toggle the AI assistant from the Studio keyboard flow",
-			"preserve high-precision numeric values and BIGINTs during cell editing",
-			"fix typed Postgres/SQLite cell edit and add-record binding behavior",
-			"improve credential-store recovery with OS-aware keyring install actions",
-			"move reusable Studio experience into `packages/studio`",
-			"rebuild marketing app-demo framing, theme polish, and deployment metadata",
-			"harden release automation with generated notes, post-release changelog sync, and package-manager fan-out",
-			"bump release line to 0.27.0 across root, desktop, Tauri, and Cargo manifests",
-		]
+		title: "Release v0.27.0",
+		description: "Updates in v0.27.0.",
+		type: "feature"
 	},
 	{
 		version: "0.26.5",

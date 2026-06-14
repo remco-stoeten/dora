@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.28.0] - 2026-06-14
+
 ### Features
 
 - add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks
@@ -38,6 +40,11 @@ All notable changes to this project will be documented in this file.
 
 - README support matrix and **Local files** section explaining database files vs data files
 - add `docs/ai-providers.md` — per-provider setup, recommended models, key storage, and troubleshooting (#91)
+
+### Tooling
+
+- new `dora-runner` CLI replacing the legacy `dora-cli`/`dora-manager-executor` (#86)
+- migrate CI workflows to Blacksmith runners (#87)
 
 ### Internal
 
