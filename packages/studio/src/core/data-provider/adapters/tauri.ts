@@ -2,8 +2,10 @@ import type {
 	TableData,
 	SortDescriptor,
 	FilterDescriptor,
+	FilterConjunction,
 	ColumnDefinition
 } from '@studio/features/database-studio/types'
+import { buildWhereClause } from '../filter-sql'
 import type {
 	ConnectionInfo,
 	DatabaseSchema,
@@ -241,22 +243,16 @@ export function createTauriAdapter(): DataAdapter {
 			page: number,
 			pageSize: number,
 			sort?: SortDescriptor,
-			filters?: FilterDescriptor[]
+			filters?: FilterDescriptor[],
+			conjunction?: FilterConjunction
 		): Promise<AdapterResult<TableData>> {
 			const startTime = performance.now()
 			const dialect = await resolveConnectionDialect(connectionId)
 			let query = `SELECT * FROM ${getTableSqlIdentifier(tableName, dialect)}`
 
-			if (filters && filters.length > 0) {
-				const conditions = filters.map(function (f) {
-					const sqlOp = operatorToSql(f.operator)
-					const escapedValue = String(f.value).replace(/'/g, "''")
-					if (f.operator === 'contains' || f.operator === 'ilike') {
-						return `"${f.column}" ${sqlOp} '%${escapedValue}%'`
-					}
-					return `"${f.column}" ${sqlOp} '${escapedValue}'`
-				})
-				query += ' WHERE ' + conditions.join(' AND ')
+			const whereClause = buildWhereClause(filters, conjunction)
+			if (whereClause) {
+				query += ' WHERE ' + whereClause
 			}
 
 			if (sort) {
@@ -580,20 +576,6 @@ export function createTauriAdapter(): DataAdapter {
 			return err(formatError(result.error))
 		}
 	}
-}
-
-function operatorToSql(op: string): string {
-	const map: Record<string, string> = {
-		eq: '=',
-		neq: '!=',
-		gt: '>',
-		gte: '>=',
-		lt: '<',
-		lte: '<=',
-		ilike: 'ILIKE',
-		contains: 'LIKE'
-	}
-	return map[op] || '='
 }
 
 function delay(ms: number): Promise<void> {

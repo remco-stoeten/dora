@@ -10,7 +10,7 @@ import { enrichColumnsWithFKs } from "../utils/fk-enrichment";
 import { buildTableCacheKey, schemaHasTable } from "../utils/table-cache";
 import { createDefaultValues } from "../utils/studio-data";
 import { getTableRefParts } from "@studio/shared/utils/table-ref";
-import type { FilterDescriptor, PaginationState, SortDescriptor, TableData } from "../types";
+import type { FilterConjunction, FilterDescriptor, PaginationState, SortDescriptor, TableData } from "../types";
 
 type Args = {
   adapter: DataAdapter;
@@ -22,6 +22,7 @@ type Args = {
   pagination: PaginationState;
   sort: SortDescriptor | undefined;
   filters: FilterDescriptor[];
+  filterConjunction: FilterConjunction;
   tableData: TableData | null;
   draftRow: Record<string, unknown> | null;
   draftInsertIndex: number | null;
@@ -58,6 +59,7 @@ export function useDatabaseStudioSync(args: Args) {
     pagination,
     sort,
     filters,
+    filterConjunction,
     tableData,
     draftRow,
     draftInsertIndex,
@@ -163,6 +165,7 @@ export function useDatabaseStudioSync(args: Args) {
         pagination.limit,
         sort,
         filters,
+        filterConjunction,
       );
       if (!isCurrentRequest()) return;
 
@@ -226,6 +229,7 @@ export function useDatabaseStudioSync(args: Args) {
     activeConnectionId,
     currentCacheKey,
     filters,
+    filterConjunction,
     pagination.limit,
     pagination.offset,
     setIsLoading,

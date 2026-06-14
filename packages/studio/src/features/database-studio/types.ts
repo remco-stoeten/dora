@@ -32,12 +32,16 @@ export type FilterDescriptor = {
 	value: unknown
 }
 
+/** How multiple filter conditions are joined together. */
+export type FilterConjunction = 'AND' | 'OR'
+
 export type TableQueryParams = {
 	tableId: string
 	limit: number
 	offset: number
 	sort?: SortDescriptor
 	filters?: FilterDescriptor[]
+	conjunction?: FilterConjunction
 }
 
 export type ViewMode = 'content' | 'structure' | 'chart'

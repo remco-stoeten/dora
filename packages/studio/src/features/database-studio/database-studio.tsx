@@ -49,7 +49,7 @@ import { useDatabaseStudioActions } from './hooks/use-database-studio-actions'
 import { useDatabaseStudioEdits } from './hooks/use-database-studio-edits'
 import { useDatabaseStudioCommands } from './hooks/use-database-studio-commands'
 import { buildTableCacheKey } from './utils/table-cache'
-import { FilterDescriptor, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
+import { FilterConjunction, FilterDescriptor, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
 import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
 import type { ResultChartConfig } from '@studio/features/result-charts/types'
 
@@ -193,6 +193,7 @@ export function DatabaseStudio({
 	const [pagination, setPagination] = useState<PaginationState>({ limit: 50, offset: 0 })
 	const [sort, setSort] = useState<SortDescriptor | undefined>()
 	const [filters, setFilters] = useState<FilterDescriptor[]>([])
+	const [filterConjunction, setFilterConjunction] = useState<FilterConjunction>('AND')
 	const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
 	const [showAddColumnDialog, setShowAddColumnDialog] = useState(false)
 	const [showDropTableDialog, setShowDropTableDialog] = useState(false)
@@ -230,10 +231,11 @@ export function DatabaseStudio({
 				pagination.limit,
 				pagination.offset,
 				sort,
-				filters
+				filters,
+				filterConjunction
 			)
 		},
-		[activeConnectionId, tableId, pagination.limit, pagination.offset, sort, filters]
+		[activeConnectionId, tableId, pagination.limit, pagination.offset, sort, filters, filterConjunction]
 	)
 	const {
 		liveMonitor,
@@ -249,6 +251,7 @@ export function DatabaseStudio({
 		pagination,
 		sort,
 		filters,
+		filterConjunction,
 		tableData,
 		draftRow,
 		draftInsertIndex,
@@ -693,6 +696,8 @@ export function DatabaseStudio({
 					isLoading={isLoading}
 					filters={filters}
 					onFiltersChange={setFilters}
+					conjunction={filterConjunction}
+					onConjunctionChange={setFilterConjunction}
 					columns={tableData.columns}
 					visibleColumns={visibleColumns}
 					onToggleColumn={handleToggleColumn}
@@ -741,6 +746,8 @@ export function DatabaseStudio({
 				isLoading={isLoading}
 				filters={filters}
 				onFiltersChange={setFilters}
+				conjunction={filterConjunction}
+				onConjunctionChange={setFilterConjunction}
 				columns={tableData?.columns || []}
 				visibleColumns={visibleColumns}
 				onToggleColumn={handleToggleColumn}

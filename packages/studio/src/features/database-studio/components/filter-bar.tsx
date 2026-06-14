@@ -3,16 +3,28 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
 import { cn } from '@studio/shared/utils/cn'
-import { ColumnDefinition, FilterDescriptor, FilterOperator } from '../types'
+import { ColumnDefinition, FilterConjunction, FilterDescriptor, FilterOperator } from '../types'
 
 type Props = {
 	filters: FilterDescriptor[]
 	onFiltersChange: (filters: FilterDescriptor[]) => void
+	conjunction?: FilterConjunction
+	onConjunctionChange?: (conjunction: FilterConjunction) => void
 	columns: ColumnDefinition[]
 	isVisible: boolean
 }
 
-export function FilterBar({ filters, onFiltersChange, columns, isVisible }: Props) {
+export function FilterBar({
+	filters,
+	onFiltersChange,
+	conjunction = 'AND',
+	onConjunctionChange,
+	columns,
+	isVisible
+}: Props) {
+	function toggleConjunction() {
+		onConjunctionChange?.(conjunction === 'AND' ? 'OR' : 'AND')
+	}
 	const [isAddingFilter, setIsAddingFilter] = useState(false)
 	const [newFilterColumn, setNewFilterColumn] = useState('')
 	const [newFilterOperator, setNewFilterOperator] = useState<FilterOperator>('eq')
@@ -83,9 +95,21 @@ export function FilterBar({ filters, onFiltersChange, columns, isVisible }: Prop
 						<X className='h-3 w-3' />
 					</Button>
 
-					<span className='text-[10px] uppercase text-muted-foreground font-bold w-8 text-center tracking-wider select-none'>
-						{index === 0 ? 'WHERE' : 'AND'}
-					</span>
+					{index === 0 ? (
+						<span className='text-[10px] uppercase text-muted-foreground font-bold w-10 text-center tracking-wider select-none'>
+							WHERE
+						</span>
+					) : (
+						<button
+							type='button'
+							onClick={toggleConjunction}
+							disabled={!onConjunctionChange}
+							title={`Joining conditions with ${conjunction}. Click to switch to ${conjunction === 'AND' ? 'OR' : 'AND'}.`}
+							className='text-[10px] uppercase text-primary font-bold w-10 text-center tracking-wider rounded border border-primary/20 bg-primary/5 hover:bg-primary/15 transition-colors disabled:cursor-default disabled:opacity-70'
+						>
+							{conjunction}
+						</button>
+					)}
 
 					<div className='flex items-center gap-2 text-xs flex-1'>
 						<span className='font-mono text-primary font-medium px-1.5 py-0.5 rounded border border-primary/20 bg-primary/5'>
@@ -134,7 +158,7 @@ export function FilterBar({ filters, onFiltersChange, columns, isVisible }: Prop
 					</Button>
 
 					<span className='text-xs text-muted-foreground font-mono w-12 text-center'>
-						{filters.length === 0 ? 'where' : 'and'}
+						{filters.length === 0 ? 'where' : conjunction.toLowerCase()}
 					</span>
 
 					<div className='relative'>

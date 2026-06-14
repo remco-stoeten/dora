@@ -25,7 +25,7 @@ import {
 } from '@studio/shared/ui/dropdown-menu'
 import { Input } from '@studio/shared/ui/input'
 import { cn } from '@studio/shared/utils/cn'
-import { ViewMode, PaginationState, FilterDescriptor, ColumnDefinition } from '../types'
+import { ViewMode, PaginationState, FilterConjunction, FilterDescriptor, ColumnDefinition } from '../types'
 import type { LiveMonitorConfig, ChangeEvent } from '@studio/core/live-monitor'
 import { LiveMonitorPopover } from './live-monitor-popover'
 import { ChangeFeed } from './change-feed'
@@ -44,6 +44,8 @@ type Props = {
 	isLoading?: boolean
 	filters?: FilterDescriptor[]
 	onFiltersChange?: (filters: FilterDescriptor[]) => void
+	conjunction?: FilterConjunction
+	onConjunctionChange?: (conjunction: FilterConjunction) => void
 	columns?: ColumnDefinition[]
 	visibleColumns?: Set<string>
 	onToggleColumn?: (columnName: string, visible: boolean) => void
@@ -75,6 +77,8 @@ export function StudioToolbar({
 	isLoading,
 	filters = [],
 	onFiltersChange,
+	conjunction = 'AND',
+	onConjunctionChange,
 	columns = [],
 	visibleColumns,
 	onToggleColumn,
@@ -364,6 +368,8 @@ export function StudioToolbar({
 				isVisible={showFilters}
 				filters={filters}
 				onFiltersChange={onFiltersChange || (() => {})}
+				conjunction={conjunction}
+				onConjunctionChange={onConjunctionChange}
 				columns={columns}
 			/>
 		</div>
