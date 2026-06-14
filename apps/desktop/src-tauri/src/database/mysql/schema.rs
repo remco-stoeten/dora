@@ -5,11 +5,22 @@ use mysql_async::prelude::Queryable;
 use mysql_async::{Pool, Row, Value as MysqlValue};
 
 use crate::{
-    database::types::{ColumnInfo, DatabaseSchema, ForeignKeyInfo, IndexInfo, TableInfo},
+    database::{
+        dialect::MySqlDialect,
+        types::{ColumnInfo, DatabaseSchema, ForeignKeyInfo, IndexInfo, TableInfo},
+    },
     Error,
 };
 
-pub async fn get_database_schema(pool: Arc<Pool>) -> Result<DatabaseSchema, Error> {
+/// Introspect the schema for a MySQL-wire connection.
+///
+/// `dialect` is threaded through so Phase 2 can branch per dialect (e.g.
+/// MariaDB type mapping). For now every dialect uses the vanilla MySQL path.
+// TODO(dialect-parity): override per dialect
+pub async fn get_database_schema(
+    pool: Arc<Pool>,
+    _dialect: MySqlDialect,
+) -> Result<DatabaseSchema, Error> {
     let mut conn = pool
         .get_conn()
         .await

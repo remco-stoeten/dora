@@ -15,23 +15,94 @@ use serde::Serialize;
 use specta::Type;
 
 /// Concrete engine behind a Postgres-wire connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum PgDialect {
     /// Vanilla PostgreSQL (the default / safe path).
+    #[default]
     Postgres,
     /// CockroachDB speaking the Postgres wire protocol.
     CockroachDb,
 }
 
+impl PgDialect {
+    /// Source capabilities for this dialect.
+    ///
+    /// Resolution layers (per the data-source spec): model defaults → engine
+    /// overrides → dialect overrides. For now the engine default is vanilla
+    /// Postgres and only CockroachDB diverges (no LISTEN/NOTIFY).
+    pub const fn caps(self) -> SourceCaps {
+        SourceCaps::for_dialect(self.detected())
+    }
+
+    /// The unified `DetectedDialect` tag for this Postgres-wire dialect.
+    pub const fn detected(self) -> DetectedDialect {
+        match self {
+            PgDialect::Postgres => DetectedDialect::Postgres,
+            PgDialect::CockroachDb => DetectedDialect::CockroachDb,
+        }
+    }
+
+    /// Introspection-query overrides for this dialect.
+    ///
+    /// Vanilla for every dialect today; Phase 2 will return per-dialect catalog
+    /// query overrides here.
+    // TODO(dialect-parity): override per dialect
+    pub const fn introspection(self) -> PgIntrospection {
+        PgIntrospection::VANILLA
+    }
+}
+
+/// Placeholder for per-dialect Postgres introspection query overrides.
+///
+/// Phase 2 will give this real fields (catalog query strings, type-mapping
+/// tables). For now it is a zero-sized vanilla marker so the seam exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PgIntrospection;
+
+impl PgIntrospection {
+    pub const VANILLA: Self = Self;
+}
+
 /// Concrete engine behind a MySQL-wire connection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum MySqlDialect {
     /// Vanilla MySQL (the default / safe path).
+    #[default]
     MySql,
     /// MariaDB speaking the MySQL wire protocol.
     MariaDb,
+}
+
+impl MySqlDialect {
+    /// Source capabilities for this dialect (MySQL/MariaDB never use
+    /// Postgres-style LISTEN/NOTIFY).
+    pub const fn caps(self) -> SourceCaps {
+        SourceCaps::for_dialect(self.detected())
+    }
+
+    /// The unified `DetectedDialect` tag for this MySQL-wire dialect.
+    pub const fn detected(self) -> DetectedDialect {
+        match self {
+            MySqlDialect::MySql => DetectedDialect::MySql,
+            MySqlDialect::MariaDb => DetectedDialect::MariaDb,
+        }
+    }
+
+    /// Introspection-query overrides for this dialect.
+    // TODO(dialect-parity): override per dialect
+    pub const fn introspection(self) -> MySqlIntrospection {
+        MySqlIntrospection::VANILLA
+    }
+}
+
+/// Placeholder for per-dialect MySQL introspection query overrides.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MySqlIntrospection;
+
+impl MySqlIntrospection {
+    pub const VANILLA: Self = Self;
 }
 
 /// A unified, runtime-detected dialect tag stored on a connection.

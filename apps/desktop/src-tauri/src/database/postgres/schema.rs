@@ -4,11 +4,23 @@ use anyhow::Context;
 use tokio_postgres::Client;
 
 use crate::{
-    database::types::{ColumnInfo, DatabaseSchema, ForeignKeyInfo, IndexInfo, TableInfo},
+    database::{
+        dialect::PgDialect,
+        types::{ColumnInfo, DatabaseSchema, ForeignKeyInfo, IndexInfo, TableInfo},
+    },
     Error,
 };
 
-pub async fn get_database_schema(client: &Client) -> Result<DatabaseSchema, Error> {
+/// Introspect the schema for a Postgres-wire connection.
+///
+/// `dialect` is threaded through so Phase 2 can branch catalog queries per
+/// dialect (e.g. CockroachDB). For now every dialect uses the vanilla Postgres
+/// introspection path.
+// TODO(dialect-parity): override per dialect
+pub async fn get_database_schema(
+    client: &Client,
+    _dialect: PgDialect,
+) -> Result<DatabaseSchema, Error> {
     // Main columns query with primary key detection
     let schema_query = r#"
         SELECT 
