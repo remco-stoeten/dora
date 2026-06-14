@@ -20,6 +20,20 @@ use crate::{
     Error,
 };
 
+/// Logs the outcome of an executor task. A `Cancelled` error here is benign —
+/// it means the results channel's consumer was aborted (cancellation or a
+/// superseding query), so the executor's send failed. Those are logged at debug
+/// to avoid noisy error-level "channel closed" spam on every query cancel.
+fn log_query_exec_outcome(engine: &str, result: Result<(), Error>) {
+    if let Err(err) = result {
+        if matches!(err, Error::Cancelled) {
+            log::debug!("{} query stopped: results consumer dropped (cancelled)", engine);
+        } else {
+            log::error!("Error executing {} query: {}", engine, err);
+        }
+    }
+}
+
 /// The storage/state for an individual statement being executed
 struct ExecState {
     status: AtomicU8,
@@ -201,12 +215,10 @@ impl StatementManager {
                 use_simple_query,
             } => {
                 let handle = spawn(async move {
-                    if let Err(err) =
+                    let result =
                         postgres::execute::execute_query(&client, stmt, &sender, use_simple_query)
-                            .await
-                    {
-                        log::error!("Error executing Postgres query: {}", err);
-                    }
+                            .await;
+                    log_query_exec_outcome("Postgres", result);
                 });
                 self.execution_handles.insert(id, handle);
             }
@@ -222,39 +234,36 @@ impl StatementManager {
 
                 let handle = spawn_blocking(move || {
                     let conn = connection.lock().expect("Mutex poisoned");
-                    if let Err(err) = sqlite::execute::execute_query(&conn, stmt, &sender) {
-                        log::error!("Error executing SQLite query: {}", err);
-                    }
+                    log_query_exec_outcome(
+                        "SQLite",
+                        sqlite::execute::execute_query(&conn, stmt, &sender),
+                    );
                 });
                 self.execution_handles.insert(id, handle);
             }
             DatabaseClient::DuckDB { connection, .. } => {
                 let handle = spawn_blocking(move || {
                     let conn = connection.lock().expect("Mutex poisoned");
-                    if let Err(err) =
-                        crate::database::duckdb::execute::execute_query(&conn, stmt, &sender)
-                    {
-                        log::error!("Error executing DuckDB query: {}", err);
-                    }
+                    log_query_exec_outcome(
+                        "DuckDB",
+                        crate::database::duckdb::execute::execute_query(&conn, stmt, &sender),
+                    );
                 });
                 self.execution_handles.insert(id, handle);
             }
             DatabaseClient::LibSQL { connection } => {
                 let handle = spawn(async move {
-                    if let Err(err) =
+                    let result =
                         crate::database::libsql::execute::execute_query(&connection, stmt, &sender)
-                            .await
-                    {
-                        log::error!("Error executing LibSQL query: {}", err);
-                    }
+                            .await;
+                    log_query_exec_outcome("LibSQL", result);
                 });
                 self.execution_handles.insert(id, handle);
             }
             DatabaseClient::MySQL { pool } => {
                 let handle = spawn(async move {
-                    if let Err(err) = mysql::execute::execute_query(&pool, stmt, &sender).await {
-                        log::error!("Error executing MySQL query: {}", err);
-                    }
+                    let result = mysql::execute::execute_query(&pool, stmt, &sender).await;
+                    log_query_exec_outcome("MySQL", result);
                 });
                 self.execution_handles.insert(id, handle);
             }

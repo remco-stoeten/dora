@@ -89,11 +89,13 @@ pub enum Error {
 }
 
 impl<T: Debug> From<tokio::sync::mpsc::error::SendError<T>> for Error {
-    fn from(error: tokio::sync::mpsc::error::SendError<T>) -> Self {
-        Error::Internal(format!(
-            "channel closed while sending {:?} — this should not happen, please report at https://github.com/remcostoeten/Dora/issues",
-            error
-        ))
+    fn from(_error: tokio::sync::mpsc::error::SendError<T>) -> Self {
+        // A send on the query results channel only fails when the receiver has
+        // been dropped — i.e. the consumer/listener task was aborted, which on
+        // this channel only happens on cancellation or a superseding query.
+        // It is benign, so map it to Cancelled rather than a scary "please
+        // report" internal error.
+        Error::Cancelled
     }
 }
 
