@@ -154,13 +154,14 @@ function SidebarContent({ activeNavId, onNavSelect, databasePanelToggle }: Conte
 				</div>
 
 				<div role='group' aria-label='Settings' className='mx-auto mt-auto flex flex-col items-center gap-1'>
-					{databasePanelToggle && !databasePanelToggle.isOpen && (
+					{databasePanelToggle && (
 						<>
 							<SidebarPanelToggle
 								isOpen={databasePanelToggle.isOpen}
 								onToggle={databasePanelToggle.onToggle}
 								buttonClassName='h-10 w-10'
 								className='h-5 w-5'
+								tooltipSide='right'
 							/>
 							<div
 								className='w-8 h-px bg-sidebar-border'

@@ -7,9 +7,12 @@ function ContextMenu(props: React.ComponentProps<typeof ContextMenuPrimitive.Roo
 	return <ContextMenuPrimitive.Root data-slot='context-menu' {...props} />
 }
 
-function ContextMenuTrigger(props: React.ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
-	return <ContextMenuPrimitive.Trigger data-slot='context-menu-trigger' {...props} />
-}
+const ContextMenuTrigger = React.forwardRef<
+	React.ElementRef<typeof ContextMenuPrimitive.Trigger>,
+	React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Trigger>
+>(function ContextMenuTrigger(props, ref) {
+	return <ContextMenuPrimitive.Trigger ref={ref} data-slot='context-menu-trigger' {...props} />
+})
 
 function ContextMenuGroup(props: React.ComponentProps<typeof ContextMenuPrimitive.Group>) {
 	return <ContextMenuPrimitive.Group data-slot='context-menu-group' {...props} />

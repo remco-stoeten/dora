@@ -11,6 +11,7 @@ import { useEffectiveShortcuts, useShortcut } from "@studio/core/shortcuts";
 import { LiveMonitorProvider } from "@studio/core/live-monitor";
 import { NavigationSidebar, SidebarProvider } from "@studio/features/app-sidebar";
 import { CommandPalette } from "@studio/features/command-palette";
+import { scheduleSqlConsoleCommand } from "@studio/features/command-palette/events";
 import { useConnections, useConnectionMutations } from "@studio/core/data-provider/hooks";
 import {
   backendToFrontendConnection,
@@ -90,7 +91,18 @@ function IndexInner() {
     return urlView || "database-studio";
   });
 
-  const { tabs, activeTabId, openTab, closeTab, setActiveTab, closeTabsForConnection } = useTabs();
+  const {
+    tabs,
+    activeTabId,
+    openTab,
+    closeTab,
+    closeOtherTabs,
+    closeTabsToLeft,
+    closeTabsToRight,
+    setActiveTab,
+    togglePinTab,
+    closeTabsForConnection,
+  } = useTabs();
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
   const activeTabConnectionId = activeTab?.connectionId ?? "";
 
@@ -671,6 +683,31 @@ function IndexInner() {
     autoSelectFirstTableRef.current = false;
   }, []);
 
+  const navigateToSqlConsole =
+    activeNavId === "sql-console" ? undefined : function () {
+      setActiveNavId("sql-console");
+    };
+
+  const handleInsertSqlInConsole = useCallback(
+    function (sql: string) {
+      scheduleSqlConsoleCommand(
+        { type: "load-query", query: sql, mode: "sql", execute: false },
+        navigateToSqlConsole ? { navigate: navigateToSqlConsole } : undefined,
+      );
+    },
+    [activeNavId],
+  );
+
+  const handleRunSqlInConsole = useCallback(
+    function (sql: string) {
+      scheduleSqlConsoleCommand(
+        { type: "load-query", query: sql, mode: "sql", execute: true },
+        navigateToSqlConsole ? { navigate: navigateToSqlConsole } : undefined,
+      );
+    },
+    [activeNavId],
+  );
+
   useEffect(
     function clearTabsFromPreviousConnection() {
       const previousConnectionId = previousConnectionIdRef.current;
@@ -724,8 +761,6 @@ function IndexInner() {
                   activeConnectionId={activeConnectionId}
                   onConnectionSelect={handleConnectionSelect}
                   onAddConnection={handleOpenNewConnection}
-                  onToggleSidebar={toggleDatabasePanel}
-                  isSidebarOpen={isSidebarOpen}
                   onManageConnections={function () {
                     const activeConn = connections.find(function (c) {
                       return c.id === activeConnectionId;
@@ -783,6 +818,10 @@ function IndexInner() {
                         activeTabId={activeTabId}
                         onTabClick={handleTabClick}
                         onTabClose={closeTab}
+                        onTabPinToggle={togglePinTab}
+                        onCloseOtherTabs={closeOtherTabs}
+                        onCloseTabsToLeft={closeTabsToLeft}
+                        onCloseTabsToRight={closeTabsToRight}
                         rightSlot={<WindowControls />}
                       />
                       <ErrorBoundary feature="Database Studio">
@@ -797,6 +836,7 @@ function IndexInner() {
                             }
                           }}
                           activeConnectionId={studioConnectionId}
+                          onConnectionSelect={setActiveConnectionId}
                           onAddConnection={handleOpenNewConnection}
                           onEditConnection={
                             studioConnectionId
@@ -950,6 +990,8 @@ function IndexInner() {
                 selectedTableId={selectedTableId || null}
                 selectedTableName={selectedTableName || null}
                 editorContext={activeNavId === "sql-console" ? sqlConsoleEditorContext : null}
+                onEditorInsert={handleInsertSqlInConsole}
+                onRunInConsole={handleRunSqlInConsole}
               />
             </div>
           </div>
@@ -994,6 +1036,8 @@ function AiAssistantPanelHost(props: {
   selectedTableId: string | null;
   selectedTableName: string | null;
   editorContext: AiAssistantEditorContext | null;
+  onEditorInsert?: (sql: string) => void;
+  onRunInConsole?: (sql: string) => void;
 }) {
   const open = useAiAssistantStore(function (s) {
     return s.open;
