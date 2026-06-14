@@ -104,7 +104,7 @@ jobs:
   submit-update:
     needs: generate-manifests
     if: ${{ inputs.submit_update }}
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
     steps:
