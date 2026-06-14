@@ -30,6 +30,7 @@ import type { LiveMonitorConfig, ChangeEvent } from '@studio/core/live-monitor'
 import { LiveMonitorPopover } from './live-monitor-popover'
 import { ChangeFeed } from './change-feed'
 import { FilterBar } from './filter-bar'
+import type { ReactNode } from 'react'
 
 type Props = {
 	tableName: string
@@ -49,6 +50,7 @@ type Props = {
 	isDryEditMode?: boolean
 	onDryEditModeChange?: (enabled: boolean) => void
 	onImportCsv?: () => void
+	importFilesAction?: ReactNode
 	onSeed?: () => void
 	onCopySchema?: () => void
 	onCopyDrizzleSchema?: () => void
@@ -87,6 +89,7 @@ export function StudioToolbar({
 	changeEvents,
 	unreadChangeCount,
 	onImportCsv,
+	importFilesAction,
 	onClearChangeEvents,
 	onMarkChangesRead
 }: Props) {
@@ -256,6 +259,8 @@ export function StudioToolbar({
 							<span className='hidden sm:inline'>Import CSV</span>
 						</Button>
 					)}
+
+					{importFilesAction}
 
 					<Button
 						variant='default'

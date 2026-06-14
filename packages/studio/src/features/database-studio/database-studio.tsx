@@ -10,6 +10,8 @@ import { useUndo } from '@studio/core/undo'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import { getSourceCaps } from '@studio/features/connections/source-caps'
 import { isUiActionVisible } from '@studio/features/connections/ui-actions'
+import { DataFileSessionChrome } from './components/data-file-session-chrome'
+import { ImportFilesIntoDuckDbButton } from './components/import-files-into-duckdb-button'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -20,7 +22,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle
 } from '@studio/shared/ui/alert-dialog'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AddRecordDialog } from './components/add-record-dialog'
 import { BottomStatusBar } from './components/bottom-status-bar'
 import { BulkEditDialog } from './components/bulk-edit-dialog'
@@ -57,6 +59,7 @@ type Props = {
 	activeConnectionId?: string
 	onAddConnection?: () => void
 	onEditConnection?: () => void
+	onConnectionSelect?: (connectionId: string) => void
 	initialRowPK?: string | number | null
 	onRowSelectionChange?: (pk: string | number | null) => void
 }
@@ -67,6 +70,7 @@ export function DatabaseStudio({
 	activeConnectionId,
 	onAddConnection,
 	onEditConnection,
+	onConnectionSelect,
 	initialRowPK,
 	onRowSelectionChange
 }: Props) {
@@ -95,8 +99,42 @@ export function DatabaseStudio({
 	)
 	const canEditRows = sourceCaps ? isUiActionVisible('edit-rows', sourceCaps) : false
 	const canImportFile = sourceCaps ? isUiActionVisible('import-csv', sourceCaps) : false
+	const canAttachFiles = sourceCaps ? isUiActionVisible('attach-file', sourceCaps) : false
 	const canExportFile = sourceCaps ? isUiActionVisible('export-data', sourceCaps) : true
 	const showLiveMonitor = sourceCaps ? isUiActionVisible('live-monitor', sourceCaps) : false
+	const existingTableNames = useMemo(
+		function () {
+			if (!schemaQuery.data) return []
+			return schemaQuery.data.tables.map(function (table) {
+				return table.name
+			})
+		},
+		[schemaQuery.data]
+	)
+	const importFilesAction =
+		canAttachFiles && activeConnectionId && activeConnection ? (
+			<ImportFilesIntoDuckDbButton
+				connectionId={activeConnectionId}
+				connectionLabel={activeConnection.name}
+				existingTableNames={existingTableNames}
+			/>
+		) : null
+
+	const withDataFileChrome = useCallback(
+		function wrapDataFileChrome(node: ReactNode) {
+			if (!activeConnection) return node
+			return (
+				<DataFileSessionChrome
+					connection={activeConnection}
+					selectedTableName={displayTableName}
+					onConnectionSelect={onConnectionSelect}
+				>
+					{node}
+				</DataFileSessionChrome>
+			)
+		},
+		[activeConnection, displayTableName, onConnectionSelect]
+	)
 	const schemaSummary = useMemo(
 		function () {
 			if (!schemaQuery.data) {
@@ -565,13 +603,13 @@ export function DatabaseStudio({
 	// No table selected
 	if (!tableId) {
 		if (schemaQuery.isLoading && !schemaQuery.data) {
-			return (
+			return withDataFileChrome(
 				<DatabaseStudioConnectionLoading connectionName={activeConnection?.name} />
 			)
 		}
 
 		if (schemaQuery.isError) {
-			return (
+			return withDataFileChrome(
 				<DatabaseStudioConnectionFailed
 					connectionName={activeConnection?.name}
 					errorMessage={
@@ -586,12 +624,12 @@ export function DatabaseStudio({
 		}
 
 		if (schemaQuery.data && schemaSummary.tableCount === 0) {
-			return (
+			return withDataFileChrome(
 				<DatabaseStudioNoTablesFound connectionName={activeConnection?.name} />
 			)
 		}
 
-		return (
+		return withDataFileChrome(
 			<DatabaseStudioNoTable
 				connectionName={activeConnection?.name}
 				tableCount={schemaSummary.tableCount}
@@ -602,7 +640,7 @@ export function DatabaseStudio({
 
 	// Structure view
 	if (viewMode === 'structure' && tableData) {
-		return (
+		return withDataFileChrome(
 			<DatabaseStudioStructureView
 				displayTableName={displayTableName}
 				tableData={tableData}
@@ -639,7 +677,7 @@ export function DatabaseStudio({
 	}
 
 	if (viewMode === 'chart' && tableData) {
-		return (
+		return withDataFileChrome(
 			<div className='flex h-full min-h-0 flex-col bg-background relative'>
 				<StudioToolbar
 					tableName={displayTableName}
@@ -651,6 +689,7 @@ export function DatabaseStudio({
 					onExportSql={canExportFile ? handleExportSqlAll : undefined}
 					onAddRecord={canEditRows ? handleAddRecord : undefined}
 					onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
+					importFilesAction={importFilesAction}
 					isLoading={isLoading}
 					filters={filters}
 					onFiltersChange={setFilters}
@@ -683,7 +722,7 @@ export function DatabaseStudio({
 	}
 
 	// Content view (default)
-	return (
+	return withDataFileChrome(
 		<div className='flex h-full min-h-0 flex-col bg-background relative'>
 			<div role='status' aria-live='polite' aria-atomic='true' className='sr-only'>
 				{selectionAnnouncement}
@@ -698,6 +737,7 @@ export function DatabaseStudio({
 				onExportSql={canExportFile ? handleExportSqlAll : undefined}
 				onAddRecord={canEditRows ? handleAddRecord : undefined}
 				onImportCsv={canImportFile ? function () { setShowImportDialog(true) } : undefined}
+				importFilesAction={importFilesAction}
 				isLoading={isLoading}
 				filters={filters}
 				onFiltersChange={setFilters}
