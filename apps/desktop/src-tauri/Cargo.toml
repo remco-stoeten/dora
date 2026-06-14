@@ -86,6 +86,8 @@ rand = "0.9"
 bcrypt = "0.15"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 tauri-plugin-shell = "2.3.4"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 dotenvy = "0.15"
 toml = "0.8"
 zstd = "0.13"

@@ -331,13 +331,19 @@ mod tests {
             &conn,
             "SELECT 42::INTEGER, 3.5::DOUBLE, 'hello', TRUE, NULL",
         );
-        assert_eq!(result, serde_json::json!([[42, 3.5, "hello", true, "NULL"]]));
+        assert_eq!(
+            result,
+            serde_json::json!([[42, 3.5, "hello", true, "NULL"]])
+        );
     }
 
     #[test]
     fn big_integers_keep_precision() {
         let conn = Connection::open_in_memory().unwrap();
-        let result = query_json(&conn, "SELECT 170141183460469231731687303715884105727::HUGEINT");
+        let result = query_json(
+            &conn,
+            "SELECT 170141183460469231731687303715884105727::HUGEINT",
+        );
         assert_eq!(
             result,
             serde_json::json!([["170141183460469231731687303715884105727"]])

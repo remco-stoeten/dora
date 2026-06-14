@@ -11,6 +11,8 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use duckdb::Connection;
+use serde::{Deserialize, Serialize};
+use specta::Type;
 
 /// Outcome of registering a batch of file sources. A missing or malformed file
 /// never aborts the whole connection; it is reported so the UI can surface it.
@@ -24,14 +26,56 @@ pub struct RegisterReport {
     pub failed: Vec<(String, String)>,
 }
 
+impl RegisterReport {
+    pub fn from_entries(entries: &[DataFileSourceEntry]) -> Self {
+        let mut report = RegisterReport::default();
+        for entry in entries {
+            match entry.status {
+                DataFileSourceStatus::Active => report.registered.push(entry.view_name.clone()),
+                DataFileSourceStatus::Missing => report.missing.push(entry.path.clone()),
+                DataFileSourceStatus::Failed => report.failed.push((
+                    entry.path.clone(),
+                    entry
+                        .error
+                        .clone()
+                        .unwrap_or_else(|| "Registration failed".to_string()),
+                )),
+            }
+        }
+        report
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum DataFileSourceStatus {
+    Active,
+    Missing,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DataFileSourceEntry {
+    pub path: String,
+    pub view_name: String,
+    pub file_type: String,
+    pub status: DataFileSourceStatus,
+    pub error: Option<String>,
+}
+
+pub fn has_active_sources(entries: &[DataFileSourceEntry]) -> bool {
+    entries
+        .iter()
+        .any(|entry| entry.status == DataFileSourceStatus::Active)
+}
+
 /// Returns the DuckDB table-function expression for a path based on its
 /// extension, or `None` when the extension is not a supported data file.
 pub fn reader_expr(path: &str) -> Option<String> {
     let escaped = path.replace('\'', "''");
     match extension(path).as_deref() {
-        Some("csv") | Some("tsv") | Some("txt") => {
-            Some(format!("read_csv_auto('{}')", escaped))
-        }
+        Some("csv") | Some("tsv") | Some("txt") => Some(format!("read_csv_auto('{}')", escaped)),
         Some("parquet") | Some("pq") => Some(format!("read_parquet('{}')", escaped)),
         Some("json") | Some("ndjson") | Some("jsonl") => {
             Some(format!("read_json_auto('{}')", escaped))
@@ -43,6 +87,20 @@ pub fn reader_expr(path: &str) -> Option<String> {
 /// True when the path looks like a flat data file we can open as a view.
 pub fn is_data_file(path: &str) -> bool {
     reader_expr(path).is_some()
+}
+
+pub fn file_type_label(path: &str) -> String {
+    match extension(path).as_deref() {
+        Some("csv") => "CSV".to_string(),
+        Some("tsv") => "TSV".to_string(),
+        Some("txt") => "Text".to_string(),
+        Some("parquet") | Some("pq") => "Parquet".to_string(),
+        Some("json") => "JSON".to_string(),
+        Some("ndjson") => "NDJSON".to_string(),
+        Some("jsonl") => "JSON Lines".to_string(),
+        Some(ext) => ext.to_uppercase(),
+        None => "Unknown".to_string(),
+    }
 }
 
 /// Derives a SQL-safe, collision-free view name from a file path. The stem is
@@ -80,37 +138,64 @@ pub fn view_name_for(path: &str, taken: &HashSet<String>) -> String {
 /// Registers every file source as a view on `conn`. Missing/failed files are
 /// collected rather than propagated so a connection with one bad path still
 /// opens with the rest of its tables.
-pub fn register_sources(conn: &Connection, sources: &[String]) -> RegisterReport {
-    let mut report = RegisterReport::default();
+pub fn register_sources(conn: &Connection, sources: &[String]) -> Vec<DataFileSourceEntry> {
+    let mut entries = Vec::with_capacity(sources.len());
     let mut taken: HashSet<String> = HashSet::new();
 
     for path in sources {
+        let view_name = view_name_for(path, &taken);
+        let file_type = file_type_label(path);
+
         if !Path::new(path).exists() {
-            report.missing.push(path.clone());
+            entries.push(DataFileSourceEntry {
+                path: path.clone(),
+                view_name,
+                file_type,
+                status: DataFileSourceStatus::Missing,
+                error: Some("File not found".to_string()),
+            });
             continue;
         }
 
         let Some(reader) = reader_expr(path) else {
-            report
-                .failed
-                .push((path.clone(), "Unsupported file type".to_string()));
+            entries.push(DataFileSourceEntry {
+                path: path.clone(),
+                view_name,
+                file_type,
+                status: DataFileSourceStatus::Failed,
+                error: Some("Unsupported file type".to_string()),
+            });
             continue;
         };
 
-        let view = view_name_for(path, &taken);
-        let quoted = view.replace('"', "\"\"");
-        let sql = format!("CREATE OR REPLACE VIEW \"{}\" AS SELECT * FROM {}", quoted, reader);
+        let quoted = view_name.replace('"', "\"\"");
+        let sql = format!(
+            "CREATE OR REPLACE VIEW \"{}\" AS SELECT * FROM {}",
+            quoted, reader
+        );
 
         match conn.execute_batch(&sql) {
             Ok(()) => {
-                taken.insert(view.clone());
-                report.registered.push(view);
+                taken.insert(view_name.clone());
+                entries.push(DataFileSourceEntry {
+                    path: path.clone(),
+                    view_name,
+                    file_type,
+                    status: DataFileSourceStatus::Active,
+                    error: None,
+                });
             }
-            Err(e) => report.failed.push((path.clone(), e.to_string())),
+            Err(error) => entries.push(DataFileSourceEntry {
+                path: path.clone(),
+                view_name,
+                file_type,
+                status: DataFileSourceStatus::Failed,
+                error: Some(error.to_string()),
+            }),
         }
     }
 
-    report
+    entries
 }
 
 fn extension(path: &str) -> Option<String> {
@@ -163,9 +248,10 @@ mod tests {
     #[test]
     fn register_reports_missing_files() {
         let conn = Connection::open_in_memory().unwrap();
-        let report = register_sources(&conn, &["/no/such/file.csv".to_string()]);
-        assert_eq!(report.missing.len(), 1);
-        assert!(report.registered.is_empty());
+        let entries = register_sources(&conn, &["/no/such/file.csv".to_string()]);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].status, DataFileSourceStatus::Missing);
+        assert!(!has_active_sources(&entries));
     }
 
     #[test]
@@ -181,11 +267,11 @@ mod tests {
         let path_str = path.to_string_lossy().to_string();
 
         let conn = Connection::open_in_memory().unwrap();
-        let report = register_sources(&conn, &[path_str]);
-        assert_eq!(report.registered.len(), 1);
-        let view = &report.registered[0];
+        let entries = register_sources(&conn, &[path_str]);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].status, DataFileSourceStatus::Active);
+        let view = &entries[0].view_name;
 
-        // Type inference passthrough: id is integer, amount is double.
         let count: i64 = conn
             .query_row(&format!("SELECT COUNT(*) FROM \"{}\"", view), [], |r| {
                 r.get(0)
@@ -200,9 +286,94 @@ mod tests {
             .unwrap();
         assert!((total - 30.5).abs() < 1e-9);
 
-        // The source is a view, so mutations fail structurally.
         let insert = conn.execute(&format!("INSERT INTO \"{}\" VALUES (3,'x',1)", view), []);
         assert!(insert.is_err(), "views must reject inserts");
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn register_partial_success_keeps_active_views() {
+        let dir = std::env::temp_dir();
+        let good_path = dir.join("dora_filesource_good.csv");
+        let bad_json_path = dir.join("dora_filesource_bad.json");
+        {
+            let mut f = std::fs::File::create(&good_path).unwrap();
+            writeln!(f, "id").unwrap();
+            writeln!(f, "1").unwrap();
+        }
+        std::fs::write(&bad_json_path, "{ invalid").unwrap();
+
+        let conn = Connection::open_in_memory().unwrap();
+        let entries = register_sources(
+            &conn,
+            &[
+                good_path.to_string_lossy().to_string(),
+                "/definitely/missing/dora_file.csv".to_string(),
+                bad_json_path.to_string_lossy().to_string(),
+            ],
+        );
+
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].status, DataFileSourceStatus::Active);
+        assert_eq!(entries[1].status, DataFileSourceStatus::Missing);
+        assert_eq!(entries[2].status, DataFileSourceStatus::Failed);
+        assert!(has_active_sources(&entries));
+
+        let view = &entries[0].view_name;
+        let count: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM \"{}\"", view), [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let _ = std::fs::remove_file(&good_path);
+        let _ = std::fs::remove_file(&bad_json_path);
+    }
+
+    #[test]
+    fn duplicate_stems_get_stable_view_names_in_one_session() {
+        let dir = std::env::temp_dir();
+        let first = dir.join("dora_filesource_dup_a.csv");
+        let second = dir.join("dora_filesource_dup_b.csv");
+        for path in [&first, &second] {
+            let mut f = std::fs::File::create(path).unwrap();
+            writeln!(f, "value").unwrap();
+            writeln!(f, "1").unwrap();
+        }
+
+        let conn = Connection::open_in_memory().unwrap();
+        let entries = register_sources(
+            &conn,
+            &[
+                first.to_string_lossy().to_string(),
+                second.to_string_lossy().to_string(),
+            ],
+        );
+
+        assert_eq!(entries[0].view_name, "dora_filesource_dup_a");
+        assert_eq!(entries[1].view_name, "dora_filesource_dup_b");
+        assert!(entries
+            .iter()
+            .all(|entry| entry.status == DataFileSourceStatus::Active));
+
+        let _ = std::fs::remove_file(&first);
+        let _ = std::fs::remove_file(&second);
+    }
+
+    #[test]
+    fn register_reports_invalid_json_as_failed() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("dora_filesource_invalid.json");
+        std::fs::write(&path, "{ this is not valid json").unwrap();
+
+        let conn = Connection::open_in_memory().unwrap();
+        let entries = register_sources(&conn, &[path.to_string_lossy().to_string()]);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].status, DataFileSourceStatus::Failed);
+        assert!(entries[0].error.as_ref().unwrap().len() > 0);
 
         let _ = std::fs::remove_file(&path);
     }

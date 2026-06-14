@@ -586,10 +586,7 @@ fn fetch_duckdb_data(
         let mut stmt = conn.prepare(query)?;
         let mut rows = stmt.query([])?;
 
-        let columns: Vec<String> = rows
-            .as_ref()
-            .map(|s| s.column_names())
-            .unwrap_or_default();
+        let columns: Vec<String> = rows.as_ref().map(|s| s.column_names()).unwrap_or_default();
 
         let mut data = Vec::new();
         while let Some(row) = rows.next()? {

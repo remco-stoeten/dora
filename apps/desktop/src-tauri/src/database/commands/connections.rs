@@ -3,8 +3,11 @@ use uuid::Uuid;
 
 use crate::{
     database::{
+        duckdb::file_source::DataFileSourceEntry,
+        duckdb::import_files::ImportFilesIntoDuckDbResult,
+        duckdb::save_session::SaveDataFileSessionResult,
         services::{connection::ConnectionService, query::QueryService},
-        types::{ConnectionInfo, DatabaseInfo},
+        types::{ConnectionInfo, DatabaseConnectResult, DatabaseInfo},
     },
     error::Error,
     storage::ConnectionHistoryEntry,
@@ -64,13 +67,71 @@ pub async fn connect_to_database(
     state: State<'_, AppState>,
     monitor: State<'_, crate::database::ConnectionMonitor>,
     certificates: State<'_, crate::database::Certificates>,
-) -> Result<bool, Error> {
+) -> Result<DatabaseConnectResult, Error> {
     let svc = ConnectionService {
         connections: &state.connections,
         storage: &state.storage,
     };
     svc.connect_to_database(&monitor, &certificates, connection_id)
         .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_data_file_source_status(
+    connection_id: Uuid,
+    state: State<'_, AppState>,
+) -> Result<Vec<DataFileSourceEntry>, Error> {
+    let svc = ConnectionService {
+        connections: &state.connections,
+        storage: &state.storage,
+    };
+    svc.get_data_file_source_status(connection_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_data_file_registration(
+    connection_id: Uuid,
+    state: State<'_, AppState>,
+    monitor: State<'_, crate::database::ConnectionMonitor>,
+    certificates: State<'_, crate::database::Certificates>,
+) -> Result<DatabaseConnectResult, Error> {
+    let svc = ConnectionService {
+        connections: &state.connections,
+        storage: &state.storage,
+    };
+    svc.retry_data_file_registration(&monitor, &certificates, connection_id)
+        .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_data_file_session_as_duckdb(
+    connection_id: Uuid,
+    destination_path: String,
+    overwrite: bool,
+    state: State<'_, AppState>,
+) -> Result<SaveDataFileSessionResult, Error> {
+    let svc = ConnectionService {
+        connections: &state.connections,
+        storage: &state.storage,
+    };
+    svc.save_data_file_session_as_duckdb(connection_id, destination_path, overwrite)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn import_files_into_duckdb(
+    connection_id: Uuid,
+    file_paths: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<ImportFilesIntoDuckDbResult, Error> {
+    let svc = ConnectionService {
+        connections: &state.connections,
+        storage: &state.storage,
+    };
+    svc.import_files_into_duckdb(connection_id, file_paths)
 }
 
 #[tauri::command]

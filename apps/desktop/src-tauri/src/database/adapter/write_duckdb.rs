@@ -68,7 +68,10 @@ impl WriteAdapter for DuckDbAdapter {
             quote_ident(&column),
             quote_ident(&pk_column)
         );
-        let params = [json_to_duckdb_value(&new_value), json_to_duckdb_value(&pk_value)];
+        let params = [
+            json_to_duckdb_value(&new_value),
+            json_to_duckdb_value(&pk_value),
+        ];
         let result = conn.execute(&query, duckdb::params_from_iter(params.iter()))?;
 
         Ok(MutationResult {
@@ -193,10 +196,8 @@ impl WriteAdapter for DuckDbAdapter {
             let mut stmt = conn.prepare(&query)?;
             let mut rows = stmt.query(duckdb::params_from_iter([pk_val].iter()))?;
 
-            let column_names: Vec<String> = rows
-                .as_ref()
-                .map(|s| s.column_names())
-                .unwrap_or_default();
+            let column_names: Vec<String> =
+                rows.as_ref().map(|s| s.column_names()).unwrap_or_default();
 
             match rows.next()? {
                 Some(row) => {
@@ -403,7 +404,14 @@ mod tests {
         let (adapter, shared) = setup();
 
         adapter
-            .update_cell("t".into(), None, "id".into(), json!(1), "n".into(), json!(123))
+            .update_cell(
+                "t".into(),
+                None,
+                "id".into(),
+                json!(1),
+                "n".into(),
+                json!(123),
+            )
             .await
             .unwrap();
         adapter
@@ -492,7 +500,14 @@ mod tests {
         assert!(insert.unwrap_err().to_string().contains("read-only"));
 
         let update = adapter
-            .update_cell("t".into(), None, "id".into(), json!(1), "name".into(), json!("x"))
+            .update_cell(
+                "t".into(),
+                None,
+                "id".into(),
+                json!(1),
+                "name".into(),
+                json!("x"),
+            )
             .await;
         assert!(update.is_err());
 

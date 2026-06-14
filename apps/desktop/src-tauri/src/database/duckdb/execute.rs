@@ -118,7 +118,11 @@ fn execute_query_with_results(
     }
 
     let duration = started_at.elapsed().as_millis() as u64;
-    log::info!("DuckDB query completed: {} rows in {}ms", total_rows, duration);
+    log::info!(
+        "DuckDB query completed: {} rows in {}ms",
+        total_rows,
+        duration
+    );
 
     sender.send(QueryExecEvent::Finished {
         elapsed_ms: duration,

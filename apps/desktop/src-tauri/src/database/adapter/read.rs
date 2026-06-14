@@ -190,10 +190,7 @@ impl DuckDbAdapter {
         }
     }
 
-    pub fn new_with_read_only(
-        connection: Arc<Mutex<duckdb::Connection>>,
-        read_only: bool,
-    ) -> Self {
+    pub fn new_with_read_only(connection: Arc<Mutex<duckdb::Connection>>, read_only: bool) -> Self {
         Self {
             connection,
             read_only,

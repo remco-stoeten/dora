@@ -52,10 +52,7 @@ pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<Databas
             );
 
             // PRAGMA table_info returns: cid, name, type, notnull, dflt_value, pk
-            let pragma_query = format!(
-                "PRAGMA table_info('{}')",
-                qualified.replace('\'', "''")
-            );
+            let pragma_query = format!("PRAGMA table_info('{}')", qualified.replace('\'', "''"));
             let mut col_stmt = conn
                 .prepare(&pragma_query)
                 .context("Failed to prepare PRAGMA table_info query")?;
@@ -71,8 +68,8 @@ pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<Databas
                 })?
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let fk_map = foreign_keys_for_table(&conn, &schema_name, &table_name)
-                .unwrap_or_default();
+            let fk_map =
+                foreign_keys_for_table(&conn, &schema_name, &table_name).unwrap_or_default();
 
             let indexes = indexes_for_table(&conn, &schema_name, &table_name).unwrap_or_default();
 
@@ -133,8 +130,7 @@ pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<Databas
                 schema_name.replace('"', "\"\""),
                 view_name.replace('"', "\"\"")
             );
-            let pragma_query =
-                format!("PRAGMA table_info('{}')", qualified.replace('\'', "''"));
+            let pragma_query = format!("PRAGMA table_info('{}')", qualified.replace('\'', "''"));
             let Ok(mut col_stmt) = conn.prepare(&pragma_query) else {
                 continue;
             };
