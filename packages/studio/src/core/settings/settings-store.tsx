@@ -41,12 +41,89 @@ export const DEFAULT_SETTINGS: SettingsState = {
 }
 
 const STORAGE_KEY = 'ui_settings'
+const EDITOR_THEMES: ReadonlySet<EditorTheme> = new Set([
+	'auto',
+	'vs',
+	'vs-dark',
+	'dracula',
+	'nord',
+	'monokai',
+	'github-dark',
+	'github-light'
+])
+const SELECTION_BAR_STYLES: ReadonlySet<SettingsState['selectionBarStyle']> = new Set([
+	'floating',
+	'static'
+])
+const STARTUP_CONNECTION_MODES: ReadonlySet<SettingsState['startupConnectionMode']> = new Set([
+	'auto',
+	'empty'
+])
 
 function isTauriRuntime(): boolean {
 	return (
 		typeof window !== 'undefined' &&
 		('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
 	)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function optionalString(value: unknown): string | null {
+	return typeof value === 'string' && value.trim() ? value : null
+}
+
+function optionalRowPk(value: unknown): string | number | null {
+	if (typeof value === 'string' || typeof value === 'number') return value
+	return null
+}
+
+function clampEditorFontSize(value: unknown): number {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_SETTINGS.editorFontSize
+	return Math.min(24, Math.max(10, Math.round(value)))
+}
+
+export function sanitizeSettings(value: unknown): SettingsState {
+	if (!isRecord(value)) return DEFAULT_SETTINGS
+
+	const startupConnectionMode = STARTUP_CONNECTION_MODES.has(
+		value.startupConnectionMode as SettingsState['startupConnectionMode']
+	)
+		? (value.startupConnectionMode as SettingsState['startupConnectionMode'])
+		: typeof value.restoreLastConnection === 'boolean'
+			? value.restoreLastConnection
+				? 'auto'
+				: 'empty'
+			: DEFAULT_SETTINGS.startupConnectionMode
+
+	return {
+		confirmBeforeDelete:
+			typeof value.confirmBeforeDelete === 'boolean'
+				? value.confirmBeforeDelete
+				: DEFAULT_SETTINGS.confirmBeforeDelete,
+		editorFontSize: clampEditorFontSize(value.editorFontSize),
+		editorTheme: EDITOR_THEMES.has(value.editorTheme as EditorTheme)
+			? (value.editorTheme as EditorTheme)
+			: DEFAULT_SETTINGS.editorTheme,
+		enableVimMode:
+			typeof value.enableVimMode === 'boolean'
+				? value.enableVimMode
+				: DEFAULT_SETTINGS.enableVimMode,
+		restoreLastConnection: startupConnectionMode === 'auto',
+		startupConnectionMode,
+		lastConnectionId: optionalString(value.lastConnectionId),
+		lastTableId: optionalString(value.lastTableId),
+		lastRowPK: optionalRowPk(value.lastRowPK),
+		selectionBarStyle: SELECTION_BAR_STYLES.has(
+			value.selectionBarStyle as SettingsState['selectionBarStyle']
+		)
+			? (value.selectionBarStyle as SettingsState['selectionBarStyle'])
+			: DEFAULT_SETTINGS.selectionBarStyle,
+		showToasts:
+			typeof value.showToasts === 'boolean' ? value.showToasts : DEFAULT_SETTINGS.showToasts
+	}
 }
 
 // ============================================================================
@@ -70,7 +147,7 @@ async function loadSettingsFromBackend(): Promise<SettingsState> {
 			if (!stored) return DEFAULT_SETTINGS
 
 			const parsed = JSON.parse(stored)
-			return { ...DEFAULT_SETTINGS, ...parsed }
+			return sanitizeSettings(parsed)
 		} catch (error) {
 			console.warn('Failed to load settings from local storage:', error)
 			return DEFAULT_SETTINGS
@@ -81,7 +158,7 @@ async function loadSettingsFromBackend(): Promise<SettingsState> {
 		const result = await commands.getSetting(STORAGE_KEY)
 		if (result.status === 'ok' && result.data) {
 			const parsed = JSON.parse(result.data)
-			return { ...DEFAULT_SETTINGS, ...parsed }
+			return sanitizeSettings(parsed)
 		}
 	} catch (error) {
 		console.warn('Failed to load settings from backend:', error)
@@ -90,9 +167,10 @@ async function loadSettingsFromBackend(): Promise<SettingsState> {
 }
 
 async function saveSettingsToBackend(settings: SettingsState): Promise<void> {
+	const sanitized = sanitizeSettings(settings)
 	if (!isTauriRuntime()) {
 		try {
-			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+			window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized))
 			return
 		} catch (error) {
 			console.warn('Failed to save settings to local storage:', error)
@@ -101,7 +179,7 @@ async function saveSettingsToBackend(settings: SettingsState): Promise<void> {
 	}
 
 	try {
-		const serialized = JSON.stringify(settings)
+		const serialized = JSON.stringify(sanitized)
 		await commands.setSetting(STORAGE_KEY, serialized)
 	} catch (error) {
 		console.warn('Failed to save settings to backend:', error)
@@ -121,6 +199,14 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 	const [isLoading, setIsLoading] = useState(true)
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const initialLoadDone = useRef(false)
+	const latestSettingsRef = useRef(settings)
+
+	useEffect(
+		function syncLatestSettingsRef() {
+			latestSettingsRef.current = settings
+		},
+		[settings]
+	)
 
 	useEffect(() => {
 		async function load() {
@@ -140,7 +226,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 		}
 
 		saveTimeoutRef.current = setTimeout(() => {
-			saveSettingsToBackend(settings)
+			saveSettingsToBackend(latestSettingsRef.current)
+			saveTimeoutRef.current = null
 		}, 300)
 
 		return () => {
@@ -149,6 +236,25 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 			}
 		}
 	}, [settings])
+
+	useEffect(function flushSettingsBeforeExit() {
+		function flush() {
+			if (!initialLoadDone.current) return
+			if (saveTimeoutRef.current) {
+				clearTimeout(saveTimeoutRef.current)
+				saveTimeoutRef.current = null
+			}
+			void saveSettingsToBackend(latestSettingsRef.current)
+		}
+
+		window.addEventListener('pagehide', flush)
+		window.addEventListener('beforeunload', flush)
+		return function cleanup() {
+			window.removeEventListener('pagehide', flush)
+			window.removeEventListener('beforeunload', flush)
+			flush()
+		}
+	}, [])
 
 	const updateSetting = useCallback(
 		<K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
@@ -162,7 +268,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 	}, [])
 
 	const resetSettings = useCallback(() => {
-		setSettings(DEFAULT_SETTINGS)
+		setSettings({ ...DEFAULT_SETTINGS })
 	}, [])
 
 	return (

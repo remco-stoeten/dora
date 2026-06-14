@@ -1,19 +1,21 @@
-import { X, RotateCcw, Keyboard } from 'lucide-react'
+import { RotateCcw, Keyboard } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { formatShortcut } from '@studio/core/shortcuts'
+import { formatShortcutList, type ShortcutConflictEventDetail } from '@studio/core/shortcuts'
 import { Button } from '@studio/shared/ui/button'
 import { cn } from '@studio/shared/utils/cn'
 
 type Props = {
 	value: string | string[]
-	onChange: (value: string) => void
+	onChange: (value: string | string[]) => boolean | void
 	onReset: () => void
 	isDefault: boolean
+	conflict?: string | null
 }
 
-export function ShortcutRecorder({ value, onChange, onReset, isDefault }: Props) {
+export function ShortcutRecorder({ value, onChange, onReset, isDefault, conflict }: Props) {
 	const [isRecording, setIsRecording] = useState(false)
 	const [tempCombo, setTempCombo] = useState<string | null>(null)
+	const [internalConflict, setInternalConflict] = useState<string | null>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 
 	useEffect(
@@ -49,13 +51,20 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault }: Props)
 
 				const combo = [...modifiers, key].join('+')
 				setTempCombo(combo)
+				setInternalConflict(null)
 			}
 
 			function handleKeyUp(_e: KeyboardEvent) {
 				if (tempCombo) {
-					onChange(tempCombo)
-					setIsRecording(false)
-					setTempCombo(null)
+					const nextValue = Array.isArray(value)
+						? [tempCombo, ...value.slice(1)]
+						: tempCombo
+					const accepted = onChange(nextValue)
+
+					if (accepted !== false) {
+						setIsRecording(false)
+						setTempCombo(null)
+					}
 				}
 			}
 
@@ -67,7 +76,28 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault }: Props)
 				window.removeEventListener('keyup', handleKeyUp)
 			}
 		},
-		[isRecording, tempCombo, onChange]
+		[isRecording, onChange, tempCombo, value]
+	)
+
+	useEffect(
+		function () {
+			function handleShortcutConflict(event: Event) {
+				const detail = (event as CustomEvent<ShortcutConflictEventDetail>).detail
+				if (!detail || !tempCombo) return
+
+				const requested = detail.requestedCombo
+				const requestedPrimary = Array.isArray(requested) ? requested[0] : requested
+				if (requestedPrimary !== tempCombo) return
+
+				setInternalConflict(detail.message)
+			}
+
+			window.addEventListener('dora-shortcut-conflict', handleShortcutConflict)
+			return function () {
+				window.removeEventListener('dora-shortcut-conflict', handleShortcutConflict)
+			}
+		},
+		[tempCombo]
 	)
 
 	// Handle clicking outside to cancel
@@ -90,44 +120,61 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault }: Props)
 		[isRecording]
 	)
 
-	const displayValue = tempCombo || (Array.isArray(value) ? value[0] : value)
-	const formatted = formatShortcut(displayValue || '')
+	const displayValue = tempCombo
+		? Array.isArray(value)
+			? [tempCombo, ...value.slice(1)]
+			: tempCombo
+		: value
+	const formatted = tempCombo ? formatShortcutList(displayValue) : formatShortcutList(value)
+	const conflictMessage = conflict ?? internalConflict
 
 	return (
-		<div className='flex items-center gap-2'>
-			<Button
-				ref={buttonRef}
-				variant={isRecording ? 'destructive' : 'outline'}
-				size='sm'
-				className={cn(
-					'min-w-[120px] justify-between font-mono text-xs',
-					isRecording && 'animate-pulse'
-				)}
-				onClick={function () {
-					setIsRecording(true)
-				}}
-			>
-				{isRecording ? (
-					<span>Press keys...</span>
-				) : (
-					<span className='flex items-center gap-2'>
-						<Keyboard className='w-3 h-3 text-muted-foreground' />
-						{formatted}
-					</span>
-				)}
-			</Button>
-
-			{!isDefault && (
+		<div className='flex flex-col items-end gap-1'>
+			<div className='flex items-center gap-2'>
 				<Button
-					variant='ghost'
-					size='icon'
-					className='h-8 w-8'
-					onClick={onReset}
-					title='Reset to default'
+					ref={buttonRef}
+					variant={isRecording ? 'destructive' : conflictMessage ? 'destructive' : 'outline'}
+					size='sm'
+					className={cn(
+						'min-w-[120px] max-w-[260px] justify-between font-mono text-xs',
+						isRecording && 'animate-pulse'
+					)}
+					onClick={function () {
+						setInternalConflict(null)
+						setIsRecording(true)
+					}}
 				>
-					<RotateCcw className='w-3 h-3' />
+					{isRecording ? (
+						<span>Press keys...</span>
+					) : (
+						<span className='flex min-w-0 items-center gap-2'>
+							<Keyboard className='h-3 w-3 shrink-0 text-muted-foreground' />
+							<span className='truncate'>{formatted}</span>
+						</span>
+					)}
 				</Button>
-			)}
+
+				{!isDefault && (
+					<Button
+						variant='ghost'
+						size='icon'
+						className='h-8 w-8'
+						onClick={function () {
+							setInternalConflict(null)
+							onReset()
+						}}
+						title='Reset to default'
+					>
+						<RotateCcw className='w-3 h-3' />
+					</Button>
+				)}
+			</div>
+
+			{conflictMessage ? (
+				<div className='max-w-[260px] text-right text-[10px] leading-tight text-destructive'>
+					{conflictMessage}
+				</div>
+			) : null}
 		</div>
 	)
 }

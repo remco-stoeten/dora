@@ -1,14 +1,48 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { APP_SHORTCUTS, ShortcutDefinition, ShortcutName } from './shortcuts'
+import {
+	APP_SHORTCUTS,
+	findShortcutConflict,
+	formatShortcut,
+	ShortcutDefinition,
+	ShortcutName
+} from './shortcuts'
 
 type UserShortcuts = Partial<Record<ShortcutName, string | string[]>>
+
+export type ShortcutConflictEventDetail = {
+	name: ShortcutName
+	requestedCombo: string | string[]
+	conflictingName: ShortcutName
+	conflictingDescription: string
+	conflictingCombo: string
+	message: string
+}
 
 type ShortcutStore = {
 	overrides: UserShortcuts
 	setShortcut: (name: ShortcutName, combo: string | string[]) => void
 	resetShortcut: (name: ShortcutName) => void
 	resetAll: () => void
+}
+
+function dispatchShortcutConflict(detail: ShortcutConflictEventDetail) {
+	if (typeof window === 'undefined') return
+	window.dispatchEvent(new CustomEvent('dora-shortcut-conflict', { detail }))
+}
+
+export function getEffectiveShortcuts(overrides: UserShortcuts = {}) {
+	const effective: Record<string, ShortcutDefinition> = {}
+
+	for (const [key, def] of Object.entries(APP_SHORTCUTS)) {
+		const name = key as ShortcutName
+		effective[name] = {
+			...def,
+			combo: overrides[name] ?? def.combo
+		}
+	}
+
+	return effective as Record<ShortcutName, ShortcutDefinition>
 }
 
 export const useShortcutStore = create<ShortcutStore>()(
@@ -18,6 +52,24 @@ export const useShortcutStore = create<ShortcutStore>()(
 				overrides: {},
 				setShortcut: function (name, combo) {
 					set(function (state) {
+						const conflict = findShortcutConflict(
+							name,
+							combo,
+							getEffectiveShortcuts(state.overrides)
+						)
+
+						if (conflict) {
+							dispatchShortcutConflict({
+								name,
+								requestedCombo: combo,
+								conflictingName: conflict.name,
+								conflictingDescription: conflict.definition.description,
+								conflictingCombo: conflict.combo,
+								message: `Conflicts with ${conflict.definition.description} (${formatShortcut(conflict.combo)})`
+							})
+							return state
+						}
+
 						return {
 							overrides: { ...state.overrides, [name]: combo }
 						}
@@ -47,15 +99,5 @@ export function useEffectiveShortcuts() {
 		return state.overrides
 	})
 
-	const effective: Record<string, ShortcutDefinition> = {}
-
-	for (const [key, def] of Object.entries(APP_SHORTCUTS)) {
-		const name = key as ShortcutName
-		effective[name] = {
-			...def,
-			combo: overrides[name] ?? def.combo
-		}
-	}
-
-	return effective as Record<ShortcutName, ShortcutDefinition>
+	return getEffectiveShortcuts(overrides)
 }

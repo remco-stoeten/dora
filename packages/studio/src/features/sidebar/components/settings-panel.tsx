@@ -19,6 +19,7 @@ import { cn } from '@studio/shared/utils/cn'
 import { AiProviderSection } from '@studio/features/ai-assistant/ai-provider-section'
 import { AiUsageSection } from '@studio/features/ai-assistant/ai-usage-section'
 import { OllamaModelsSection } from '@studio/features/ai-assistant/ollama-models-section'
+import { AppearanceControls } from './appearance-panel'
 import { AiKeysSection } from './ai-keys-section'
 import { ShortcutRecorder } from './shortcut-recorder'
 import { StorageSection } from './storage-section'
@@ -29,6 +30,7 @@ type SettingsViewProps = {
 
 type SettingsSectionId =
 	| 'editor'
+	| 'appearance'
 	| 'shortcuts'
 	| 'ai-provider'
 	| 'ollama-models'
@@ -50,6 +52,11 @@ const SETTINGS_SECTIONS: SettingsSectionNav[] = [
 		id: 'editor',
 		title: 'Editor',
 		description: 'Font size, syntax theme, and Vim mode'
+	},
+	{
+		id: 'appearance',
+		title: 'Appearance',
+		description: 'Theme, color shift, and app typography'
 	},
 	{
 		id: 'shortcuts',
@@ -222,7 +229,7 @@ export function SettingsView({ windowControls }: SettingsViewProps = {}) {
 							Application settings
 						</h1>
 						<p className='mt-0.5 text-xs text-muted-foreground'>
-							Editor behavior, shortcuts, AI keys, storage, and interface preferences
+							Appearance, editor behavior, shortcuts, AI keys, storage, and interface preferences
 						</p>
 					</div>
 					{windowControls ? (
@@ -311,6 +318,15 @@ export function SettingsView({ windowControls }: SettingsViewProps = {}) {
 										</div>
 									</div>
 								</div>
+							</SectionCard>
+
+							<SectionCard
+								id='appearance'
+								title='Appearance'
+								description='Choose the app theme, global color shift, and typography.'
+								sectionRef={registerSectionRef('appearance')}
+							>
+								<AppearanceControls />
 							</SectionCard>
 
 							<SectionCard

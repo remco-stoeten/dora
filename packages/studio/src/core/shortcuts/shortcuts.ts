@@ -118,6 +118,16 @@ export const APP_SHORTCUTS = {
 		description: 'AI: generate SQL from prompt',
 		scope: 'sql-console'
 	},
+	switchToSql: {
+		combo: 'alt+s',
+		description: 'Switch to SQL mode',
+		scope: 'sql-console'
+	},
+	switchToDrizzle: {
+		combo: 'alt+d',
+		description: 'Switch to Drizzle mode',
+		scope: 'sql-console'
+	},
 	saveScript: {
 		combo: 'mod+s',
 		description: 'Save script',
@@ -239,6 +249,7 @@ export const SHORTCUT_CATEGORIES: Record<string, ShortcutName[]> = {
 	],
 	'SQL Console': [
 		'runQuery', 'runSelection', 'formatQuery', 'saveScript', 'openQueryHistory', 'newTab', 'aiCmdK',
+		'switchToSql', 'switchToDrizzle',
 	],
 	'Editor': [
 		'find', 'replace', 'toggleComment', 'selectNextOccurrence',
@@ -267,6 +278,117 @@ export function getAllShortcuts(): Array<{ name: ShortcutName; definition: Short
 	return Object.entries(APP_SHORTCUTS).map(function ([name, definition]) {
 		return { name: name as ShortcutName, definition }
 	})
+}
+
+export type ShortcutConflictResult = {
+	name: ShortcutName
+	definition: ShortcutDefinition
+	combo: string
+}
+
+const MODIFIER_ORDER = ['mod', 'ctrl', 'meta', 'alt', 'shift'] as const
+const MODIFIER_ALIASES: Record<string, string> = {
+	cmd: 'mod',
+	command: 'mod',
+	control: 'ctrl',
+	option: 'alt',
+	esc: 'escape',
+	del: 'delete',
+	return: 'enter',
+	arrowup: 'up',
+	arrowdown: 'down',
+	arrowleft: 'left',
+	arrowright: 'right',
+	' ': 'space'
+}
+
+export function toShortcutList(combo: string | string[]): string[] {
+	return (Array.isArray(combo) ? combo : [combo])
+		.map(function (entry) {
+			return entry.trim()
+		})
+		.filter(Boolean)
+}
+
+function normalizeShortcutStep(step: string): string {
+	const parts = step
+		.split('+')
+		.map(function (part) {
+			const normalized = part.trim().toLowerCase()
+			return MODIFIER_ALIASES[normalized] ?? normalized
+		})
+		.filter(Boolean)
+
+	const modifiers = MODIFIER_ORDER.filter(function (modifier) {
+		return parts.includes(modifier)
+	})
+	const key = parts.find(function (part) {
+		return !MODIFIER_ORDER.includes(part as (typeof MODIFIER_ORDER)[number])
+	})
+
+	return [...modifiers, key].filter(Boolean).join('+')
+}
+
+export function normalizeShortcut(combo: string): string {
+	return combo
+		.trim()
+		.toLowerCase()
+		.split(/\s+/)
+		.map(normalizeShortcutStep)
+		.filter(Boolean)
+		.join(' ')
+}
+
+export function formatShortcutList(combo: string | string[]): string {
+	return toShortcutList(combo)
+		.map(function (entry) {
+			return formatShortcut(entry)
+		})
+		.join(' / ')
+}
+
+function shortcutScopesConflict(
+	a?: ShortcutDefinition['scope'],
+	b?: ShortcutDefinition['scope']
+): boolean {
+	if (!a || !b) return true
+	if (a === 'global' || b === 'global') return true
+	return a === b
+}
+
+export function findShortcutConflict(
+	name: ShortcutName,
+	combo: string | string[],
+	shortcuts: Record<ShortcutName, ShortcutDefinition>
+): ShortcutConflictResult | null {
+	const current = shortcuts[name]
+	if (!current) return null
+
+	const candidates = new Set(
+		toShortcutList(combo).map(function (entry) {
+			return normalizeShortcut(entry)
+		})
+	)
+
+	if (candidates.size === 0) return null
+
+	for (const [otherName, definition] of Object.entries(shortcuts)) {
+		if (otherName === name) continue
+		if (!shortcutScopesConflict(current.scope, definition.scope)) continue
+
+		for (const otherCombo of toShortcutList(definition.combo)) {
+			const normalized = normalizeShortcut(otherCombo)
+			if (candidates.has(normalized)) {
+				return {
+					name: otherName as ShortcutName,
+					definition,
+					combo: otherCombo
+				}
+			}
+		}
+	}
+
+	return null
 }
 
 type BoundShortcutState = {

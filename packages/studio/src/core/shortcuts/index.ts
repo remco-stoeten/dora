@@ -8,15 +8,20 @@ export {
 	registerShortcutMap,
 	APP_SHORTCUTS,
 	SHORTCUT_CATEGORIES,
+	findShortcutConflict,
+	formatShortcutList,
 	getShortcutsByScope,
 	getAllShortcuts,
 	formatShortcut,
 	getModifierSymbols,
 	matchesAnyShortcut,
 	matchesShortcut,
+	normalizeShortcut,
 	parseShortcut,
 	parseShortcuts,
+	toShortcutList,
 	type ShortcutDefinition,
+	type ShortcutConflictResult,
 	type ShortcutName,
 	type ActionKey,
 	type ExceptPredicate,
@@ -37,4 +42,9 @@ export {
 	type UseShortcutOptions
 } from './shortcuts'
 
-export { useShortcutStore, useEffectiveShortcuts } from './store'
+export {
+	getEffectiveShortcuts,
+	useShortcutStore,
+	useEffectiveShortcuts,
+	type ShortcutConflictEventDetail
+} from './store'
