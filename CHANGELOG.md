@@ -19,6 +19,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixes
 
+- schema-visualizer SVG and PNG export now follows the active theme instead of always exporting dark-theme colours (#112)
+- cancelling a Postgres query no longer logs benign "channel closed" error noise (#83)
 - SQL console loading shell and editor surfaces now use a themed `--editor` token, so they no longer render a black rectangle in light and non-dark themes (#114)
 - data-grid column headers show a tooltip with the full column name and type, but only when the label is actually truncated (#115)
 - database-studio empty states no longer re-fire their entrance animation on every tab switch, removing the zoom/flicker (#113)
