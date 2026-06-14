@@ -13,22 +13,119 @@ export type ChangelogRelease = {
 	groups: ChangelogReleaseGroup[]
 }
 
-export const CURRENT_VERSION = "0.27.0"
+export const CURRENT_VERSION = "0.28.0"
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
+	{
+		version: "Unreleased",
+		date: "2026-06-14",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/vUnreleased",
+		groups: [
+
+		]
+	},
+	{
+		version: "0.28.0",
+		date: "2026-06-14",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.28.0",
+		groups: [
+			{
+				name: "Features",
+				items: [
+				"add source metadata layer (`describeConnectionSource`, `getSourceCaps`, `isUiActionVisible`) so UI visibility follows connection capabilities instead of engine string checks",
+				"open CSV, JSON, Parquet, TSV, and NDJSON as readonly **data files** (DuckDB-backed sessions) with health indicators, recovery actions, and connection summaries",
+				"**Save as DuckDB** — materialize active data-file sessions into editable `.duckdb` files",
+				"**Import files** — import CSV/JSON/Parquet as physical tables in native DuckDB file connections",
+				"open SQLite and DuckDB files as editable embedded databases",
+				"drag tabs to reorder them (pinned tabs stay grouped first) (#105)",
+				"open tabs are persisted and restored across relaunch (#98)",
+				"binary/blob cells now show inline hex for small values and a `<type — size>` summary (with magic-byte detection) for large ones, instead of a bare byte count (#90)",
+				"data-grid filters can be joined with OR via an AND/OR toggle, not only AND (#102)",
+				"JSON/CSV/SQL export now respects the active filters and sort order instead of dumping the whole table or just the loaded page (#99)",
+				"back up a database to a `.sql` dump and restore from one via the data-grid actions menu (#103)",
+				"\"Fix with AI\" on a failed query sends the query and error to the AI assistant (#104)",
+				]
+			},
+			{
+				name: "Reliability",
+				items: [
+				"recover gracefully from missing or moved data-file sources when reopening a connection",
+				"clearer failure copy for save/import paths (no active files, destination conflicts, partial imports, schema refresh warnings)",
+				]
+			},
+			{
+				name: "Fixes",
+				items: [
+				"schema-visualizer SVG and PNG export now follows the active theme instead of always exporting dark-theme colours (#112)",
+				"cancelling a Postgres query no longer logs benign \"channel closed\" error noise (#83)",
+				"SQL console loading shell and editor surfaces now use a themed `--editor` token, so they no longer render a black rectangle in light and non-dark themes (#114)",
+				"data-grid column headers show a tooltip with the full column name and type, but only when the label is actually truncated (#115)",
+				"database-studio empty states no longer re-fire their entrance animation on every tab switch, removing the zoom/flicker (#113)",
+				"AI provider status dot is no longer colour-only — it uses a filled vs hollow shape plus `aria-pressed`/`aria-label` for screen readers (#116)",
+				"SQLite `VACUUM`, `DETACH DATABASE`, and some `PRAGMA` forms no longer fail to run — they are classified via a keyword fallback when the AST parser rejects them (#94)",
+				]
+			},
+			{
+				name: "Documentation",
+				items: [
+				"README support matrix and **Local files** section explaining database files vs data files",
+				"add `docs/ai-providers.md` — per-provider setup, recommended models, key storage, and troubleshooting (#91)",
+				]
+			},
+			{
+				name: "Tooling",
+				items: [
+				"new `dora-runner` CLI replacing the legacy `dora-cli`/`dora-manager-executor` (#86)",
+				"migrate CI workflows to Blacksmith runners (#87)",
+				]
+			},
+			{
+				name: "Internal",
+				items: [
+				"remove unused `DisabledFeature`/`NotImplemented` components and the deprecated `database-studio/api.ts` (#95)",
+				"drop the inaccurate PgBouncer scaffold comment in `types.rs` now that `use_simple_query` is fully wired (#92)",
+				"model statement execution result as an enum instead of a `returns_values` bool, making page/column state unrepresentable for non-row-returning queries (#93)",
+				]
+			}
+		]
+	},
 	{
 		version: "0.27.0",
 		date: "2026-06-07",
 		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.27.0",
 		groups: [
 			{
-				name: "Other Changes",
+				name: "Features",
 				items: [
-				"feat(marketing): server-render GitHub stats (ISR)",
-				"refactor(marketing): split features-section into per-card files",
-				"feat(studio): shared @dora/studio package — desktop + marketing /app web demo",
-				"feat: multi-provider AI (OpenAI, Anthropic, Ollama)",
-				"Pre-release: landing fixes, studio polish, and beta prep",
+				"add multi-provider AI support for OpenAI, Anthropic, Gemini, Groq, and Ollama",
+				"add encrypted API key storage, provider/model selection, and usage history",
+				"add in-app Ollama setup flow with installer, runtime helpers, and model management",
+				"feed live table indexes into assistant schema context",
+				"extract Dora Studio into `@dora/studio` for desktop and marketing web demo",
+				"render shared Studio at `/app` and refresh marketing landing with live demos and release-aware downloads",
+				"add `Ctrl+Shift+B` to toggle the AI assistant from the Studio keyboard flow",
+				]
+			},
+			{
+				name: "Bug Fixes",
+				items: [
+				"preserve high-precision numeric values and BIGINTs during cell editing",
+				"fix typed Postgres/SQLite cell edit and add-record binding behavior",
+				"improve credential-store recovery with OS-aware keyring install actions",
+				]
+			},
+			{
+				name: "Refactoring",
+				items: [
+				"move reusable Studio experience into `packages/studio`",
+				"rebuild marketing app-demo framing, theme polish, and deployment metadata",
+				]
+			},
+			{
+				name: "CI/CD",
+				items: [
+				"harden release automation with generated notes, post-release changelog sync, and package-manager fan-out",
+				"bump release line to 0.27.0 across root, desktop, Tauri, and Cargo manifests",
 				]
 			}
 		]
