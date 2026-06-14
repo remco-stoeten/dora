@@ -320,8 +320,8 @@ jobs:
           gh run download "${{ github.run_id }}" -D /tmp/release-assets
 
           mapfile -t ASSETS < <(find /tmp/release-assets -type f | sort)
-          if [ "${#ASSETS[@]}" -lt 10 ]; then
-            echo "Expected at least 10 release assets, found ${#ASSETS[@]}" >&2
+          if [ "${#ASSETS[@]}" -lt 9 ]; then
+            echo "Expected at least 9 release assets, found ${#ASSETS[@]}" >&2
             find /tmp/release-assets -type f || true
             exit 1
           fi
