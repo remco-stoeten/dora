@@ -10,16 +10,51 @@ use crate::{
     Error,
 };
 
+pub const DEFAULT_QUERY_PAGE_SIZE: usize = 50;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SqliteExecuteConfig {
+    query_page_size: usize,
+}
+
+impl SqliteExecuteConfig {
+    pub fn new(query_page_size: usize) -> Self {
+        Self {
+            query_page_size: query_page_size.max(1),
+        }
+    }
+
+    pub fn query_page_size(self) -> usize {
+        self.query_page_size
+    }
+}
+
+impl Default for SqliteExecuteConfig {
+    fn default() -> Self {
+        Self::new(DEFAULT_QUERY_PAGE_SIZE)
+    }
+}
+
 /// Make sure to run this on a task where blocking is allowed.
 pub fn execute_query(
     client: &Connection,
     stmt: ParsedStatement,
     sender: &ExecSender,
 ) -> Result<(), Error> {
+    execute_query_with_config(client, stmt, sender, SqliteExecuteConfig::default())
+}
+
+/// Make sure to run this on a task where blocking is allowed.
+pub fn execute_query_with_config(
+    client: &Connection,
+    stmt: ParsedStatement,
+    sender: &ExecSender,
+    config: SqliteExecuteConfig,
+) -> Result<(), Error> {
     let start = std::time::Instant::now();
 
     if stmt.returns_values {
-        execute_query_with_results(client, &stmt.statement, sender, start)?;
+        execute_query_with_results(client, &stmt.statement, sender, start, config)?;
     } else {
         execute_modification_query(client, &stmt.statement, sender, start)?;
     }
@@ -32,6 +67,7 @@ fn execute_query_with_results(
     query: &str,
     sender: &ExecSender,
     started_at: Instant,
+    config: SqliteExecuteConfig,
 ) -> Result<(), Error> {
     log::info!("Starting SQLite query: {}", query);
 
@@ -50,8 +86,6 @@ fn execute_query_with_results(
                     sender.send(QueryExecEvent::TypesResolved { columns })?;
 
                     let mut total_rows = 0;
-                    // TODO: make this configurable
-                    let batch_size = 50;
                     let mut writer = RowWriter::new(column_types);
 
                     loop {
@@ -60,7 +94,7 @@ fn execute_query_with_results(
                                 writer.add_row(row)?;
                                 total_rows += 1;
 
-                                if writer.len() >= batch_size {
+                                if writer.len() >= config.query_page_size() {
                                     sender.send(QueryExecEvent::Page {
                                         page_amount: writer.len(),
                                         page: writer.finish(),
@@ -80,8 +114,9 @@ fn execute_query_with_results(
                                     // TODO(vini): this is actually not necessarily true?
                                     //             Might not matter, though
                                     affected_rows: 0,
-                                    error: Some(error_msg),
+                                    error: Some(error_msg.clone()),
                                 })?;
+                                return Err(Error::Any(anyhow::anyhow!(error_msg)));
                             }
                         }
                     }
@@ -178,12 +213,20 @@ mod tests {
     use rusqlite::Connection;
     use std::sync::Mutex;
 
-    use super::execute_query;
+    use super::{execute_query, execute_query_with_config, SqliteExecuteConfig};
     use crate::database::{sqlite::parser::parse_statements, types::channel, QueryExecEvent};
 
     async fn run_query(
         conn: Arc<Mutex<Connection>>,
         query: &str,
+    ) -> anyhow::Result<Vec<QueryExecEvent>> {
+        run_query_with_config(conn, query, SqliteExecuteConfig::default()).await
+    }
+
+    async fn run_query_with_config(
+        conn: Arc<Mutex<Connection>>,
+        query: &str,
+        config: SqliteExecuteConfig,
     ) -> anyhow::Result<Vec<QueryExecEvent>> {
         let mut parsed_stmt = parse_statements(query).unwrap();
         assert_eq!(parsed_stmt.len(), 1);
@@ -194,7 +237,7 @@ mod tests {
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.lock().unwrap();
-            execute_query(&conn, stmt, &sender).unwrap();
+            execute_query_with_config(&conn, stmt, &sender, config).unwrap();
         });
 
         let mut events = Vec::new();
@@ -204,6 +247,35 @@ mod tests {
         }
 
         Ok(events)
+    }
+
+    #[tokio::test]
+    async fn test_query_page_size_config() -> anyhow::Result<()> {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        let conn = Arc::new(Mutex::new(conn));
+
+        let query = "WITH RECURSIVE t(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM t WHERE x < 7) SELECT * FROM t;";
+        let mut events = run_query_with_config(conn, query, SqliteExecuteConfig::new(3))
+            .await?
+            .into_iter();
+
+        assert!(matches!(
+            events.next().unwrap(),
+            QueryExecEvent::TypesResolved { .. }
+        ));
+
+        for expected in [3, 3, 1] {
+            match events.next().unwrap() {
+                QueryExecEvent::Page { page_amount, .. } => assert_eq!(page_amount, expected),
+                other => return Err(anyhow::anyhow!("Expected Page event, got {:?}", other)),
+            }
+        }
+
+        assert!(matches!(
+            events.next().unwrap(),
+            QueryExecEvent::Finished { error: None, .. }
+        ));
+        Ok(())
     }
 
     /// Run a query that returns no results (modification-only?), returning the number of rows affected.

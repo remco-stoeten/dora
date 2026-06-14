@@ -103,9 +103,41 @@ async updateConnectionColor(connectionId: string, color: number | null) : Promis
     else return { status: "error", error: e  as any };
 }
 },
-async connectToDatabase(connectionId: string) : Promise<Result<boolean, { kind: string; detail: string }>> {
+async connectToDatabase(connectionId: string) : Promise<Result<DatabaseConnectResult, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("connect_to_database", { connectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getDataFileSourceStatus(connectionId: string) : Promise<Result<DataFileSourceEntry[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_data_file_source_status", { connectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async retryDataFileRegistration(connectionId: string) : Promise<Result<DatabaseConnectResult, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("retry_data_file_registration", { connectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async saveDataFileSessionAsDuckdb(connectionId: string, destinationPath: string, overwrite: boolean) : Promise<Result<SaveDataFileSessionResult, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_data_file_session_as_duckdb", { connectionId, destinationPath, overwrite }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async importFilesIntoDuckdb(connectionId: string, filePaths: string[]) : Promise<Result<ImportFilesIntoDuckDbResult, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("import_files_into_duckdb", { connectionId, filePaths }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -786,6 +818,17 @@ async aiKeysTest(id: number, model: string | null, prompt: string | null) : Prom
 }
 },
 /**
+ * Test the configured provider key source (environment keys plus active saved keys).
+ */
+async aiKeysTestProvider(provider: string, model: string | null, prompt: string | null) : Promise<Result<AiKeyTestResult, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("ai_keys_test_provider", { provider, model, prompt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Test an unsaved key (used by the "Test before save" button).
  */
 async aiKeysTestRaw(provider: string, apiKey: string, model: string | null, prompt: string | null) : Promise<Result<AiKeyTestResult, { kind: string; detail: string }>> {
@@ -893,6 +936,9 @@ export type ConnectionHistoryEntry = { id: number; connection_id: string; connec
 export type ConnectionInfo = { id: string; name: string; connected: boolean; database_type: DatabaseInfo; last_connected_at: number | null; created_at: number | null; updated_at: number | null; pin_hash: string | null; favorite: boolean | null; color: string | null; sort_order: number | null }
 export type CredentialStorageBackend = "os_keyring" | "local_encrypted_file"
 export type CredentialStorageStatus = { backend: CredentialStorageBackend; message: string; storage_path: string | null; install_hint: string | null }
+export type DataFileSourceEntry = { path: string; viewName: string; fileType: string; status: DataFileSourceStatus; error: string | null }
+export type DataFileSourceStatus = "active" | "missing" | "failed"
+export type DatabaseConnectResult = { connected: boolean; fileSources: DataFileSourceEntry[] | null }
 export type DatabaseFileKind = "sqlite" | "duckdb" | "unknown"
 export type DatabaseInfo = { Postgres: { connection_string: string; ssh_config: SshConfig | null } } | { CockroachDB: { connection_string: string; ssh_config: SshConfig | null } } | { MySQL: { connection_string: string; ssh_config: SshConfig | null } } | { MariaDB: { connection_string: string; ssh_config: SshConfig | null } } | { SQLite: { db_path: string } } | 
 /**
@@ -956,6 +1002,7 @@ export type DumpResult = { success: boolean; file_path: string; size_bytes: numb
  * Export format options
  */
 export type ExportFormat = "json" | "sql_insert" | "csv"
+export type FailedDuckDbImport = { path: string; fileType: string; error: string }
 /**
  * Information about a foreign key relationship
  */
@@ -973,6 +1020,8 @@ referenced_column: string;
  */
 referenced_schema: string }
 export type GroqStatus = { available: boolean; key_count: number }
+export type ImportFilesIntoDuckDbResult = { tables: ImportedDuckDbTable[]; failed: FailedDuckDbImport[]; warnings: string[] }
+export type ImportedDuckDbTable = { name: string; sourcePath: string; fileType: string; rowCount: number | null }
 export type IndexInfo = { name: string; column_names: string[]; is_unique: boolean; is_primary: boolean }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
@@ -1009,8 +1058,11 @@ export type OllamaStatus = { running: boolean; endpoint: string; version: string
 export type QueryHistoryEntry = { id: number; connection_id: string; query_text: string; executed_at: number; duration_ms: number | null; status: string; row_count: number; error_message: string | null }
 export type QueryStatus = "Pending" | "Running" | "Completed" | "Error"
 export type RegisteredDatabase = { name: string; path: string; active: boolean }
+export type SaveDataFileSessionResult = { path: string; tables: SavedDataFileTable[]; skipped: SkippedDataFileSource[]; warnings: string[] }
+export type SavedDataFileTable = { name: string; sourcePath: string; rowCount: number | null }
 export type SavedQuery = { id: number; name: string; description: string | null; query_text: string; connection_id: string | null; tags: string | null; category: string | null; created_at: number; updated_at: number; favorite: boolean; is_snippet: boolean; is_system: boolean; language: string | null; folder_id: number | null }
 export type SeedResult = { rows_inserted: number; table: string }
+export type SkippedDataFileSource = { path: string; viewName: string; status: DataFileSourceStatus; error: string | null }
 export type SnippetFolder = { id: number; name: string; parent_id: number | null; color: string | null; created_at: number; updated_at: number }
 /**
  * Result of a soft delete operation
@@ -1025,7 +1077,7 @@ deleted_at: number;
  */
 undo_window_seconds: number }
 export type SshConfig = { host: string; port: number; username: string; private_key_path: string | null; password: string | null }
-export type StatementInfo = { returns_values: boolean; status: QueryStatus; first_page: JsonValue; affected_rows: number | null; error: string | null }
+export type StatementInfo = { returns_values: boolean; status: QueryStatus; first_page: JsonValue; affected_rows: number | null; page_count: number; rows_received: number; error: string | null }
 export type TAURI_CHANNEL<TSend> = null
 export type TableInfo = { name: string; schema: string; columns: ColumnInfo[]; 
 /**

@@ -7,8 +7,16 @@ use specta::Type;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use uuid::Uuid;
 
+use crate::database::duckdb::file_source::DataFileSourceEntry;
 use crate::database::ssh_tunnel::SshTunnel;
 use crate::Error;
+
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DatabaseConnectResult {
+    pub connected: bool,
+    pub file_sources: Option<Vec<DataFileSourceEntry>>,
+}
 
 pub type QueryId = usize;
 
@@ -71,6 +79,8 @@ pub struct StatementInfo {
     #[specta(type = serde_json::Value)]
     pub first_page: Option<Box<RawValue>>,
     pub affected_rows: Option<usize>,
+    pub page_count: usize,
+    pub rows_received: usize,
     pub error: Option<String>,
 }
 
@@ -234,6 +244,7 @@ pub enum Database {
     DuckDB {
         db_path: String,
         file_sources: Vec<String>,
+        file_source_entries: Vec<DataFileSourceEntry>,
         connection: Option<Arc<Mutex<duckdb::Connection>>>,
     },
     LibSQL {
@@ -360,6 +371,7 @@ impl DatabaseConnection {
             } => Database::DuckDB {
                 db_path,
                 file_sources,
+                file_source_entries: Vec::new(),
                 connection: None,
             },
             DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
@@ -430,6 +442,7 @@ impl DatabaseConnection {
             } => Database::DuckDB {
                 db_path,
                 file_sources,
+                file_source_entries: Vec::new(),
                 connection: None,
             },
             DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {

@@ -5,7 +5,7 @@ use std::sync::{
 
 use anyhow::Context;
 use serde_json::value::RawValue;
-use tauri::async_runtime::{spawn, spawn_blocking};
+use tauri::async_runtime::{spawn, spawn_blocking, JoinHandle};
 
 use dashmap::DashMap;
 
@@ -24,6 +24,7 @@ use crate::{
 struct ExecState {
     status: AtomicU8,
     pages: RwLock<Vec<Page>>,
+    rows_received: RwLock<usize>,
     error: RwLock<Option<String>>,
     columns: RwLock<Option<Box<RawValue>>>,
     /// True if this query is expected to return some amount of rows
@@ -31,11 +32,13 @@ struct ExecState {
     // TODO(vini): we could refactor this into an enum with a variant with `pages`, `columns`, and one with just `rows_affected`
     returns_values: bool,
     rows_affected: RwLock<Option<usize>>,
+    sqlite_interrupt_handle: RwLock<Option<rusqlite::InterruptHandle>>,
 }
 
 /// Executes and keeps track of the execution of queries.
 pub struct StatementManager {
     queries: DashMap<QueryId, Arc<ExecState>>,
+    execution_handles: DashMap<QueryId, JoinHandle<()>>,
     listener_handles: DashMap<QueryId, tokio::task::JoinHandle<()>>,
 }
 
@@ -50,13 +53,28 @@ impl StatementManager {
     pub fn new() -> Self {
         Self {
             queries: DashMap::new(),
+            execution_handles: DashMap::new(),
             listener_handles: DashMap::new(),
         }
     }
 
     /// Cancels all currently running queries, marking them as errors and aborting their listener tasks.
     pub fn cancel_active_queries(&self) {
-        for entry in self.listener_handles.iter() {
+        for entry in self.queries.iter() {
+            let status = entry.status.load(Ordering::Relaxed);
+            if status == QueryStatus::Running as u8 || status == QueryStatus::Pending as u8 {
+                if let Some(handle) = entry
+                    .sqlite_interrupt_handle
+                    .read()
+                    .expect("RwLock poisoned")
+                    .as_ref()
+                {
+                    handle.interrupt();
+                }
+            }
+        }
+
+        for entry in self.execution_handles.iter() {
             entry.value().abort();
         }
         for entry in self.queries.iter() {
@@ -69,14 +87,16 @@ impl StatementManager {
                     .store(QueryStatus::Error as u8, Ordering::Relaxed);
             }
         }
+        for entry in self.listener_handles.iter() {
+            entry.value().abort();
+        }
+        self.execution_handles.clear();
         self.listener_handles.clear();
     }
 
     /// Submits a new query (possibly containing multiple statements) for execution.
     ///
     /// Note that this _will_ cancel the execution of any ongoing query, and replace it with the new one.
-    // TODO(vini): not sure if this will actually cancel the ongoing query.
-    // Might need to store the joinhandles so we can properly cancel them
     pub fn submit_query(&self, client: DatabaseClient, query: &str) -> Result<Vec<QueryId>, Error> {
         self.cancel_active_queries();
         self.queries.clear();
@@ -109,17 +129,19 @@ impl StatementManager {
     pub fn fetch_query(&self, query_id: QueryId) -> Result<StatementInfo, Error> {
         let exec_state = self.get(query_id)?;
         let returns_values = exec_state.returns_values;
+        let pages = exec_state.pages.read().expect("RwLock poisoned");
 
         let info = StatementInfo {
             returns_values,
             status: exec_state.status.load(Ordering::Relaxed).into(),
             first_page: if returns_values {
-                let pages = exec_state.pages.read().expect("RwLock poisoned");
                 pages.first().cloned()
             } else {
                 None
             },
             affected_rows: *exec_state.rows_affected.read().expect("RwLock poisoned"),
+            page_count: pages.len(),
+            rows_received: *exec_state.rows_received.read().expect("RwLock poisoned"),
             error: exec_state.error.read().expect("RwLock poisoned").clone(),
         };
 
@@ -160,10 +182,12 @@ impl StatementManager {
         let exec_storage = ExecState {
             status: AtomicU8::new(QueryStatus::Pending as u8),
             pages: RwLock::new(vec![]),
+            rows_received: RwLock::new(0),
             error: RwLock::new(None),
             columns: RwLock::new(None),
             returns_values: stmt.returns_values,
             rows_affected: RwLock::new(None),
+            sqlite_interrupt_handle: RwLock::new(None),
         };
 
         let exec_storage = Arc::new(exec_storage);
@@ -176,7 +200,7 @@ impl StatementManager {
                 client,
                 use_simple_query,
             } => {
-                spawn(async move {
+                let handle = spawn(async move {
                     if let Err(err) =
                         postgres::execute::execute_query(&client, stmt, &sender, use_simple_query)
                             .await
@@ -184,17 +208,28 @@ impl StatementManager {
                         log::error!("Error executing Postgres query: {}", err);
                     }
                 });
+                self.execution_handles.insert(id, handle);
             }
             DatabaseClient::SQLite { connection } => {
-                spawn_blocking(move || {
+                let interrupt_handle = connection
+                    .lock()
+                    .expect("Mutex poisoned")
+                    .get_interrupt_handle();
+                *exec_storage
+                    .sqlite_interrupt_handle
+                    .write()
+                    .expect("RwLock poisoned") = Some(interrupt_handle);
+
+                let handle = spawn_blocking(move || {
                     let conn = connection.lock().expect("Mutex poisoned");
                     if let Err(err) = sqlite::execute::execute_query(&conn, stmt, &sender) {
                         log::error!("Error executing SQLite query: {}", err);
                     }
                 });
+                self.execution_handles.insert(id, handle);
             }
             DatabaseClient::DuckDB { connection, .. } => {
-                spawn_blocking(move || {
+                let handle = spawn_blocking(move || {
                     let conn = connection.lock().expect("Mutex poisoned");
                     if let Err(err) =
                         crate::database::duckdb::execute::execute_query(&conn, stmt, &sender)
@@ -202,9 +237,10 @@ impl StatementManager {
                         log::error!("Error executing DuckDB query: {}", err);
                     }
                 });
+                self.execution_handles.insert(id, handle);
             }
             DatabaseClient::LibSQL { connection } => {
-                spawn(async move {
+                let handle = spawn(async move {
                     if let Err(err) =
                         crate::database::libsql::execute::execute_query(&connection, stmt, &sender)
                             .await
@@ -212,13 +248,15 @@ impl StatementManager {
                         log::error!("Error executing LibSQL query: {}", err);
                     }
                 });
+                self.execution_handles.insert(id, handle);
             }
             DatabaseClient::MySQL { pool } => {
-                spawn(async move {
+                let handle = spawn(async move {
                     if let Err(err) = mysql::execute::execute_query(&pool, stmt, &sender).await {
                         log::error!("Error executing MySQL query: {}", err);
                     }
                 });
+                self.execution_handles.insert(id, handle);
             }
         }
 
@@ -234,17 +272,15 @@ impl StatementManager {
                     QueryExecEvent::TypesResolved { columns } => {
                         *exec_storage.columns.write().expect("RwLock poisoned") = Some(columns);
                     }
-                    QueryExecEvent::Page {
-                        page_amount: _,
-                        page,
-                    } => {
+                    QueryExecEvent::Page { page_amount, page } => {
                         exec_storage
                             .pages
                             .write()
                             .expect("RwLock poisoned")
                             .push(page);
 
-                        // TODO(vini): emit progress event to frontend?
+                        *exec_storage.rows_received.write().expect("RwLock poisoned") +=
+                            page_amount;
                     }
                     QueryExecEvent::Finished {
                         elapsed_ms: _,
@@ -326,5 +362,37 @@ mod tests {
             .unwrap()
             .expect("Page not found after 3 attempts");
         assert_eq!(serde_json::to_string(&page).unwrap(), r#"[[1]]"#);
+
+        let info = stmt_manager.fetch_query(0).unwrap();
+        assert_eq!(info.page_count, 1);
+        assert_eq!(info.rows_received, 1);
+    }
+
+    #[tokio::test]
+    async fn test_cancel_active_queries_marks_running_sqlite_query_cancelled() {
+        let stmt_manager = StatementManager::new();
+        let client = DatabaseClient::SQLite {
+            connection: Arc::new(Mutex::new(rusqlite::Connection::open_in_memory().unwrap())),
+        };
+
+        stmt_manager
+            .submit_query(
+                client.clone(),
+                "WITH RECURSIVE t(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM t WHERE x < 100000000) SELECT count(*) FROM t;",
+            )
+            .unwrap();
+
+        for _ in 0..10 {
+            if stmt_manager.get_query_status(0).unwrap() == QueryStatus::Running {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        stmt_manager.cancel_active_queries();
+
+        let cancelled = stmt_manager.fetch_query(0).unwrap();
+        assert_eq!(cancelled.status, QueryStatus::Error);
+        assert_eq!(cancelled.error.as_deref(), Some("Query cancelled"));
     }
 }

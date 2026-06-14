@@ -233,14 +233,7 @@ impl RowWriter {
 
             Type::RECORD => {
                 let value: PgRecord = row.try_get(column_index)?;
-                self.buf.push('[');
-                for (i, field) in value.fields.iter().enumerate() {
-                    if i > 0 {
-                        self.buf.push(',');
-                    }
-                    self.buf.push_str(&field.to_string());
-                }
-                self.buf.push(']');
+                self.buf.push_str(&value.json);
             }
 
             // TODO(vini): BPCHAR and NAME are correct here?

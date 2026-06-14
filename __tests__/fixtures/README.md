@@ -7,12 +7,12 @@ read-write `.duckdb` database).
 ## Regenerate
 
 ```bash
-./generate.sh                  # curated small set
-./generate.sh --large 200000   # + data-files/large/big_sales.* (N rows)
+./scripts/generate-test-fixtures.sh                  # curated small set
+./scripts/generate-test-fixtures.sh --large 200000   # + data-files/large/big_sales.* (N rows)
 ```
 
-`generate.sh` creates a throwaway `.venv` with the `duckdb` package (the only
-dependency) — nothing touches system Python. The `.venv/` and `data-files/large/`
+`generate-test-fixtures.sh` creates a throwaway `.venv` with the `duckdb` package (the only
+dependency) — nothing touches system Python. The venv and `data-files/large/`
 are gitignored.
 
 ## What's here (`data-files/`)

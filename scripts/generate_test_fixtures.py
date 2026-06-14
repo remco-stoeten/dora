@@ -2,7 +2,7 @@
 """
 Generate smoke-test fixtures for Dora's file-as-database + DuckDB provider.
 
-Produces, under tests/fixtures/data-files/:
+Produces, under __tests__/fixtures/data-files/:
   customers.csv / .parquet   - 8 base customers (PK id)
   sales.csv / .parquet       - orders, customer_id -> customers.id
   products.tsv               - tab-separated, has a bool column
@@ -16,8 +16,8 @@ With --large N it ALSO writes data-files/large/:
                                hundred MB of CSV.
 
 Usage:
-  ./generate.sh                 # small curated set only
-  ./generate.sh --large 200000  # + a 200k-row big_sales set
+  ./generate-test-fixtures.sh                 # small curated set only
+  ./generate-test-fixtures.sh --large 200000  # + a 200k-row big_sales set
 """
 
 import argparse
@@ -29,7 +29,9 @@ import random
 import duckdb
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "data-files")
+REPO_ROOT = os.path.dirname(HERE)
+FIXTURES_ROOT = os.path.join(REPO_ROOT, "__tests__", "fixtures")
+OUT = os.path.join(FIXTURES_ROOT, "data-files")
 
 REGIONS = [
     {"code": "EMEA", "label": "Europe, Middle East & Africa", "tz_offset": 1},
@@ -84,7 +86,7 @@ def write_csv(path, header, rows, sep=","):
         f.write(sep.join(header) + "\n")
         for r in rows:
             f.write(sep.join(str(c) for c in r) + "\n")
-    print("wrote", os.path.relpath(path, HERE))
+    print("wrote", os.path.relpath(path, FIXTURES_ROOT))
 
 
 def to_parquet(con, csv_path, parquet_path):
@@ -92,7 +94,7 @@ def to_parquet(con, csv_path, parquet_path):
         f"COPY (SELECT * FROM read_csv_auto('{csv_path}')) "
         f"TO '{parquet_path}' (FORMAT PARQUET)"
     )
-    print("wrote", os.path.relpath(parquet_path, HERE))
+    print("wrote", os.path.relpath(parquet_path, FIXTURES_ROOT))
 
 
 def small_set():
