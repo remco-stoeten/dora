@@ -1,3 +1,5 @@
+import { pickDefaultQueryTable } from '@studio/shared/utils/default-query-table'
+
 type SchemaTableLite = {
 	name: string
 	schema?: string
@@ -24,7 +26,8 @@ export function buildDynamicSuggestions(tables: SchemaTableLite[]): string[] {
 	if (!tables || tables.length === 0) return GENERIC_SUGGESTIONS
 
 	const out: string[] = []
-	const first = tables[0]
+	const first = pickDefaultQueryTable(tables)
+	if (!first) return GENERIC_SUGGESTIONS
 	const firstName = qualified(first)
 
 	out.push(`SELECT * FROM ${firstName} LIMIT 10`)

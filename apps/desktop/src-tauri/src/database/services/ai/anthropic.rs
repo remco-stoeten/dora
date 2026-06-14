@@ -72,7 +72,9 @@ pub struct AnthropicClient {
 impl AnthropicClient {
     pub fn from_env_and_storage(storage: &Storage) -> Result<Self, Error> {
         let mut keys = Self::collect_env_keys();
-        let db_keys = storage.ai_keys_active_decrypted("anthropic").unwrap_or_default();
+        let db_keys = storage
+            .ai_keys_active_decrypted("anthropic")
+            .unwrap_or_default();
         keys.extend(db_keys);
         let model = storage
             .get_setting("ai_model")?
@@ -205,6 +207,16 @@ impl AnthropicClient {
         self.keys.len()
     }
 
+    pub async fn test_configured_key(
+        storage: &Storage,
+        model: Option<&str>,
+        prompt: Option<&str>,
+    ) -> Result<String, Error> {
+        let client = Self::from_env_and_storage(storage)?;
+        let key = client.next_key().to_string();
+        Self::test_key(&key, model, prompt).await
+    }
+
     fn next_key(&self) -> &str {
         let index = self.counter.fetch_add(1, Ordering::Relaxed);
         &self.keys[index % self.keys.len()]
@@ -237,10 +249,7 @@ impl AnthropicClient {
             || status.is_server_error()
     }
 
-    fn auth_headers(
-        builder: reqwest::RequestBuilder,
-        key: &str,
-    ) -> reqwest::RequestBuilder {
+    fn auth_headers(builder: reqwest::RequestBuilder, key: &str) -> reqwest::RequestBuilder {
         builder
             .header("x-api-key", key)
             .header("anthropic-version", ANTHROPIC_VERSION)
@@ -255,20 +264,19 @@ impl AnthropicClient {
 
         for _ in 0..max_retries {
             let key = self.next_key().to_string();
-            let response = match Self::auth_headers(
-                self.client.post(ANTHROPIC_API_URL).json(&body),
-                &key,
-            )
-            .send()
-            .await
-            {
-                Ok(response) => response,
-                Err(error) => {
-                    last_err =
-                        Some(Error::Any(anyhow::anyhow!("Anthropic request failed: {error}")));
-                    continue;
-                }
-            };
+            let response =
+                match Self::auth_headers(self.client.post(ANTHROPIC_API_URL).json(&body), &key)
+                    .send()
+                    .await
+                {
+                    Ok(response) => response,
+                    Err(error) => {
+                        last_err = Some(Error::Any(anyhow::anyhow!(
+                            "Anthropic request failed: {error}"
+                        )));
+                        continue;
+                    }
+                };
 
             let status = response.status();
             if Self::should_rotate(status) {
@@ -287,7 +295,9 @@ impl AnthropicClient {
             }
 
             let parsed: AnthropicResponse = response.json().await.map_err(|error| {
-                Error::Any(anyhow::anyhow!("Failed to parse Anthropic response: {error}"))
+                Error::Any(anyhow::anyhow!(
+                    "Failed to parse Anthropic response: {error}"
+                ))
             })?;
 
             let content = parsed
@@ -297,9 +307,9 @@ impl AnthropicClient {
                 .collect::<Vec<_>>()
                 .join("");
 
-            let tokens_used = parsed.usage.map(|usage| {
-                usage.input_tokens.unwrap_or(0) + usage.output_tokens.unwrap_or(0)
-            });
+            let tokens_used = parsed
+                .usage
+                .map(|usage| usage.input_tokens.unwrap_or(0) + usage.output_tokens.unwrap_or(0));
 
             return Ok(AIResponse {
                 content,
@@ -330,20 +340,19 @@ impl AnthropicClient {
             }
 
             let key = self.next_key().to_string();
-            let response = match Self::auth_headers(
-                self.client.post(ANTHROPIC_API_URL).json(&body),
-                &key,
-            )
-            .send()
-            .await
-            {
-                Ok(response) => response,
-                Err(error) => {
-                    last_err =
-                        Some(Error::Any(anyhow::anyhow!("Anthropic request failed: {error}")));
-                    continue;
-                }
-            };
+            let response =
+                match Self::auth_headers(self.client.post(ANTHROPIC_API_URL).json(&body), &key)
+                    .send()
+                    .await
+                {
+                    Ok(response) => response,
+                    Err(error) => {
+                        last_err = Some(Error::Any(anyhow::anyhow!(
+                            "Anthropic request failed: {error}"
+                        )));
+                        continue;
+                    }
+                };
 
             let status = response.status();
             if Self::should_rotate(status) {
@@ -422,7 +431,9 @@ impl AnthropicClient {
         let response = Self::auth_headers(http.get(ANTHROPIC_MODELS_URL), api_key)
             .send()
             .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Anthropic models request failed: {error}")))?;
+            .map_err(|error| {
+                Error::Any(anyhow::anyhow!("Anthropic models request failed: {error}"))
+            })?;
 
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();

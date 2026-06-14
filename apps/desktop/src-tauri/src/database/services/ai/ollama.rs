@@ -50,15 +50,21 @@ pub struct OllamaCatalogEntry {
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OllamaPullEvent {
-    Status { message: String },
+    Status {
+        message: String,
+    },
     Progress {
         completed: u64,
         total: u64,
         percent: f32,
         eta_seconds: Option<u32>,
     },
-    Done { model: String },
-    Error { message: String },
+    Done {
+        model: String,
+    },
+    Error {
+        message: String,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -159,7 +165,11 @@ impl OllamaClient {
         let endpoint = self.endpoint.clone();
         match self.fetch_version().await {
             Ok(version) => {
-                let installed_count = self.list_installed_models().await.map(|m| m.len()).unwrap_or(0);
+                let installed_count = self
+                    .list_installed_models()
+                    .await
+                    .map(|m| m.len())
+                    .unwrap_or(0);
                 OllamaStatus {
                     running: true,
                     endpoint,
@@ -198,22 +208,18 @@ impl OllamaClient {
             )));
         }
 
-        let parsed: OllamaVersionResponse = response
-            .json()
-            .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Failed to parse Ollama version: {error}")))?;
+        let parsed: OllamaVersionResponse = response.json().await.map_err(|error| {
+            Error::Any(anyhow::anyhow!("Failed to parse Ollama version: {error}"))
+        })?;
 
         Ok(parsed.version)
     }
 
     async fn list_installed_models(&self) -> Result<Vec<OllamaModel>, Error> {
         let url = format!("{}/api/tags", self.endpoint);
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Failed to list Ollama models: {error}")))?;
+        let response = self.client.get(&url).send().await.map_err(|error| {
+            Error::Any(anyhow::anyhow!("Failed to list Ollama models: {error}"))
+        })?;
 
         if !response.status().is_success() {
             return Err(Error::Any(anyhow::anyhow!("Failed to list Ollama models")));
@@ -265,7 +271,12 @@ impl OllamaClient {
         }
 
         for model in installed {
-            let base = model.name.split(':').next().unwrap_or(&model.name).to_string();
+            let base = model
+                .name
+                .split(':')
+                .next()
+                .unwrap_or(&model.name)
+                .to_string();
             if seen.insert(model.name.clone()) {
                 catalog.push(OllamaCatalogEntry {
                     name: model.name.clone(),
@@ -297,7 +308,9 @@ impl OllamaClient {
             .json(&serde_json::json!({ "name": model }))
             .send()
             .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Failed to delete Ollama model: {error}")))?;
+            .map_err(|error| {
+                Error::Any(anyhow::anyhow!("Failed to delete Ollama model: {error}"))
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -345,8 +358,9 @@ impl OllamaClient {
                 return Ok(());
             }
 
-            let chunk = chunk_result
-                .map_err(|error| Error::Any(anyhow::anyhow!("Ollama pull stream error: {error}")))?;
+            let chunk = chunk_result.map_err(|error| {
+                Error::Any(anyhow::anyhow!("Ollama pull stream error: {error}"))
+            })?;
             buffer.push_str(&String::from_utf8_lossy(&chunk));
 
             while let Some(newline_idx) = buffer.find('\n') {
@@ -376,7 +390,8 @@ impl OllamaClient {
                             let delta = completed.saturating_sub(last_completed);
                             let rate = delta as f64 / elapsed;
                             let eta_seconds = if rate > 0.0 {
-                                Some(((total.saturating_sub(completed)) as f64 / rate).round() as u32)
+                                Some(((total.saturating_sub(completed)) as f64 / rate).round()
+                                    as u32)
                             } else {
                                 None
                             };

@@ -74,7 +74,9 @@ pub struct GeminiClient {
 impl GeminiClient {
     pub fn from_env_and_storage(storage: &Storage) -> Result<Self, Error> {
         let mut keys = Self::collect_env_keys();
-        let db_keys = storage.ai_keys_active_decrypted("gemini").unwrap_or_default();
+        let db_keys = storage
+            .ai_keys_active_decrypted("gemini")
+            .unwrap_or_default();
         keys.extend(db_keys);
         let model = storage
             .get_setting("ai_model")?
@@ -112,6 +114,16 @@ impl GeminiClient {
 
     pub fn key_count(&self) -> usize {
         self.keys.len()
+    }
+
+    pub async fn test_configured_key(
+        storage: &Storage,
+        model: Option<&str>,
+        prompt: Option<&str>,
+    ) -> Result<String, Error> {
+        let client = Self::from_env_and_storage(storage)?;
+        let key = client.next_key().to_string();
+        Self::test_key(&key, model, prompt).await
     }
 
     fn next_key(&self) -> &str {
@@ -183,9 +195,7 @@ impl GeminiClient {
             .build()
             .map_err(|error| Error::Any(anyhow::anyhow!("client build failed: {error}")))?;
 
-        let url = format!(
-            "{GEMINI_BASE_URL}/{model}:generateContent?key={api_key}"
-        );
+        let url = format!("{GEMINI_BASE_URL}/{model}:generateContent?key={api_key}");
         let response = client
             .post(&url)
             .json(&body)
@@ -240,7 +250,9 @@ impl GeminiClient {
             let response = match self.client.post(&url).json(&body).send().await {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!("Gemini request failed: {error}")));
+                    last_err = Some(Error::Any(anyhow::anyhow!(
+                        "Gemini request failed: {error}"
+                    )));
                     continue;
                 }
             };
@@ -315,7 +327,9 @@ impl GeminiClient {
             let response = match self.client.post(&url).json(&body).send().await {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!("Gemini request failed: {error}")));
+                    last_err = Some(Error::Any(anyhow::anyhow!(
+                        "Gemini request failed: {error}"
+                    )));
                     continue;
                 }
             };
@@ -410,12 +424,9 @@ impl GeminiClient {
         let client = Self::from_env_and_storage(storage)?;
         let key = client.next_key();
         let url = format!("{GEMINI_MODELS_URL}?key={key}");
-        let response = client
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("Gemini models request failed: {error}")))?;
+        let response = client.client.get(&url).send().await.map_err(|error| {
+            Error::Any(anyhow::anyhow!("Gemini models request failed: {error}"))
+        })?;
 
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();

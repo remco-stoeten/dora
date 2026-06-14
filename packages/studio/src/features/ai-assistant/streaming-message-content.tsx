@@ -1,3 +1,5 @@
+import { AiThinkingIndicator } from './components/ai-thinking-indicator'
+
 type Segment =
 	| { type: 'text'; content: string; key: string }
 	| { type: 'code'; language: string; content: string; incomplete: boolean; key: string }
@@ -73,8 +75,8 @@ type Props = {
 }
 
 export function StreamingMessageContent({ content }: Props) {
-	if (!content) {
-		return <span className='text-muted-foreground'>…</span>
+	if (!content.trim()) {
+		return <AiThinkingIndicator />
 	}
 
 	const segments = splitStreamingMarkdown(content)

@@ -4,8 +4,18 @@ import { useIsTauri } from '@studio/core/data-provider'
 import { commands, type AiModelOption, type AiServiceConfig } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue
+} from '@studio/shared/ui/select'
 import { cn } from '@studio/shared/utils/cn'
 import { buildMockAiStatus, buildMockProviderModels } from './mock-ai'
+import { ModelIdInput } from './components/model-id-input'
 
 const CUSTOM_MODEL_VALUE = '__custom__'
 
@@ -193,22 +203,24 @@ export function AiProviderSection() {
 						<span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
 							Provider
 						</span>
-						<select
+						<Select
 							value={config.provider}
 							disabled={!isTauri}
-							onChange={function (event) {
-								updateProvider(event.target.value)
-							}}
-							className='h-8 w-full rounded-md border border-sidebar-border bg-background px-2 text-xs'
+							onValueChange={updateProvider}
 						>
-							{PROVIDER_OPTIONS.map(function (option) {
-								return (
-									<option key={option.id} value={option.id}>
-										{option.label}
-									</option>
-								)
-							})}
-						</select>
+							<SelectTrigger className='h-8 border-sidebar-border bg-sidebar text-xs text-sidebar-foreground'>
+								<SelectValue placeholder='Select provider' />
+							</SelectTrigger>
+							<SelectContent>
+								{PROVIDER_OPTIONS.map(function (option) {
+									return (
+										<SelectItem key={option.id} value={option.id} className='text-xs'>
+											{option.label}
+										</SelectItem>
+									)
+								})}
+							</SelectContent>
+						</Select>
 					</label>
 
 					<div className='space-y-1'>
@@ -242,11 +254,10 @@ export function AiProviderSection() {
 							/>
 						) : (
 							<>
-								<select
+								<Select
 									value={selectValue}
 									disabled={!isTauri || loadingModels}
-									onChange={function (event) {
-										const value = event.target.value
+									onValueChange={function (value) {
 										if (value === CUSTOM_MODEL_VALUE) {
 											setConfig(function (current) {
 												return { ...current, model: '' }
@@ -257,34 +268,48 @@ export function AiProviderSection() {
 											return { ...current, model: value }
 										})
 									}}
-									className='h-8 w-full rounded-md border border-sidebar-border bg-background px-2 text-xs'
 								>
-									{groupedModels.map(function (group) {
-										return (
-											<optgroup key={group.tier} label={group.label}>
-												{group.models.map(function (option) {
-													return (
-														<option key={option.id} value={option.id}>
-															{option.label}
-														</option>
-													)
-												})}
-											</optgroup>
-										)
-									})}
-									<option value={CUSTOM_MODEL_VALUE}>Custom model ID…</option>
-								</select>
+									<SelectTrigger className='h-8 border-sidebar-border bg-sidebar text-xs text-sidebar-foreground'>
+										<SelectValue placeholder='Select model' />
+									</SelectTrigger>
+									<SelectContent>
+										{groupedModels.map(function (group) {
+											return (
+												<SelectGroup key={group.tier}>
+													<SelectLabel className='text-[10px] uppercase tracking-wide'>
+														{group.label}
+													</SelectLabel>
+													{group.models.map(function (option) {
+														return (
+															<SelectItem
+																key={option.id}
+																value={option.id}
+																className='text-xs'
+															>
+																{option.label}
+															</SelectItem>
+														)
+													})}
+												</SelectGroup>
+											)
+										})}
+										<SelectItem value={CUSTOM_MODEL_VALUE} className='text-xs'>
+											Custom model ID…
+										</SelectItem>
+									</SelectContent>
+								</Select>
 
 								{usingCustomModel || selectValue === CUSTOM_MODEL_VALUE ? (
-									<Input
+									<ModelIdInput
 										value={config.model}
 										disabled={!isTauri}
-										onChange={function (event) {
+										onChange={function (nextValue) {
 											setConfig(function (current) {
-												return { ...current, model: event.target.value }
+												return { ...current, model: nextValue }
 											})
 										}}
-										placeholder='e.g. gpt-5.5-pro or claude-opus-4-8'
+										options={modelOptions}
+										placeholder='Start typing a model id…'
 										className='h-8 font-mono text-xs'
 									/>
 								) : null}

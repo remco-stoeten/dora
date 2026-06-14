@@ -227,6 +227,16 @@ impl GroqClient {
         self.keys.len()
     }
 
+    pub async fn test_configured_key(
+        storage: &Storage,
+        model: Option<&str>,
+        prompt: Option<&str>,
+    ) -> Result<String, Error> {
+        let client = Self::from_env_and_storage(storage)?;
+        let key = client.next_key().to_string();
+        Self::test_key(&key, model, prompt).await
+    }
+
     fn next_key(&self) -> &str {
         let idx = self.counter.fetch_add(1, Ordering::Relaxed);
         &self.keys[idx % self.keys.len()]
@@ -492,7 +502,9 @@ impl GroqClient {
 
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(Error::Any(anyhow::anyhow!("Groq models request failed: {body}")));
+            return Err(Error::Any(anyhow::anyhow!(
+                "Groq models request failed: {body}"
+            )));
         }
 
         #[derive(Debug, Deserialize)]
@@ -505,9 +517,10 @@ impl GroqClient {
             id: String,
         }
 
-        let parsed: GroqModelsResponse = response.json().await.map_err(|error| {
-            Error::Any(anyhow::anyhow!("Failed to parse Groq models: {error}"))
-        })?;
+        let parsed: GroqModelsResponse = response
+            .json()
+            .await
+            .map_err(|error| Error::Any(anyhow::anyhow!("Failed to parse Groq models: {error}")))?;
 
         Ok(parsed.data.into_iter().map(|entry| entry.id).collect())
     }

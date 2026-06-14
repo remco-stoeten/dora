@@ -1,4 +1,4 @@
-import { Loader2, Send, Sparkles, Square, Trash2, X } from 'lucide-react'
+import { Send, Sparkles, Square, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAdapter, useIsTauri } from '@studio/core/data-provider'
 import type { DatabaseSchema } from '@studio/lib/bindings'
@@ -19,6 +19,7 @@ type Props = {
 	selectedTableName?: string | null
 	editorContext?: AiAssistantEditorContext | null
 	onEditorInsert?: (sql: string) => void
+	onRunInConsole?: (sql: string) => void
 }
 
 export function AiAssistantPanel({
@@ -27,7 +28,8 @@ export function AiAssistantPanel({
 	selectedTableId,
 	selectedTableName,
 	editorContext,
-	onEditorInsert
+	onEditorInsert,
+	onRunInConsole
 }: Props) {
 	const adapter = useAdapter()
 	const isTauri = useIsTauri()
@@ -190,6 +192,15 @@ export function AiAssistantPanel({
 	const keysAvailable = aiStatus?.ready ?? false
 	const keyLabel = formatAiStatusBadge(aiStatus, isMock)
 	const activeProvider = aiStatus?.active_provider ?? 'groq'
+	const streamingAssistant = messages.find(function (message) {
+		return message.role === 'assistant' && message.streaming
+	})
+	const liveStreamContent =
+		streamingSnapshot != null &&
+		streamingSnapshot.messageId === streamingAssistant?.id
+			? streamingSnapshot.content
+			: streamingAssistant?.content ?? ''
+	const isWaitingForFirstToken = isStreaming && liveStreamContent.trim().length === 0
 
 	return (
 		<aside
@@ -264,7 +275,8 @@ export function AiAssistantPanel({
 					<div className='divide-y divide-sidebar-border/40'>
 						{messages.map(function (m) {
 							const liveContent =
-								streamingSnapshot?.messageId === m.id
+								streamingSnapshot != null &&
+								streamingSnapshot.messageId === m.id
 									? streamingSnapshot.content
 									: m.content
 							const message =
@@ -278,6 +290,7 @@ export function AiAssistantPanel({
 									message={message}
 									activeConnectionId={activeConnectionId}
 									onEditorInsert={onEditorInsert}
+									onRunInConsole={onRunInConsole}
 								/>
 							)
 						})}
@@ -343,9 +356,13 @@ export function AiAssistantPanel({
 				<div className='mt-1 flex items-center justify-between text-[10px] text-muted-foreground'>
 					<span>Enter to send · Shift+Enter newline · Esc to close</span>
 					{isStreaming && (
-						<span className='flex items-center gap-1'>
-							<Loader2 className='h-3 w-3 animate-spin' />
-							streaming…
+						<span
+							className={cn(
+								'ai-thinking-label font-medium',
+								!isWaitingForFirstToken && 'opacity-80'
+							)}
+						>
+							{isWaitingForFirstToken ? 'Thinking…' : 'Writing…'}
 						</span>
 					)}
 				</div>

@@ -523,9 +523,21 @@ export function AiKeysSection() {
 									void handleToggleActive(key.id, !key.is_active)
 								}}
 								className={cn(
-									'h-2 w-2 rounded-full flex-shrink-0',
-									key.is_active ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+									// Active = filled dot, inactive = hollow ring. The shape
+									// difference (not just colour) keeps the state legible for
+									// colour-blind users; aria-label/aria-pressed cover SRs.
+									'h-2 w-2 rounded-full flex-shrink-0 border',
+									key.is_active
+										? 'bg-emerald-500 border-emerald-500'
+										: 'bg-transparent border-muted-foreground/50'
 								)}
+								role='switch'
+								aria-pressed={key.is_active}
+								aria-label={
+									key.is_active
+										? `${key.label} provider key active — click to disable`
+										: `${key.label} provider key disabled — click to enable`
+								}
 								title={key.is_active ? 'Active — click to disable' : 'Disabled — click to enable'}
 							/>
 							<div className='min-w-0 flex-1'>

@@ -9,6 +9,7 @@ type Props = {
 	className?: string
 	buttonClassName?: string
 	tooltip?: string
+	tooltipSide?: 'top' | 'right' | 'bottom' | 'left'
 }
 
 export function SidebarPanelToggle({
@@ -16,7 +17,8 @@ export function SidebarPanelToggle({
 	onToggle,
 	className,
 	buttonClassName,
-	tooltip = 'Toggle sidebar (Ctrl+B)'
+	tooltip = 'Toggle sidebar (Ctrl+B)',
+	tooltipSide = 'top'
 }: Props) {
 	if (!onToggle) return null
 
@@ -43,7 +45,7 @@ export function SidebarPanelToggle({
 					/>
 				</Button>
 			</TooltipTrigger>
-			<TooltipContent side='top' className='text-xs'>
+			<TooltipContent side={tooltipSide} className='text-xs'>
 				{tooltip}
 			</TooltipContent>
 		</Tooltip>

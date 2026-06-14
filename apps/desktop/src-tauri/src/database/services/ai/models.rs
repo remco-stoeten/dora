@@ -27,8 +27,16 @@ pub const ANTHROPIC_CURATED: &[(&str, &str, &str)] = &[
     ("claude-opus-4-6", "Claude Opus 4.6", "flagship"),
     ("claude-sonnet-4-6", "Claude Sonnet 4.6", "balanced"),
     ("claude-sonnet-4-5", "Claude Sonnet 4.5", "balanced"),
-    ("claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet", "balanced"),
-    ("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet", "balanced"),
+    (
+        "claude-3-7-sonnet-20250219",
+        "Claude 3.7 Sonnet",
+        "balanced",
+    ),
+    (
+        "claude-3-5-sonnet-20241022",
+        "Claude 3.5 Sonnet",
+        "balanced",
+    ),
     ("claude-haiku-4-5", "Claude Haiku 4.5", "fast"),
     ("claude-3-5-haiku-20241022", "Claude 3.5 Haiku", "fast"),
 ];
@@ -57,7 +65,11 @@ pub fn curated_only(entries: &[(&str, &str, &str)]) -> Vec<AiModelOption> {
         .collect()
 }
 
-pub fn merge_models<F>(curated: &[(&str, &str, &str)], fetched_ids: Vec<String>, classify: F) -> Vec<AiModelOption>
+pub fn merge_models<F>(
+    curated: &[(&str, &str, &str)],
+    fetched_ids: Vec<String>,
+    classify: F,
+) -> Vec<AiModelOption>
 where
     F: Fn(&str) -> (&'static str, String),
 {
@@ -87,22 +99,21 @@ where
 
 pub fn classify_openai(id: &str) -> (&'static str, String) {
     let lower = id.to_lowercase();
-    let tier = if lower.starts_with("gpt-5.5")
-        || (lower.starts_with("o3") && !lower.contains("mini"))
-    {
-        "flagship"
-    } else if lower.contains("mini") || lower.contains("nano") || lower.contains("instant") {
-        "fast"
-    } else if lower.starts_with("gpt-")
-        || lower.starts_with("o1")
-        || lower.starts_with("o3")
-        || lower.starts_with("o4")
-        || lower.starts_with("chatgpt-")
-    {
-        "balanced"
-    } else {
-        "other"
-    };
+    let tier =
+        if lower.starts_with("gpt-5.5") || (lower.starts_with("o3") && !lower.contains("mini")) {
+            "flagship"
+        } else if lower.contains("mini") || lower.contains("nano") || lower.contains("instant") {
+            "fast"
+        } else if lower.starts_with("gpt-")
+            || lower.starts_with("o1")
+            || lower.starts_with("o3")
+            || lower.starts_with("o4")
+            || lower.starts_with("chatgpt-")
+        {
+            "balanced"
+        } else {
+            "other"
+        };
     (tier, id.to_string())
 }
 

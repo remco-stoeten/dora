@@ -8,12 +8,14 @@ type Props = {
 	message: ChatMessage
 	activeConnectionId: string | null
 	onEditorInsert?: (sql: string) => void
+	onRunInConsole?: (sql: string) => void
 }
 
 export const MessageBubble = memo(function MessageBubble({
 	message,
 	activeConnectionId,
-	onEditorInsert
+	onEditorInsert,
+	onRunInConsole
 }: Props) {
 	const isUser = message.role === 'user'
 
@@ -39,6 +41,7 @@ export const MessageBubble = memo(function MessageBubble({
 							isStreaming={message.streaming}
 							activeConnectionId={activeConnectionId}
 							onEditorInsert={onEditorInsert}
+							onRunInConsole={onRunInConsole}
 						/>
 					</div>
 				)}
@@ -47,8 +50,11 @@ export const MessageBubble = memo(function MessageBubble({
 						{message.error}
 					</div>
 				)}
-				{message.streaming && !message.error && (
-					<span className='ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-primary align-middle' />
+				{message.streaming && !message.error && message.content.trim().length > 0 && (
+					<span
+						aria-hidden
+						className='ml-0.5 inline-block h-3.5 w-[2px] animate-pulse rounded-full bg-primary/80 align-middle'
+					/>
 				)}
 			</div>
 		</div>

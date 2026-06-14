@@ -39,9 +39,13 @@ fn build_chat_system_prompt(request: &AIRequest) -> String {
     s.push_str("- Small tables (well under a few thousand rows) rarely need new indexes for FK columns unless a slow query is proven.\n");
     s.push_str("- For performance questions, prefer diagnostic SQL (`EXPLAIN`, `EXPLAIN ANALYZE`, index usage views) before DDL. Say when you are inferring vs when the schema proves something.\n");
     s.push_str("- If context is incomplete (missing indexes, truncated tables, no query plan), say what you cannot verify and ask one focused follow-up.\n");
-    s.push_str("- Wrap executable SQL in ```sql code blocks so the UI can render Run/Copy buttons.\n");
+    s.push_str(
+        "- Wrap executable SQL in ```sql code blocks so the UI can render Run/Copy buttons.\n",
+    );
     s.push_str("- Use realistic fake values when writing INSERT examples.\n");
-    s.push_str("- Default to the active database dialect. Note dialect-specific syntax when relevant.\n");
+    s.push_str(
+        "- Default to the active database dialect. Note dialect-specific syntax when relevant.\n",
+    );
     s.push_str("- For fuzzy text matching, explain that plain `LIKE`/`ILIKE` does not return a match percentage. For PostgreSQL, mention `pg_trgm` (`similarity`, `%`, GIN indexes) or full-text search when substring search is the bottleneck.\n");
     s.push_str("- For destructive statements (DELETE/UPDATE without WHERE, DROP, TRUNCATE) add a one-line warning comment above the SQL.\n");
     s.push_str("- If the user prompt includes `Current Dora UI context`, use it for references like \"this table\" or \"selected table\".\n");

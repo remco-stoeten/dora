@@ -9,13 +9,15 @@ type Props = {
 	isStreaming?: boolean
 	activeConnectionId: string | null
 	onEditorInsert?: (sql: string) => void
+	onRunInConsole?: (sql: string) => void
 }
 
 export function MessageContent({
 	content,
 	isStreaming = false,
 	activeConnectionId,
-	onEditorInsert
+	onEditorInsert,
+	onRunInConsole
 }: Props) {
 	if (isStreaming) {
 		return <StreamingMessageContent content={content} />
@@ -34,6 +36,7 @@ export function MessageContent({
 					code={parsed.sql}
 					activeConnectionId={activeConnectionId}
 					onEditorInsert={onEditorInsert}
+					onRunInConsole={onRunInConsole}
 				/>
 				{parsed.examples.map(function (example) {
 					return (
@@ -43,6 +46,7 @@ export function MessageContent({
 							code={example}
 							activeConnectionId={activeConnectionId}
 							onEditorInsert={onEditorInsert}
+							onRunInConsole={onRunInConsole}
 						/>
 					)
 				})}
@@ -82,6 +86,7 @@ export function MessageContent({
 							code={text}
 							activeConnectionId={activeConnectionId}
 							onEditorInsert={onEditorInsert}
+							onRunInConsole={onRunInConsole}
 						/>
 					)
 				},

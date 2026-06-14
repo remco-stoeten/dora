@@ -38,6 +38,7 @@ type Props = {
 	code: string
 	activeConnectionId: string | null
 	onEditorInsert?: (sql: string) => void
+	onRunInConsole?: (sql: string) => void
 	queryPollIntervalMs?: number
 	queryPollAttempts?: number
 }
@@ -45,7 +46,13 @@ type Props = {
 type RunState =
 	| { kind: 'idle' }
 	| { kind: 'running'; mode: 'run' | 'dry-run' }
-	| { kind: 'success'; mode: 'run' | 'dry-run'; rowCount: number; durationMs: number }
+	| {
+			kind: 'success'
+			mode: 'run' | 'dry-run'
+			rowCount: number
+			durationMs: number
+			inConsole?: boolean
+	  }
 	| { kind: 'error'; mode: 'run' | 'dry-run'; message: string }
 
 const tokenClassName: Record<SqlTokenKind, string> = {
@@ -83,6 +90,7 @@ export function CodeBlock({
 	code,
 	activeConnectionId,
 	onEditorInsert,
+	onRunInConsole,
 	queryPollIntervalMs,
 	queryPollAttempts
 }: Props) {
@@ -211,9 +219,31 @@ export function CodeBlock({
 
 	const handleRun = useCallback(
 		async function handleRun() {
+			if (onRunInConsole) {
+				if (!activeConnectionId || runState.kind === 'running') return
+				setRunState({ kind: 'running', mode: 'run' })
+				try {
+					onRunInConsole(code)
+					setRunState({
+						kind: 'success',
+						mode: 'run',
+						rowCount: 0,
+						durationMs: 0,
+						inConsole: true
+					})
+				} catch (e) {
+					setRunState({
+						kind: 'error',
+						mode: 'run',
+						message: e instanceof Error ? e.message : String(e)
+					})
+				}
+				return
+			}
+
 			await runSql(code, 'run')
 		},
-		[code, runSql]
+		[activeConnectionId, code, onRunInConsole, runSql, runState.kind]
 	)
 
 	const handleDryRun = useCallback(
@@ -355,7 +385,9 @@ export function CodeBlock({
 					{runState.kind === 'success' &&
 						(runState.mode === 'dry-run'
 							? `Dry run passed · ${runState.durationMs}ms`
-							: `${runState.rowCount} row${runState.rowCount === 1 ? '' : 's'} · ${runState.durationMs}ms`)}
+							: runState.inConsole
+								? 'Opened in query runner'
+								: `${runState.rowCount} row${runState.rowCount === 1 ? '' : 's'} · ${runState.durationMs}ms`)}
 					{runState.kind === 'error' && runState.message}
 				</div>
 			)}

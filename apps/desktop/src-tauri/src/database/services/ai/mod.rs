@@ -247,8 +247,7 @@ impl<'a> AIService<'a> {
     }
 
     pub fn set_provider(&self, provider: AIProvider) -> Result<(), Error> {
-        self.storage
-            .set_setting("ai_provider", provider.as_str())?;
+        self.storage.set_setting("ai_provider", provider.as_str())?;
         Ok(())
     }
 
@@ -302,7 +301,10 @@ impl<'a> AIService<'a> {
         Ok(())
     }
 
-    pub async fn list_provider_models(&self, provider: AIProvider) -> Result<Vec<AiModelOption>, Error> {
+    pub async fn list_provider_models(
+        &self,
+        provider: AIProvider,
+    ) -> Result<Vec<AiModelOption>, Error> {
         match provider {
             AIProvider::Openai => models::list_openai_models(self.storage).await,
             AIProvider::Anthropic => models::list_anthropic_models(self.storage).await,
@@ -422,33 +424,35 @@ impl<'a> AIService<'a> {
                         }
                     }
                 },
-                AIProvider::Anthropic => match AnthropicClient::from_env_and_storage(self.storage) {
-                    Ok(client) => AiProviderReadiness {
-                        provider: provider.as_str().to_string(),
-                        ready: true,
-                        detail: None,
-                        key_count: Some(client.key_count()),
-                    },
-                    Err(_) => {
-                        let keys = self.storage.ai_keys_list(provider.as_str())?;
-                        let active_count = keys.iter().filter(|key| key.is_active).count();
-                        AiProviderReadiness {
+                AIProvider::Anthropic => {
+                    match AnthropicClient::from_env_and_storage(self.storage) {
+                        Ok(client) => AiProviderReadiness {
                             provider: provider.as_str().to_string(),
-                            ready: active_count > 0,
-                            detail: if active_count > 0 {
-                                None
-                            } else if keys.is_empty() {
-                                Some(format!(
-                                    "Add an {} API key in Settings → AI Keys",
-                                    provider.label()
-                                ))
-                            } else {
-                                Some("Enable an API key in Settings".into())
-                            },
-                            key_count: Some(keys.len()),
+                            ready: true,
+                            detail: None,
+                            key_count: Some(client.key_count()),
+                        },
+                        Err(_) => {
+                            let keys = self.storage.ai_keys_list(provider.as_str())?;
+                            let active_count = keys.iter().filter(|key| key.is_active).count();
+                            AiProviderReadiness {
+                                provider: provider.as_str().to_string(),
+                                ready: active_count > 0,
+                                detail: if active_count > 0 {
+                                    None
+                                } else if keys.is_empty() {
+                                    Some(format!(
+                                        "Add an {} API key in Settings → AI Keys",
+                                        provider.label()
+                                    ))
+                                } else {
+                                    Some("Enable an API key in Settings".into())
+                                },
+                                key_count: Some(keys.len()),
+                            }
                         }
                     }
-                },
+                }
                 _ => unreachable!(),
             };
             providers.push(readiness);

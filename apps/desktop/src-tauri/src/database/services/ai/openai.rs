@@ -86,7 +86,9 @@ pub struct OpenAiClient {
 impl OpenAiClient {
     pub fn from_env_and_storage(storage: &Storage) -> Result<Self, Error> {
         let mut keys = Self::collect_env_keys();
-        let db_keys = storage.ai_keys_active_decrypted("openai").unwrap_or_default();
+        let db_keys = storage
+            .ai_keys_active_decrypted("openai")
+            .unwrap_or_default();
         keys.extend(db_keys);
         let model = storage
             .get_setting("ai_model")?
@@ -219,6 +221,16 @@ impl OpenAiClient {
         self.keys.len()
     }
 
+    pub async fn test_configured_key(
+        storage: &Storage,
+        model: Option<&str>,
+        prompt: Option<&str>,
+    ) -> Result<String, Error> {
+        let client = Self::from_env_and_storage(storage)?;
+        let key = client.next_key().to_string();
+        Self::test_key(&key, model, prompt).await
+    }
+
     fn next_key(&self) -> &str {
         let index = self.counter.fetch_add(1, Ordering::Relaxed);
         &self.keys[index % self.keys.len()]
@@ -289,7 +301,9 @@ impl OpenAiClient {
             {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!("OpenAI request failed: {error}")));
+                    last_err = Some(Error::Any(anyhow::anyhow!(
+                        "OpenAI request failed: {error}"
+                    )));
                     continue;
                 }
             };
@@ -366,7 +380,9 @@ impl OpenAiClient {
             {
                 Ok(response) => response,
                 Err(error) => {
-                    last_err = Some(Error::Any(anyhow::anyhow!("OpenAI request failed: {error}")));
+                    last_err = Some(Error::Any(anyhow::anyhow!(
+                        "OpenAI request failed: {error}"
+                    )));
                     continue;
                 }
             };
@@ -459,7 +475,9 @@ impl OpenAiClient {
             .bearer_auth(api_key)
             .send()
             .await
-            .map_err(|error| Error::Any(anyhow::anyhow!("OpenAI models request failed: {error}")))?;
+            .map_err(|error| {
+                Error::Any(anyhow::anyhow!("OpenAI models request failed: {error}"))
+            })?;
 
         if !response.status().is_success() {
             let body = response.text().await.unwrap_or_default();
