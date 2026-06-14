@@ -88,7 +88,21 @@ export const FEATURES: TFeatureConfig[] = [
             'supabase gui',
             'supabase desktop client',
             'neon database client',
-            'railway database viewer'
+            'railway database viewer',
+            'fly.io postgres client',
+            'aiven database client',
+            'render postgres gui',
+            'digitalocean database gui',
+            'planetscale gui',
+            'aws rds desktop client',
+            'cockroachdb gui',
+            'tidb cloud client',
+            'vercel postgres gui',
+            'crunchy bridge client',
+            'timescale cloud gui',
+            'azure database client',
+            'google cloud sql gui',
+            'yugabytedb client'
         ]
     },
     {
