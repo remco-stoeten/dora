@@ -2,9 +2,19 @@ import { Check, Loader2, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { buildMockProviderModels } from '@studio/features/ai-assistant/mock-ai'
+import { ModelIdInput } from '@studio/features/ai-assistant/components/model-id-input'
 import { commands, type AiApiKeyRecord, type AiModelOption } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue
+} from '@studio/shared/ui/select'
 import { cn } from '@studio/shared/utils/cn'
 import { SidebarSection } from './sidebar-panel'
 
@@ -114,6 +124,11 @@ export function AiKeysSection() {
 		testing: false
 	})
 	const [tests, setTests] = useState<Record<number, TestState>>({})
+	const [settingsTest, setSettingsTest] = useState<{
+		ok?: boolean
+		message?: string
+		testing: boolean
+	}>({ testing: false })
 
 	const activeProvider = PROVIDERS.find(function (entry) {
 		return entry.id === provider
@@ -133,6 +148,14 @@ export function AiKeysSection() {
 	const testModelSelectValue = usingCustomTestModel ? CUSTOM_MODEL_VALUE : testModel
 
 	const resolvedTestModel = usingCustomTestModel ? customTestModel.trim() : testModel.trim()
+
+	const testKey = useMemo(function () {
+		return (
+			keys.find(function (key) {
+				return key.is_active
+			}) ?? keys[0]
+		)
+	}, [keys])
 
 	const loadModels = useCallback(
 		async function loadModels(nextProvider: KeyProvider, preferredModel?: string) {
@@ -202,6 +225,7 @@ export function AiKeysSection() {
 			setApiKey('')
 			setLabel('')
 			setTestNew({ testing: false })
+			setSettingsTest({ testing: false })
 			void loadModels(provider)
 			void load()
 		},
@@ -244,25 +268,54 @@ export function AiKeysSection() {
 		if (res.status === 'ok') await load()
 	}
 
-	async function handleTest(id: number) {
+	async function handleTest(id: number): Promise<{ ok: boolean; message: string } | null> {
 		setTests(function (prev) {
 			return { ...prev, [id]: { id, testing: true } }
 		})
 		const args = testArgs()
 		const res = await commands.aiKeysTest(id, args.model, args.prompt)
 		if (res.status === 'ok') {
+			const result = { ok: res.data.ok, message: res.data.message }
 			setTests(function (prev) {
 				return {
 					...prev,
-					[id]: { id, testing: false, ok: res.data.ok, message: res.data.message }
+					[id]: { id, testing: false, ok: result.ok, message: result.message }
 				}
 			})
 			await load()
-		} else {
-			setTests(function (prev) {
-				return { ...prev, [id]: { id, testing: false, ok: false, message: 'Test failed' } }
-			})
+			return result
 		}
+
+		const failure = { ok: false, message: 'Test failed' }
+		setTests(function (prev) {
+			return { ...prev, [id]: { id, testing: false, ...failure } }
+		})
+		return failure
+	}
+
+	async function handleRunSettingsTest() {
+		setSettingsTest({ testing: true })
+		if (testKey) {
+			const result = await handleTest(testKey.id)
+			setSettingsTest({
+				testing: false,
+				ok: result?.ok,
+				message: result?.message
+			})
+			return
+		}
+
+		const args = testArgs()
+		const res = await commands.aiKeysTestProvider(provider, args.model, args.prompt)
+		const result =
+			res.status === 'ok'
+				? { ok: res.data.ok, message: res.data.message }
+				: { ok: false, message: 'Test failed' }
+		setSettingsTest({
+			testing: false,
+			ok: result.ok,
+			message: result.message
+		})
 	}
 
 	async function handleToggleActive(id: number, next: boolean) {
@@ -322,11 +375,14 @@ export function AiKeysSection() {
 
 					<label className='block space-y-1'>
 						<span className='text-[10px] text-muted-foreground'>Model to test against</span>
-						<select
+						<p className='text-[10px] leading-snug text-muted-foreground/80'>
+							Cloud models your {activeProvider.label} API key can call — nothing is
+							installed on your device. Pick any model your account supports.
+						</p>
+						<Select
 							value={testModelSelectValue}
 							disabled={!isTauri || loadingModels}
-							onChange={function (event) {
-								const value = event.target.value
+							onValueChange={function (value) {
 								if (value === CUSTOM_MODEL_VALUE) {
 									setCustomTestModel(testModel)
 									setTestModel('')
@@ -335,33 +391,45 @@ export function AiKeysSection() {
 								setTestModel(value)
 								setCustomTestModel('')
 							}}
-							className='h-8 w-full rounded-md border border-sidebar-border bg-background px-2 text-xs'
 						>
-							{groupedModels.map(function (group) {
-								return (
-									<optgroup key={group.tier} label={group.label}>
-										{group.models.map(function (option) {
-											return (
-												<option key={option.id} value={option.id}>
-													{option.label}
-												</option>
-											)
-										})}
-									</optgroup>
-								)
-							})}
-							<option value={CUSTOM_MODEL_VALUE}>Custom model ID…</option>
-						</select>
+							<SelectTrigger className='h-8 border-sidebar-border bg-sidebar text-xs text-sidebar-foreground'>
+								<SelectValue placeholder='Select a model' />
+							</SelectTrigger>
+							<SelectContent>
+								{groupedModels.map(function (group) {
+									return (
+										<SelectGroup key={group.tier}>
+											<SelectLabel className='text-[10px] uppercase tracking-wide'>
+												{group.label}
+											</SelectLabel>
+											{group.models.map(function (option) {
+												return (
+													<SelectItem
+														key={option.id}
+														value={option.id}
+														className='text-xs'
+													>
+														{option.label}
+													</SelectItem>
+												)
+											})}
+										</SelectGroup>
+									)
+								})}
+								<SelectItem value={CUSTOM_MODEL_VALUE} className='text-xs'>
+									Custom model ID…
+								</SelectItem>
+							</SelectContent>
+						</Select>
 					</label>
 
 					{usingCustomTestModel || testModelSelectValue === CUSTOM_MODEL_VALUE ? (
-						<Input
+						<ModelIdInput
 							value={customTestModel}
 							disabled={!isTauri}
-							onChange={function (event) {
-								setCustomTestModel(event.target.value)
-							}}
-							placeholder='Model id for this test'
+							onChange={setCustomTestModel}
+							options={modelOptions}
+							placeholder='Start typing a model id…'
 							className='h-8 font-mono text-xs'
 						/>
 					) : null}
@@ -380,6 +448,53 @@ export function AiKeysSection() {
 							className='h-8 text-xs'
 						/>
 					</label>
+
+					<div className='flex flex-wrap items-center gap-2'>
+						<Button
+							variant='outline'
+							size='sm'
+							className='h-7 text-xs'
+							onClick={function () {
+								void handleRunSettingsTest()
+							}}
+							disabled={
+								!isTauri || !resolvedTestModel || settingsTest.testing
+							}
+							title={
+								testKey
+									? `Run test with ${testKey.label} using the model and prompt above`
+									: `Run test with configured ${activeProvider.label} environment keys`
+							}
+						>
+							{settingsTest.testing ? (
+								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+							) : (
+								<Zap className='mr-1 h-3 w-3' />
+							)}
+							Run test
+						</Button>
+						{testKey ? (
+							<span className='text-[10px] text-muted-foreground'>
+								Using {testKey.label}
+								{testKey.is_active ? '' : ' (first saved key)'}
+							</span>
+						) : (
+							<span className='text-[10px] text-muted-foreground'>
+								Using configured provider keys from the environment
+							</span>
+						)}
+					</div>
+
+					{settingsTest.message ? (
+						<div
+							className={cn(
+								'text-[10px] font-mono',
+								settingsTest.ok ? 'text-emerald-500' : 'text-destructive'
+							)}
+						>
+							{settingsTest.ok ? '✓' : '✗'} {settingsTest.message}
+						</div>
+					) : null}
 				</div>
 
 				{loading && (

@@ -19,6 +19,10 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::update_connection,
         db_commands::update_connection_color,
         db_commands::connect_to_database,
+        db_commands::get_data_file_source_status,
+        db_commands::retry_data_file_registration,
+        db_commands::save_data_file_session_as_duckdb,
+        db_commands::import_files_into_duckdb,
         db_commands::disconnect_from_database,
         db_commands::get_connections,
         db_commands::remove_connection,
@@ -102,6 +106,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::ai_keys_delete,
         db_commands::ai_keys_set_active,
         db_commands::ai_keys_test,
+        db_commands::ai_keys_test_provider,
         db_commands::ai_keys_test_raw,
         // Storage management
         db_commands::list_databases,

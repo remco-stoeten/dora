@@ -7,11 +7,12 @@ use uuid::Uuid;
 use crate::{
     database::{
         services::ai::{
-            AIProvider, AIRequest, AIResponse, AIService, AiModelOption, AiServiceConfig, AiStatus,
-            AiStreamEvent, AiUsageCapture, AiUsageEntry, AiUsageProviderSummary, AiUsageSummary,
-            AnthropicClient, ColumnContext, ForeignKeyContext, GeminiClient, GroqClient, OllamaCatalogEntry,
-            OllamaClient, OllamaPullEvent, OllamaStatus, OpenAiClient, GroqStatus, IndexContext, SchemaContext,
-            TableContext, record_usage, usage_source,
+            record_usage, usage_source, AIProvider, AIRequest, AIResponse, AIService,
+            AiModelOption, AiServiceConfig, AiStatus, AiStreamEvent, AiUsageCapture, AiUsageEntry,
+            AiUsageProviderSummary, AiUsageSummary, AnthropicClient, ColumnContext,
+            ForeignKeyContext, GeminiClient, GroqClient, GroqStatus, IndexContext,
+            OllamaCatalogEntry, OllamaClient, OllamaPullEvent, OllamaStatus, OpenAiClient,
+            SchemaContext, TableContext,
         },
         types::DatabaseSchema,
     },
@@ -213,13 +214,8 @@ pub async fn ai_complete_stream(
 
     if result.is_ok() {
         if let Some(content) = final_content {
-            let capture = AiUsageCapture::estimated_from_text(
-                &provider,
-                &model,
-                &source,
-                &prompt,
-                &content,
-            );
+            let capture =
+                AiUsageCapture::estimated_from_text(&provider, &model, &source, &prompt, &content);
             let _ = record_usage(&state.storage, capture);
         }
     } else if let Err(ref error) = result {
@@ -466,7 +462,10 @@ pub async fn ai_cancel_ollama_pull(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn ai_delete_ollama_model(model: String, state: State<'_, AppState>) -> Result<(), Error> {
+pub async fn ai_delete_ollama_model(
+    model: String,
+    state: State<'_, AppState>,
+) -> Result<(), Error> {
     let model = model.trim().to_string();
     if model.is_empty() {
         return Err(Error::InvalidInput("Model name cannot be empty".into()));
@@ -612,6 +611,25 @@ async fn test_ai_key_for_provider(
     }
 }
 
+async fn test_configured_ai_key_for_provider(
+    provider: &str,
+    model: Option<String>,
+    prompt: Option<String>,
+    storage: &crate::storage::Storage,
+) -> Result<String, Error> {
+    let model_ref = model.as_deref();
+    let prompt_ref = prompt.as_deref();
+    match provider {
+        "groq" => GroqClient::test_configured_key(storage, model_ref, prompt_ref).await,
+        "openai" => OpenAiClient::test_configured_key(storage, model_ref, prompt_ref).await,
+        "anthropic" => AnthropicClient::test_configured_key(storage, model_ref, prompt_ref).await,
+        "gemini" => GeminiClient::test_configured_key(storage, model_ref, prompt_ref).await,
+        other => Err(Error::InvalidInput(format!(
+            "Key testing is not supported for provider: {other}"
+        ))),
+    }
+}
+
 fn resolve_test_model(
     provider: &str,
     model: Option<String>,
@@ -627,7 +645,9 @@ fn resolve_test_model(
         }
     }
 
-    Ok(AIProvider::parse(provider).ok().map(|entry| entry.default_model().to_string()))
+    Ok(AIProvider::parse(provider)
+        .ok()
+        .map(|entry| entry.default_model().to_string()))
 }
 
 #[tauri::command]
@@ -666,7 +686,11 @@ pub async fn ai_keys_test(
                 .as_deref()
                 .filter(|value| !value.trim().is_empty())
                 .unwrap_or("ping");
-            let output = if input == "ping" { "OK" } else { message.as_str() };
+            let output = if input == "ping" {
+                "OK"
+            } else {
+                message.as_str()
+            };
             let capture = AiUsageCapture::estimated_from_text(
                 &record.provider,
                 &model_id,
@@ -678,6 +702,50 @@ pub async fn ai_keys_test(
         }
     }
     Ok(AiKeyTestResult { ok, message })
+}
+
+/// Test the configured provider key source (environment keys plus active saved keys).
+#[tauri::command]
+#[specta::specta]
+pub async fn ai_keys_test_provider(
+    provider: String,
+    model: Option<String>,
+    prompt: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<AiKeyTestResult, Error> {
+    let provider = AIProvider::parse(&provider)?.as_str().to_string();
+    let resolved_model = resolve_test_model(&provider, model, &state.storage)?;
+    let result = test_configured_ai_key_for_provider(
+        &provider,
+        resolved_model.clone(),
+        prompt.clone(),
+        &state.storage,
+    )
+    .await;
+    let outcome = match result {
+        Ok(msg) => {
+            if let Some(model_id) = resolved_model {
+                let input = prompt
+                    .as_deref()
+                    .filter(|value| !value.trim().is_empty())
+                    .unwrap_or("ping");
+                let output = if input == "ping" { "OK" } else { msg.as_str() };
+                let capture = AiUsageCapture::estimated_from_text(
+                    &provider, &model_id, "key_test", input, output,
+                );
+                let _ = record_usage(&state.storage, capture);
+            }
+            AiKeyTestResult {
+                ok: true,
+                message: msg,
+            }
+        }
+        Err(error) => AiKeyTestResult {
+            ok: false,
+            message: error.to_string(),
+        },
+    };
+    Ok(outcome)
 }
 
 /// Test an unsaved key (used by the "Test before save" button).

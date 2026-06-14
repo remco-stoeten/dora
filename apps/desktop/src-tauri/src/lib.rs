@@ -10,8 +10,8 @@ pub mod credentials;
 pub mod database;
 mod error;
 mod init;
-mod ollama_installer;
 mod observability;
+mod ollama_installer;
 mod storage;
 mod test_queries;
 pub mod utils;
@@ -131,6 +131,8 @@ pub fn run() {
         .manage(app_state)
         .manage(certificates)
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             #[cfg(debug_assertions)]
             {
@@ -159,6 +161,10 @@ pub fn run() {
             database::commands::update_connection,
             database::commands::update_connection_color,
             database::commands::connect_to_database,
+            database::commands::get_data_file_source_status,
+            database::commands::retry_data_file_registration,
+            database::commands::save_data_file_session_as_duckdb,
+            database::commands::import_files_into_duckdb,
             database::commands::disconnect_from_database,
             database::commands::cancel_query,
             database::commands::start_query,
@@ -253,6 +259,7 @@ pub fn run() {
             database::commands::ai_keys_delete,
             database::commands::ai_keys_set_active,
             database::commands::ai_keys_test,
+            database::commands::ai_keys_test_provider,
             database::commands::ai_keys_test_raw,
             // Window commands
             window::commands::minimize_window,
