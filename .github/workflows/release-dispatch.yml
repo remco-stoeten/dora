@@ -28,7 +28,12 @@ jobs:
         with:
           fetch-depth: 0
           ref: master
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Push the tag with a PAT so the resulting `push: tags` event triggers
+          # release.yml. Tags pushed with the default GITHUB_TOKEN do NOT start
+          # other workflows (GitHub anti-recursion), which previously left the
+          # build/publish pipeline un-triggered. Falls back to GITHUB_TOKEN when
+          # RELEASE_PAT is not configured (release is tagged but not auto-built).
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Install git-cliff
         uses: taiki-e/install-action@git-cliff
@@ -52,6 +57,13 @@ jobs:
           git push origin "${{ steps.prepare.outputs.next_tag }}"
 
       - name: Summary
+        env:
+          HAS_PAT: ${{ secrets.RELEASE_PAT != '' }}
         run: |
           echo "Release ${{ steps.prepare.outputs.next_tag }} pushed."
           echo "Build pipeline: https://github.com/${{ github.repository }}/actions/workflows/release.yml"
+          if [ "$HAS_PAT" = "true" ]; then
+            echo "RELEASE_PAT is configured — release.yml will be triggered by the tag push."
+          else
+            echo "::warning::RELEASE_PAT secret is not set. The tag was pushed with GITHUB_TOKEN, so release.yml will NOT auto-trigger. Add a RELEASE_PAT secret (repo/contents:write) for automatic publishing, or trigger the build manually by re-pushing the tag."
+          fi
