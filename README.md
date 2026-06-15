@@ -15,9 +15,9 @@
   <img src="assets/demo-tour.webp" alt="Dora in use" width="92%" />
 </p>
 
-Dora is a cross-platform database workbench built with Tauri and Rust. It connects to PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, libSQL/Turso, and DuckDB — plus serverless Postgres/MySQL (Neon, Supabase, PlanetScale) via one-click presets — and ships as a ~10 MB binary instead of the 100+ MB you get from Electron-based alternatives.
+Dora is a cross-platform database workbench built with Tauri and Rust. It ships as a **~10 MB binary** — versus the 100+ MB you get from Electron-based alternatives — and covers the full day-to-day loop without asking you to leave the app.
 
-It covers the full day-to-day loop: browse data, run queries with a Monaco editor, inspect schemas as an ER diagram, manage local Docker databases, generate SQL with AI, and write type-safe Drizzle ORM queries — all from one keyboard-first app.
+Connect to PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, libSQL/Turso, and DuckDB. Open CSV, JSON, Parquet, and NDJSON as queryable data files. One-click presets for 10+ hosted providers (Supabase, Neon, PlanetScale, Fly.io, Railway, and more). Browse data, run SQL in a Monaco editor, generate SQL with AI, write ORM queries with Drizzle or Prisma, inspect schemas as an ER diagram, and manage local Docker databases — all keyboard-first.
 
 ## Install
 
@@ -60,19 +60,51 @@ sudo snap install dora
 | PostgreSQL | Full support — SSH tunneling, live updates via LISTEN/NOTIFY |
 | MySQL | Full support — SSH tunneling, live updates via polling |
 | SQLite | Full support — native file picker |
-| DuckDB | Beta — local `.duckdb` files (editable), import CSV/JSON/Parquet as tables |
-| Data files (CSV / TSV / Parquet / JSON / NDJSON) | Readonly DuckDB-backed sessions — query, export, cross-file JOINs; Save as DuckDB to edit |
+| DuckDB | Full support — local `.duckdb` files, import CSV/JSON/Parquet as tables |
 | libSQL / Turso | Full support — local and remote |
-| MariaDB | Full support — MariaDB-aware dialect detection; native `UUID` / `INET4` / `INET6` types render correctly |
-| CockroachDB | Full support — CockroachDB-aware schema introspection; live monitor auto-tuned (no `LISTEN/NOTIFY`) |
-| Neon · Supabase | Full support — Postgres-compatible, one-click connection presets |
-| PlanetScale | Full support — MySQL-compatible connection preset |
+| MariaDB | Full support — MariaDB-aware dialect; native `UUID` / `INET4` / `INET6` types |
+| CockroachDB | Full support — CockroachDB-aware schema introspection, live monitor auto-tuned |
+| Data files (CSV / TSV / Parquet / JSON / NDJSON) | DuckDB-backed sessions — query, export, cross-file JOINs; save as DuckDB to edit |
 
-Dora separates the **wire engine** (Postgres, MySQL, …) from the **dialect/vendor** flavor, detecting the dialect at connect time and adapting schema introspection, capabilities, and type rendering per vendor. Serverless and compatible providers ride their base engine with a dedicated preset — adding a new one is metadata, not a fork. See [docs/architecture/data-sources.md](docs/architecture/data-sources.md).
+**Hosted & serverless providers** are auto-recognized from the connection string with one-click presets — correct engine, dialect, and SSL applied for you:
 
-**Hosted & serverless providers** are auto-recognized from the connection string — correct engine, dialect, and SSL applied for you: Railway, Render, Vercel Postgres, Fly.io, Aiven, DigitalOcean, Crunchy Bridge, Timescale Cloud, AWS RDS/Aurora, Azure Database, Google Cloud SQL, CockroachDB Cloud, TiDB Cloud, and Yugabyte. They all speak standard Postgres/MySQL/libSQL, so there's no special integration to maintain — just paste the string.
+Neon · Supabase · PlanetScale · Fly.io · Railway · Render · Vercel Postgres · Aiven · DigitalOcean · Crunchy Bridge · Timescale · AWS RDS/Aurora · Azure Database · Google Cloud SQL · CockroachDB Cloud · TiDB Cloud · Yugabyte
 
-## Local files
+They all speak standard Postgres/MySQL/libSQL — no special integration to maintain, just paste the string. See [docs/architecture/data-sources.md](docs/architecture/data-sources.md).
+
+## Features
+
+### Data viewer
+
+Browse schemas, tables, columns, indexes, and row data. Sort, filter (with AND/OR toggle), and paginate. Inline-edit cells, bulk-edit selections, set values to `NULL`, add/duplicate/delete rows, and stage changes in dry-run mode before committing. Export as JSON, CSV, or SQL `INSERT` — respecting your active filters and sort order. Back up a database to a `.sql` dump and restore from one.
+
+### SQL console
+
+Multi-tab workspace with isolated execution state. Monaco editor with autocomplete, syntax highlighting, and Vim keybindings. Run `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and DDL. Filter result sets, switch between table and JSON view, export results. Tabs persist across relaunch and can be dragged to reorder.
+
+### AI SQL generation
+
+Press `⌘I` / `Ctrl+I`, describe what you want, get schema-grounded SQL back. Hit **Fix with AI** on a failed query to send the query and error to the assistant automatically. Supports **OpenAI, Anthropic, Gemini, Groq, and Ollama** — API keys are stored encrypted (AES-256-GCM) with the master key in the OS keychain. Ollama runs entirely offline, no key required. See [docs/ai-providers.md](docs/ai-providers.md).
+
+### ORM runners
+
+**Drizzle runner** — write and run Drizzle ORM queries with schema-aware autocomplete and a SQL preview before execution.
+
+**Prisma runner** — write and execute Prisma Client queries natively inside Dora, with schema-aware autocomplete. No separate script file or `ts-node` needed.
+
+### Query history
+
+Every query you run is stored, searchable, and re-runnable. History is scoped per connection.
+
+### Schema visualizer
+
+Interactive ER diagram with pan, zoom, FK edges, and a search that dims unrelated tables. Export to SVG or PNG — follows the active theme.
+
+### Docker manager
+
+Create, start, stop, inspect, and remove local database containers without leaving the app. Open a container directly in the data viewer, view logs, run seed scripts, or export a Docker Compose file.
+
+### Local files
 
 Dora distinguishes **database files** from **data files**:
 
@@ -80,38 +112,19 @@ Dora distinguishes **database files** from **data files**:
 |---|---|
 | `.sqlite` / `.db` | Editable SQLite database |
 | `.duckdb` | Editable DuckDB database — browse, edit rows, run SQL, import more files |
-| CSV, JSON, Parquet, TSV, NDJSON | **Data files** — readonly DuckDB-backed session. Tables are rebuilt from disk when the connection opens. SQL queries, export, and cross-file JOINs work; inline row editing does not. |
+| CSV, JSON, Parquet, TSV, NDJSON | Readonly DuckDB-backed session — SQL queries, export, cross-file JOINs |
 
-**Making data files editable**
+**Save as DuckDB** materializes a data-file session into a new `.duckdb` file on disk, then opens it as an editable connection. **Import files** pulls CSV/JSON/Parquet into physical tables on an existing DuckDB connection.
 
-- **Save as DuckDB** — materializes the active data-file session into a new `.duckdb` file on disk, then opens it as an editable connection. The original data-file connection is unchanged.
-- **Import files** — on an existing native `.duckdb` connection, import CSV/JSON/Parquet as physical tables you can edit.
+If a data file moves or goes missing, Dora shows connection health and lets you relocate or remove sources from the source panel without losing the connection entry.
 
-**Recovery**
+### SSH tunneling
 
-If a data file moves or goes missing, Dora shows connection health (Active / Connected with issues / Unavailable) and lets you relocate or remove sources from the source panel without losing the connection entry.
+Connect to databases behind firewalls through encrypted SSH tunnels. Tunnel config is stored per connection alongside its credentials.
 
-Open database files via the connection dialog file picker. Open data files via drag-and-drop or **Open data file** in the desktop app.
+### Theming
 
-## Features
-
-**Data viewer** — Browse schemas, tables, columns, indexes, and row data. Sort, filter, paginate, inline-edit cells, bulk-edit selections, set values to `NULL`, add/duplicate/delete rows, and stage changes in dry-run mode before committing. Export as JSON, CSV, or SQL `INSERT`.
-
-**SQL console** — Multi-tab workspace with isolated execution state. Monaco editor with autocomplete, syntax highlighting, and Vim keybindings. Run `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and DDL. Filter result sets, switch between table and JSON view, export results.
-
-**Query history** — Every query you run is stored, searchable, and re-runnable. History is scoped per connection.
-
-**Schema visualizer** — Interactive ER diagram with pan, zoom, FK edges, and a search that dims unrelated tables.
-
-**Docker manager** — Create, start, stop, inspect, and remove local database containers without leaving the app. Open a container directly in the data viewer, view logs, run seed scripts, or export a Docker Compose file.
-
-**AI SQL generation** — Press `⌘I` / `Ctrl+I`, describe what you want, get schema-grounded SQL back. Supports Groq, Ollama, and other providers. API keys are stored encrypted (AES-256-GCM) with the master key in the OS keychain. See [docs/ai-providers.md](docs/ai-providers.md) for per-provider setup and troubleshooting.
-
-**Drizzle runner** — Write and run Drizzle ORM queries with schema-aware autocomplete and a SQL preview before execution.
-
-**SSH tunneling** — Connect to databases behind firewalls through encrypted SSH tunnels. Tunnel config is stored per connection alongside its credentials.
-
-**Theming** — Dark and light themes, custom accent colours, and configurable font sizes. Live preview, no restart required.
+Dark and light themes, custom accent colours, and configurable font sizes. Live preview, no restart required.
 
 ## Development
 
@@ -122,7 +135,8 @@ apps/
   desktop/   # Tauri app (Rust backend + React/TypeScript frontend)
   marketing/ # Next.js marketing site
 packages/
-  style/     # Shared ESLint + Prettier config
+  studio/    # @dora/studio — shared Studio package used by desktop and marketing demo
+  style/     # Shared oxlint + oxfmt config
 ```
 
 **Prerequisites:** [Bun](https://bun.sh), [Rust](https://rustup.rs), and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform.
@@ -155,6 +169,12 @@ bun test
 
 > [!NOTE]
 > The desktop app uses Vite as its dev server (`http://localhost:1420`). Hot-reload works for the TypeScript frontend; Rust changes require a full rebuild.
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome. Open an issue to discuss anything non-trivial before sending a PR.
+
+For significant changes — new database support, new UI surfaces, changes to the Rust backend — please open an issue first so the approach can be agreed on.
 
 ## Platforms
 
