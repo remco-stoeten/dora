@@ -163,7 +163,9 @@ impl DatabaseAdapter for SqliteAdapter {
         let sender = sender.clone();
 
         tauri::async_runtime::spawn_blocking(move || {
-            let conn = conn.lock().expect("Mutex poisoned");
+            let conn = conn
+                .lock()
+                .map_err(|_| Error::Internal("SQLite connection mutex poisoned".into()))?;
             crate::database::sqlite::execute::execute_query(&conn, stmt, &sender)
         })
         .await
@@ -228,7 +230,9 @@ impl DatabaseAdapter for DuckDbAdapter {
         let sender = sender.clone();
 
         tauri::async_runtime::spawn_blocking(move || {
-            let conn = conn.lock().expect("Mutex poisoned");
+            let conn = conn
+                .lock()
+                .map_err(|_| Error::Internal("DuckDB connection mutex poisoned".into()))?;
             crate::database::duckdb::execute::execute_query(&conn, stmt, &sender)
         })
         .await
