@@ -13,7 +13,9 @@ use crate::{
 
 pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<DatabaseSchema, Error> {
     tauri::async_runtime::spawn_blocking(move || {
-        let conn = conn.lock().unwrap();
+        let conn = conn
+            .lock()
+            .map_err(|_| Error::Internal("DuckDB connection mutex poisoned".into()))?;
 
         // duckdb_schemas() flags every schema as internal (incl. `main`), so
         // use information_schema scoped to the current catalog instead.

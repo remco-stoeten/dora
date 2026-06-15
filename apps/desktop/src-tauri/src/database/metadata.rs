@@ -265,10 +265,11 @@ pub async fn get_libsql_counts(conn: &libsql::Connection) -> Result<(u32, u64), 
     let mut total_rows: u64 = 0;
     for table in tables {
         let query = format!("SELECT COUNT(*) FROM \"{}\"", table);
-        let mut rows = conn
-            .query(&query, ())
-            .await
-            .unwrap_or_else(|_| panic!("Failed to count rows in {}", table));
+        // A single table that fails to count (e.g. permission denied, dropped
+        // mid-introspection) must not crash the whole metadata fetch — skip it.
+        let Ok(mut rows) = conn.query(&query, ()).await else {
+            continue;
+        };
 
         if let Ok(Some(row)) = rows.next().await {
             let count: i64 = row.get(0).unwrap_or(0);
