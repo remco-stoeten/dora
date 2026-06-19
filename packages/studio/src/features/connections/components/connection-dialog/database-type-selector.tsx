@@ -7,7 +7,7 @@ import {
 	Neon as NeonIcon
 } from '@studio/components/provider.icons'
 import { DatabaseType } from '../../types'
-import { DatabaseIcon, DATABASE_META } from '../database-icons'
+import { DatabaseIcon, DATABASE_META, CloudflareD1Icon } from '../database-icons'
 
 function SelectedProviderIcon({ accent, children }: { accent: string; children: ReactNode }) {
 	return (
@@ -29,7 +29,7 @@ function SelectedProviderIcon({ accent, children }: { accent: string; children: 
  * they resolve to a plain engine connection — selecting one swaps the form for
  * that provider's connect flow rather than changing `formData.type`.
  */
-export type ProviderKey = DatabaseType | 'supabase' | 'turso' | 'neon' | 'files'
+export type ProviderKey = DatabaseType | 'supabase' | 'turso' | 'neon' | 'cloudflare' | 'files'
 
 type Props = {
 	selectedType: ProviderKey
@@ -40,6 +40,8 @@ type Props = {
 	showTurso?: boolean
 	/** Show the Neon connect tile (new connections only). */
 	showNeon?: boolean
+	/** Show the Cloudflare D1 connect tile (new connections only). */
+	showCloudflare?: boolean
 	/** Show the Files tile (opens flat files as a read-only DuckDB connection). */
 	showFiles?: boolean
 	compact?: boolean
@@ -87,6 +89,14 @@ const TYPE_THEME: Record<ProviderKey, Theme> = {
 		accent: 'hsl(169 62% 45%)',
 		wash: 'color-mix(in srgb, hsl(169 62% 45%) 9%, hsl(var(--card)))'
 	},
+	d1: {
+		accent: 'hsl(28 90% 55%)',
+		wash: 'color-mix(in srgb, hsl(28 90% 55%) 9%, hsl(var(--card)))'
+	},
+	cloudflare: {
+		accent: 'hsl(28 90% 55%)',
+		wash: 'color-mix(in srgb, hsl(28 90% 55%) 10%, hsl(var(--card)))'
+	},
 	supabase: {
 		accent: 'hsl(153 60% 45%)',
 		wash: 'color-mix(in srgb, hsl(153 60% 45%) 10%, hsl(var(--card)))'
@@ -133,6 +143,13 @@ const NEON_TILE: Tile = {
 	icon: <NeonIcon className='h-[18px] w-[18px]' />
 }
 
+const CLOUDFLARE_TILE: Tile = {
+	key: 'cloudflare',
+	name: 'Cloudflare D1',
+	description: 'Add a token, pick a database',
+	icon: <CloudflareD1Icon className='h-[18px] w-[18px]' />
+}
+
 const FILES_TILE: Tile = {
 	key: 'files',
 	name: 'Files',
@@ -146,6 +163,7 @@ export function DatabaseTypeSelector({
 	showSupabase,
 	showTurso,
 	showNeon,
+	showCloudflare,
 	showFiles,
 	compact,
 	disabled
@@ -163,6 +181,7 @@ export function DatabaseTypeSelector({
 	if (showSupabase) tiles.push(SUPABASE_TILE)
 	if (showTurso) tiles.push(TURSO_TILE)
 	if (showNeon) tiles.push(NEON_TILE)
+	if (showCloudflare) tiles.push(CLOUDFLARE_TILE)
 	if (showFiles) tiles.push(FILES_TILE)
 	const orderedTiles = compact
 		? [...tiles].sort(function (a, b) {

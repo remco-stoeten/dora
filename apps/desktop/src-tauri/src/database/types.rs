@@ -167,6 +167,13 @@ pub enum DatabaseInfo {
         /// Auth token for remote connections (optional for local)
         auth_token: Option<String>,
     },
+    /// Cloudflare D1 database, queried over the REST API (no SQL wire protocol).
+    /// `url` is `d1://{account_id}/{database_id}`; the API token is loaded from
+    /// the encrypted Cloudflare integration setting at connect time, so it is
+    /// never persisted on the connection itself.
+    D1 {
+        url: String,
+    },
 }
 
 #[derive(Debug)]
@@ -213,6 +220,12 @@ pub enum DatabaseClient {
     LibSQL {
         connection: Arc<libsql::Connection>,
     },
+    /// Cloudflare D1 over HTTP. The `D1Http` holds the account/database ids and
+    /// the bearer token and is cheap to clone (the inner `reqwest::Client` is an
+    /// `Arc`), so it lives behind an `Arc` like the other driver handles.
+    D1 {
+        http: Arc<crate::database::d1::D1Http>,
+    },
 }
 
 #[derive(Debug)]
@@ -256,6 +269,13 @@ pub enum Database {
         url: String,
         auth_token: Option<String>,
         connection: Option<Arc<libsql::Connection>>,
+    },
+    /// Cloudflare D1. `url` is `d1://{account_id}/{database_id}`. `connection`
+    /// is `None` until `connect` loads the encrypted Cloudflare token and builds
+    /// a `D1Http`.
+    D1 {
+        url: String,
+        connection: Option<Arc<crate::database::d1::D1Http>>,
     },
 }
 
@@ -321,6 +341,7 @@ impl DatabaseConnection {
                     url: url.clone(),
                     auth_token: auth_token.clone(),
                 },
+                Database::D1 { url, .. } => DatabaseInfo::D1 { url: url.clone() },
             },
             last_connected_at: None,
             created_at: Some(self.created_at),
@@ -392,6 +413,10 @@ impl DatabaseConnection {
             DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
                 url,
                 auth_token,
+                connection: None,
+            },
+            DatabaseInfo::D1 { url } => Database::D1 {
+                url,
                 connection: None,
             },
         };
@@ -470,6 +495,10 @@ impl DatabaseConnection {
                 auth_token,
                 connection: None,
             },
+            DatabaseInfo::D1 { url } => Database::D1 {
+                url,
+                connection: None,
+            },
         };
 
         Self {
@@ -512,6 +541,7 @@ impl DatabaseConnection {
             Database::SQLite { connection, .. } => connection.is_some(),
             Database::DuckDB { connection, .. } => connection.is_some(),
             Database::LibSQL { connection, .. } => connection.is_some(),
+            Database::D1 { connection, .. } => connection.is_some(),
         }
     }
 
@@ -578,6 +608,17 @@ impl DatabaseConnection {
                 connection: None, ..
             } => {
                 return Err(Error::Any(anyhow::anyhow!("LibSQL connection not active")));
+            }
+            Database::D1 {
+                connection: Some(http),
+                ..
+            } => DatabaseClient::D1 { http: http.clone() },
+            Database::D1 {
+                connection: None, ..
+            } => {
+                return Err(Error::Any(anyhow::anyhow!(
+                    "Cloudflare D1 connection not active"
+                )));
             }
         };
 

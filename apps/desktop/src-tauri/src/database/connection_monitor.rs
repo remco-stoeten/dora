@@ -62,6 +62,10 @@ impl ConnectionMonitor {
             crate::database::types::Database::MySQL {
                 pool: mysql_pool, ..
             } => *mysql_pool = None,
+            crate::database::types::Database::D1 {
+                connection: d1_conn,
+                ..
+            } => *d1_conn = None,
         }
     }
 

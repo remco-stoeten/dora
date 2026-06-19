@@ -133,6 +133,11 @@ impl<'a> SeedingService<'a> {
                         .await
                         .map_err(|e| Error::Any(anyhow::anyhow!("MySQL insert failed: {}", e)))?;
                 }
+                crate::database::types::DatabaseClient::D1 { http } => {
+                    http.query(&sql, Vec::new())
+                        .await
+                        .map_err(|e| Error::Any(anyhow::anyhow!("Cloudflare D1 insert failed: {}", e)))?;
+                }
             }
             inserted += chunk.len() as u32;
         }

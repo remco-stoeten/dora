@@ -220,6 +220,69 @@ pub async fn get_libsql_metadata(
     }
 }
 
+/// Metadata for a Cloudflare D1 database. D1 is queried over HTTP with no
+/// file-based stats, so size/timestamps are unavailable; only table and row
+/// counts (introspected via `sqlite_master`) and the host are returned.
+pub async fn get_d1_metadata(
+    http: &crate::database::d1::D1Http,
+    url: &str,
+) -> Result<DatabaseMetadata, Error> {
+    let (table_count, row_count_total) = get_d1_counts(http).await?;
+    Ok(DatabaseMetadata {
+        size_bytes: 0,
+        created_at: None,
+        last_updated: None,
+        row_count_total,
+        table_count,
+        host: url.to_string(),
+        database_name: None,
+    })
+}
+
+/// Table and row counts for a D1 database over HTTP, mirroring
+/// [`get_libsql_counts`] but issuing each query as a REST call.
+async fn get_d1_counts(http: &crate::database::d1::D1Http) -> Result<(u32, u64), Error> {
+    fn first_rows(
+        sets: Vec<crate::database::d1::D1ResultSet>,
+    ) -> Vec<crate::database::d1::D1Row> {
+        sets.into_iter().next().map(|set| set.results).unwrap_or_default()
+    }
+
+    let table_rows = first_rows(
+        http.query(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+            Vec::new(),
+        )
+        .await?,
+    );
+
+    let tables: Vec<String> = table_rows
+        .iter()
+        .filter_map(|row| match row.get("name") {
+            Some(serde_json::Value::String(name)) => Some(name.clone()),
+            _ => None,
+        })
+        .collect();
+    let table_count = tables.len() as u32;
+
+    let mut total_rows: u64 = 0;
+    for table in tables {
+        let query = format!("SELECT COUNT(*) AS n FROM \"{}\"", table);
+        // A table that fails to count mid-introspection must not crash the whole
+        // metadata fetch — skip it.
+        let Ok(sets) = http.query(&query, Vec::new()).await else {
+            continue;
+        };
+        if let Some(row) = first_rows(sets).first() {
+            if let Some(serde_json::Value::Number(n)) = row.get("n") {
+                total_rows += n.as_u64().unwrap_or(0);
+            }
+        }
+    }
+
+    Ok((table_count, total_rows))
+}
+
 /// Get table and row counts from LibSQL connection
 pub async fn get_libsql_counts(conn: &libsql::Connection) -> Result<(u32, u64), Error> {
     // Get table count

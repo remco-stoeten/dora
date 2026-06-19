@@ -8,6 +8,7 @@
 pub mod read;
 pub mod watch;
 pub mod write;
+mod write_d1;
 mod write_duckdb;
 mod write_libsql;
 mod write_mysql;

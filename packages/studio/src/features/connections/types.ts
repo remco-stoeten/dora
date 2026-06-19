@@ -1,4 +1,12 @@
-export type DatabaseType = 'postgres' | 'cockroach' | 'mysql' | 'mariadb' | 'sqlite' | 'duckdb' | 'libsql'
+export type DatabaseType =
+	| 'postgres'
+	| 'cockroach'
+	| 'mysql'
+	| 'mariadb'
+	| 'sqlite'
+	| 'duckdb'
+	| 'libsql'
+	| 'd1'
 
 export type SshAuthMethod = 'password' | 'keyfile'
 
@@ -52,5 +60,6 @@ export const DEFAULT_PORTS: Record<DatabaseType, number> = {
 	mariadb: 3306,
 	sqlite: 0,
 	duckdb: 0,
-	libsql: 0
+	libsql: 0,
+	d1: 0
 }

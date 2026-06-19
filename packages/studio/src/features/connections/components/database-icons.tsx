@@ -1,5 +1,6 @@
 import {
 	Boxes,
+	Cloud,
 	Cylinder,
 	Database,
 	Feather,
@@ -43,7 +44,19 @@ export function DuckDBIcon({ className }: Props) {
 	return <DatabaseGlyph icon={Feather} className={className} />
 }
 
-type DatabaseType = 'postgres' | 'cockroach' | 'mysql' | 'mariadb' | 'sqlite' | 'duckdb' | 'libsql'
+export function CloudflareD1Icon({ className }: Props) {
+	return <DatabaseGlyph icon={Cloud} className={className} />
+}
+
+type DatabaseType =
+	| 'postgres'
+	| 'cockroach'
+	| 'mysql'
+	| 'mariadb'
+	| 'sqlite'
+	| 'duckdb'
+	| 'libsql'
+	| 'd1'
 
 type DatabaseIconProps = {
 	type: DatabaseType
@@ -75,6 +88,8 @@ export function DatabaseIcon({ type, className }: DatabaseIconProps) {
 			return <DuckDBIcon className={className} />
 		case 'libsql':
 			return <LibSQLIcon className={className} />
+		case 'd1':
+			return <CloudflareD1Icon className={className} />
 		default:
 			return <DatabaseGlyph icon={FileStack} className={className} />
 	}
@@ -108,5 +123,9 @@ export const DATABASE_META: Record<DatabaseType, { name: string; description: st
 	libsql: {
 		name: 'LibSQL / Turso',
 		description: 'Edge-native SQLite fork'
+	},
+	d1: {
+		name: 'Cloudflare D1',
+		description: 'Serverless SQLite on the edge'
 	}
 }

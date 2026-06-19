@@ -1,6 +1,7 @@
 pub mod adapter;
 pub mod blob_display;
 pub mod connection_repository;
+pub mod d1;
 pub mod duckdb;
 pub mod libsql;
 pub mod mysql;

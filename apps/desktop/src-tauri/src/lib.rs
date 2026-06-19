@@ -220,6 +220,12 @@ pub fn run() {
             database::commands::neon_create_connection_uri,
             database::commands::neon_disconnect,
             database::commands::neon_is_connected,
+            database::commands::cloudflare_save_token,
+            database::commands::cloudflare_list_accounts,
+            database::commands::cloudflare_list_databases,
+            database::commands::cloudflare_account,
+            database::commands::cloudflare_disconnect,
+            database::commands::cloudflare_is_connected,
             // Mutation API commands
             database::commands::update_cell,
             database::commands::get_blob_bytes,

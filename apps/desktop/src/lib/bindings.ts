@@ -441,6 +441,59 @@ async neonDisconnect() : Promise<Result<null, { kind: string; detail: string }>>
 async neonIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("neon_is_connected");
 },
+/**
+ * Validates and stores a Cloudflare API token (encrypted on-device).
+ */
+async cloudflareSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Cloudflare accounts the stored token can see — the first pick step (D1 is
+ * account-scoped) and the source of the "Connected as …" label.
+ */
+async cloudflareListAccounts() : Promise<Result<CloudflareAccount[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_list_accounts") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The D1 databases in one Cloudflare account.
+ */
+async cloudflareListDatabases(accountId: string) : Promise<Result<CloudflareD1Database[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_list_databases", { accountId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareAccount() : Promise<Result<CloudflareAccount[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("cloudflare_is_connected");
+},
 async setConnectionPin(connectionId: string, pin: string | null) : Promise<Result<null, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_connection_pin", { connectionId, pin }) };
@@ -1169,6 +1222,16 @@ export type AiStreamEvent = { type: "token"; text: string } | { type: "final"; c
 export type AiUsageEntry = { id: number; provider: string; model: string; source: string; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null; estimated_cost_usd: number | null; estimated: boolean; created_at: number }
 export type AiUsageProviderSummary = { provider: string; request_count: number; input_tokens: number; output_tokens: number; total_tokens: number; estimated_cost_usd: number }
 export type AiUsageSummary = { total_requests: number; input_tokens: number; output_tokens: number; total_tokens: number; estimated_cost_usd: number; providers: AiUsageProviderSummary[]; recent: AiUsageEntry[] }
+/**
+ * A Cloudflare account the token can see — used for the "Connected as …" label
+ * and as the first pick step (D1 databases are account-scoped).
+ */
+export type CloudflareAccount = { id: string; name?: string }
+/**
+ * A selectable D1 database within an account. `uuid` is the database id used in
+ * the query endpoint path; the connect-flow encodes it into the connection URL.
+ */
+export type CloudflareD1Database = { accountId: string; uuid: string; name: string }
 export type ColumnInfo = { name: string; data_type: string; is_nullable: boolean; default_value: string | null; 
 /**
  * Whether this column is part of the primary key
@@ -1210,7 +1273,14 @@ url: string;
 /**
  * Auth token for remote connections (optional for local)
  */
-auth_token: string | null } }
+auth_token: string | null } } | 
+/**
+ * Cloudflare D1 database, queried over the REST API (no SQL wire protocol).
+ * `url` is `d1://{account_id}/{database_id}`; the API token is loaded from
+ * the encrypted Cloudflare integration setting at connect time, so it is
+ * never persisted on the connection itself.
+ */
+{ D1: { url: string } }
 /**
  * Database-level metadata information
  */

@@ -116,6 +116,22 @@ const ENGINE_CAPS: Record<DbEngine, SourceCaps> = {
 		supportsLiveMonitor: false,
 		isReadonly: false,
 	},
+	d1: {
+		// Cloudflare D1: SQLite over the REST API. No local file or SSH; live
+		// monitoring is disabled (HTTP polling would be too costly).
+		canRunSql: true,
+		canInspectSchema: true,
+		canEditRows: true,
+		canImportFile: false,
+		canExportFile: true,
+		canQueryFiles: false,
+		canAttachFiles: false,
+		supportsLocalFile: false,
+		supportsRemoteUrl: true,
+		supportsSshTunnel: false,
+		supportsLiveMonitor: false,
+		isReadonly: false,
+	},
 }
 
 function applyDataFileSessionOverrides(caps: SourceCaps): SourceCaps {

@@ -256,6 +256,17 @@ impl<'a> MutationService<'a> {
                     "mysql",
                 )
             }
+            DatabaseClient::D1 { .. } => {
+                // D1 is the SQLite dialect.
+                let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
+                (
+                    format!(
+                        "SELECT * FROM \"{}\"{}{}{}",
+                        table_name, where_sql, order_sql, limit_clause
+                    ),
+                    "d1",
+                )
+            }
         };
 
         let (columns, rows) = match db_type {
@@ -264,6 +275,7 @@ impl<'a> MutationService<'a> {
             "duckdb" => fetch_duckdb_data(&client, &query)?,
             "libsql" => fetch_libsql_data(&client, &query).await?,
             "mysql" => fetch_mysql_data(&client, &query).await?,
+            "d1" => fetch_d1_data(&client, &query).await?,
             _ => unreachable!(),
         };
 
@@ -695,6 +707,35 @@ async fn fetch_libsql_data(
         Ok((columns, data))
     } else {
         Err(Error::Any(anyhow!("Expected LibSQL client")))
+    }
+}
+
+async fn fetch_d1_data(
+    client: &DatabaseClient,
+    query: &str,
+) -> Result<(Vec<String>, Vec<Vec<serde_json::Value>>), Error> {
+    if let DatabaseClient::D1 { http } = client {
+        let result_sets = http.query(query, Vec::new()).await?;
+        let set = match result_sets.into_iter().next() {
+            Some(set) => set,
+            None => return Ok((Vec::new(), Vec::new())),
+        };
+
+        let columns = set.columns();
+        let data: Vec<Vec<serde_json::Value>> = set
+            .results
+            .iter()
+            .map(|row| {
+                columns
+                    .iter()
+                    .map(|column| row.get(column).cloned().unwrap_or(serde_json::Value::Null))
+                    .collect()
+            })
+            .collect();
+
+        Ok((columns, data))
+    } else {
+        Err(Error::Any(anyhow!("Expected Cloudflare D1 client")))
     }
 }
 

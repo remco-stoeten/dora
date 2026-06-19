@@ -187,6 +187,9 @@ impl<'a> ConnectionService<'a> {
                     Database::LibSQL {
                         connection: conn, ..
                     } => *conn = None,
+                    Database::D1 {
+                        connection: conn, ..
+                    } => *conn = None,
                 }
                 connection.connected = false;
                 connection.database = match database_info {
@@ -250,6 +253,10 @@ impl<'a> ConnectionService<'a> {
                     DatabaseInfo::LibSQL { url, auth_token } => Database::LibSQL {
                         url,
                         auth_token,
+                        connection: None,
+                    },
+                    DatabaseInfo::D1 { url } => Database::D1 {
+                        url,
                         connection: None,
                     },
                 };
@@ -770,6 +777,52 @@ impl<'a> ConnectionService<'a> {
                     }
                 }
             }
+            Database::D1 {
+                url,
+                connection: d1_conn,
+            } => {
+                // D1 has no wire protocol: "connecting" means loading the
+                // encrypted Cloudflare token, building the HTTP handle, and
+                // probing it with a trivial query so a bad/expired token fails
+                // here rather than on first use.
+                let url_str = url.clone();
+                let token = match crate::integrations::cloudflare::connect_token(&self.storage) {
+                    Ok(token) => token,
+                    Err(e) => {
+                        log::error!("Cloudflare D1 connect failed for {}: {}", url_str, e);
+                        connection.connected = false;
+                        return Ok(connect_result(false));
+                    }
+                };
+
+                let http = match crate::database::d1::D1Http::from_url(url, &token) {
+                    Ok(http) => http,
+                    Err(e) => {
+                        log::error!("Malformed D1 URL {}: {}", url_str, e);
+                        connection.connected = false;
+                        return Ok(connect_result(false));
+                    }
+                };
+
+                match http.query("SELECT 1", Vec::new()).await {
+                    Ok(_) => {
+                        *d1_conn = Some(Arc::new(http));
+                        connection.connected = true;
+
+                        if let Err(e) = self.storage.update_last_connected(&connection_id) {
+                            log::warn!("Failed to update last connected timestamp: {}", e);
+                        }
+
+                        log::info!("Successfully connected to Cloudflare D1: {}", url_str);
+                        Ok(connect_result(true))
+                    }
+                    Err(e) => {
+                        log::error!("Failed to reach Cloudflare D1 {}: {}", url_str, e);
+                        connection.connected = false;
+                        Ok(connect_result(false))
+                    }
+                }
+            }
         }
     }
 
@@ -994,6 +1047,10 @@ impl<'a> ConnectionService<'a> {
                 connection: libsql_conn,
                 ..
             } => *libsql_conn = None,
+            Database::D1 {
+                connection: d1_conn,
+                ..
+            } => *d1_conn = None,
         }
         connection.connected = false;
         Ok(())
@@ -1363,6 +1420,17 @@ impl ConnectionService<'_> {
                     }
                     Err(e) => Err(Error::Any(anyhow::anyhow!("MySQL connect failed: {}", e))),
                 }
+            }
+            DatabaseInfo::D1 { url } => {
+                log::info!("Testing Cloudflare D1 connection: {}", url);
+                // The API token lives in the encrypted Cloudflare setting, not on
+                // the connection, and was already validated when it was saved
+                // (and again the first time the database list was fetched). This
+                // static test path has no storage handle, so it validates the
+                // `d1://account/database` URL shape; the live query probe runs in
+                // `connect_to_database`.
+                crate::database::d1::parse_d1_url(&url)?;
+                Ok(true)
             }
         }
     }

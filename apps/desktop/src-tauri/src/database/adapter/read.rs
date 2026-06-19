@@ -65,6 +65,7 @@ pub enum DatabaseType {
     SQLite,
     DuckDB,
     LibSQL,
+    D1,
 }
 
 impl std::fmt::Display for DatabaseType {
@@ -75,6 +76,7 @@ impl std::fmt::Display for DatabaseType {
             DatabaseType::SQLite => write!(f, "SQLite"),
             DatabaseType::DuckDB => write!(f, "DuckDB"),
             DatabaseType::LibSQL => write!(f, "libSQL"),
+            DatabaseType::D1 => write!(f, "Cloudflare D1"),
         }
     }
 }
@@ -332,6 +334,34 @@ impl DatabaseAdapter for MySqlAdapter {
     }
 }
 
+/// Cloudflare D1 adapter. D1 is the SQLite dialect over an HTTP transport, so it
+/// reuses the SQLite statement parser; execution and schema introspection go
+/// through `D1Http` (REST) rather than a local connection.
+pub use crate::database::d1::D1Adapter;
+
+#[async_trait]
+impl DatabaseAdapter for D1Adapter {
+    fn parse_statements(&self, query: &str) -> Result<Vec<ParsedStatement>, Error> {
+        crate::database::sqlite::parser::parse_statements(query).map_err(Into::into)
+    }
+
+    async fn execute_query(&self, stmt: ParsedStatement, sender: &ExecSender) -> Result<(), Error> {
+        self.run_statement(stmt, sender).await
+    }
+
+    async fn get_schema(&self) -> Result<DatabaseSchema, Error> {
+        crate::database::d1::schema::get_database_schema(self.http()).await
+    }
+
+    fn is_connected(&self) -> bool {
+        true
+    }
+
+    fn database_type(&self) -> DatabaseType {
+        DatabaseType::D1
+    }
+}
+
 pub type BoxedAdapter = Box<dyn DatabaseAdapter>;
 
 pub fn adapter_from_client(client: &crate::database::types::DatabaseClient) -> BoxedAdapter {
@@ -352,6 +382,9 @@ pub fn adapter_from_client(client: &crate::database::types::DatabaseClient) -> B
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))
+        }
+        crate::database::types::DatabaseClient::D1 { http } => {
+            Box::new(D1Adapter::new(http.clone()))
         }
     }
 }
