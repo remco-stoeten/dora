@@ -2,7 +2,7 @@ use tauri::State;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::{
-    integrations::neon::{self, NeonAccount, NeonDatabase},
+    integrations::neon::{self, NeonAccount, NeonBranch, NeonDatabase},
     integrations::supabase::{self, SupabaseOrganization, SupabaseProject},
     integrations::turso::{self, TursoDatabase, TursoOrganization},
     AppState, Error,
@@ -204,6 +204,17 @@ pub async fn neon_list_databases(
     state: State<'_, AppState>,
 ) -> Result<Vec<NeonDatabase>, Error> {
     neon::list_databases(&state.storage).await
+}
+
+/// Lists every branch of a Neon project so the user can connect to a non-primary
+/// branch (e.g. a preview branch) instead of always landing on the default one.
+#[tauri::command]
+#[specta::specta]
+pub async fn neon_list_branches(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<NeonBranch>, Error> {
+    neon::list_branches(&state.storage, &project_id).await
 }
 
 /// The Neon account the stored key belongs to, so the UI can show which account

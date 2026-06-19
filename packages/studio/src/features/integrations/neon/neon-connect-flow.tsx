@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Copy, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import { Check, Copy, ExternalLink, GitBranch, Loader2, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
 import { open } from '@tauri-apps/plugin-shell'
 import type { NeonAccount, NeonDatabase } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
@@ -17,6 +17,7 @@ import {
 	saveNeonToken
 } from './neon-api'
 import { useNeonDatabases } from './use-neon-databases'
+import { useNeonBranches } from './use-neon-branches'
 import { useIsTauri } from '@studio/core/data-provider'
 import { DesktopOnlyNotice } from '@studio/core/platform'
 
@@ -49,10 +50,16 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 	const [authError, setAuthError] = useState<string | null>(null)
 	const [query, setQuery] = useState('')
 	const [selected, setSelected] = useState<NeonDatabase | null>(null)
+	const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
 	const [isBuilding, setIsBuilding] = useState(false)
 	const [tokenUrlCopied, setTokenUrlCopied] = useState(false)
 	const tokenUrlCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const { databases, isLoading, error, refresh, reset } = useNeonDatabases(isConnected)
+	// Only fetch branches once a database is picked — most connects never need
+	// the picker, so we don't pay the per-project call until it's relevant.
+	const { branches, isLoading: branchesLoading } = useNeonBranches(
+		selected?.projectId ?? null
+	)
 
 	// Hydrate from a key stored in a previous session so a returning user lands
 	// straight on the database picker.
@@ -121,6 +128,39 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 		[databases, query]
 	)
 
+	// Once a database is picked and its branches load, default the picker to the
+	// branch the database was discovered on (the project's primary), keeping any
+	// explicit choice the user already made for this same project.
+	useEffect(
+		function preselectBranch() {
+			if (!selected || branches.length === 0) {
+				setSelectedBranchId(null)
+				return
+			}
+			setSelectedBranchId(function (previous) {
+				if (previous && branches.some((branch) => branch.id === previous)) {
+					return previous
+				}
+				const fallback =
+					branches.find((branch) => branch.id === selected.branchId) ??
+					branches.find((branch) => branch.isDefault) ??
+					branches[0]
+				return fallback?.id ?? null
+			})
+		},
+		[selected, branches]
+	)
+
+	// The branch the connection will actually target, and whether it differs from
+	// the project's primary — used to label the connection and gate the picker.
+	const chosenBranch = useMemo(
+		function resolveChosenBranch() {
+			if (!selectedBranchId) return null
+			return branches.find((branch) => branch.id === selectedBranchId) ?? null
+		},
+		[branches, selectedBranchId]
+	)
+
 	async function handleConnect() {
 		const token = tokenInput.trim()
 		if (!token) return
@@ -143,6 +183,7 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 			await disconnectNeon()
 			setIsConnected(false)
 			setSelected(null)
+			setSelectedBranchId(null)
 			setQuery('')
 			setTokenInput('')
 			reset()
@@ -188,9 +229,16 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 		setIsBuilding(true)
 		setAuthError(null)
 		try {
-			const url = await createNeonConnectionUri(selected)
+			const url = await createNeonConnectionUri(selected, selectedBranchId ?? undefined)
+			const baseName = selected.projectName || selected.databaseName
+			// Distinguish a non-primary branch on the connection list so
+			// `myapp · main` and `myapp · preview-123` don't look identical.
+			const name =
+				chosenBranch && !chosenBranch.isDefault
+					? `${baseName} · ${chosenBranch.name}`
+					: baseName
 			onComplete({
-				name: selected.projectName || selected.databaseName,
+				name,
 				type: 'postgres',
 				url,
 				poolerMode: true,
@@ -382,6 +430,7 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 									type='button'
 									onClick={function () {
 										setSelected(database)
+										setSelectedBranchId(null)
 										setAuthError(null)
 									}}
 									className={cn(
@@ -406,6 +455,45 @@ function NeonConnectFlowInner({ onComplete }: Props) {
 							)
 						})}
 					</div>
+
+					{selected && branches.length > 1 ? (
+						<div className='space-y-2'>
+							<div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+								<GitBranch className='h-3.5 w-3.5' />
+								<span>Branch</span>
+								{branchesLoading ? (
+									<Loader2 className='h-3 w-3 animate-spin' />
+								) : null}
+							</div>
+							<div className='flex flex-wrap gap-2'>
+								{branches.map(function (branch) {
+									const isActive = branch.id === selectedBranchId
+									return (
+										<button
+											key={branch.id}
+											type='button'
+											onClick={function () {
+												setSelectedBranchId(branch.id)
+											}}
+											className={cn(
+												'inline-flex items-center gap-1.5 border px-2.5 py-1 text-xs transition-colors',
+												isActive
+													? 'border-emerald-500/45 bg-emerald-500/10 text-foreground'
+													: 'border-border/60 bg-background/45 text-muted-foreground hover:border-border hover:bg-card/65'
+											)}
+										>
+											<span className='truncate max-w-[12rem]'>{branch.name}</span>
+											{branch.isDefault ? (
+												<span className='text-[0.65rem] uppercase tracking-wide text-muted-foreground/70'>
+													primary
+												</span>
+											) : null}
+										</button>
+									)
+								})}
+							</div>
+						</div>
+					) : null}
 
 					{selected ? (
 						<div
