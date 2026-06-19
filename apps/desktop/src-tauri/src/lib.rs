@@ -220,6 +220,13 @@ pub fn run() {
             database::commands::neon_create_connection_uri,
             database::commands::neon_disconnect,
             database::commands::neon_is_connected,
+            database::commands::planetscale_save_token,
+            database::commands::planetscale_account,
+            database::commands::planetscale_list_databases,
+            database::commands::planetscale_list_branches,
+            database::commands::planetscale_create_password,
+            database::commands::planetscale_disconnect,
+            database::commands::planetscale_is_connected,
             // Mutation API commands
             database::commands::update_cell,
             database::commands::get_blob_bytes,

@@ -414,6 +414,68 @@ async neonDisconnect() : Promise<Result<null, { kind: string; detail: string }>>
 async neonIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("neon_is_connected");
 },
+/**
+ * Validates and stores a PlanetScale service token (encrypted on-device).
+ */
+async planetscaleSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The PlanetScale organizations the stored token can access, so the UI can show
+ * which account is currently connected.
+ */
+async planetscaleAccount() : Promise<Result<PlanetscaleOrganization[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async planetscaleListDatabases(organization: string) : Promise<Result<PlanetscaleDatabase[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_list_databases", { organization }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async planetscaleListBranches(organization: string, database: string, defaultBranch: string) : Promise<Result<PlanetscaleBranch[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_list_branches", { organization, database, defaultBranch }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Mints a fresh MySQL password on a branch (PlanetScale returns the plaintext
+ * only at creation), so the connection needs no hand-copied secret.
+ */
+async planetscaleCreatePassword(organization: string, database: string, branch: string) : Promise<Result<PlanetscalePassword, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_create_password", { organization, database, branch }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async planetscaleDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("planetscale_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async planetscaleIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("planetscale_is_connected");
+},
 async setConnectionPin(connectionId: string, pin: string | null) : Promise<Result<null, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_connection_pin", { connectionId, pin }) };
@@ -1306,6 +1368,28 @@ export type TursoDatabase = { name: string; hostname: string; organizationSlug: 
 export type TursoOrganization = { slug: string; name?: string }
 export type NeonAccount = { email?: string; name?: string }
 export type NeonDatabase = { projectId: string; projectName: string; branchId: string; databaseName: string; roleName: string }
+/**
+ * A branch of a PlanetScale database. `is_default` marks the database's default
+ * branch (the one to preselect). This is the branch-aware hook other plans
+ * (05-branch-aware-connects) build on.
+ */
+export type PlanetscaleBranch = { name: string; production: boolean; isDefault: boolean }
+/**
+ * A selectable PlanetScale database. `default_branch` is carried so the
+ * connect-flow can preselect the primary branch without re-discovering it.
+ */
+export type PlanetscaleDatabase = { name: string; defaultBranch: string }
+/**
+ * The PlanetScale organization the stored token belongs to, shown in the UI so
+ * the user can confirm which account is connected.
+ */
+export type PlanetscaleOrganization = { name: string }
+/**
+ * A freshly minted MySQL credential for a branch. PlanetScale only returns the
+ * plaintext password once (at creation), so the connect-flow uses this
+ * immediately to assemble a connection string — the user never copies a secret.
+ */
+export type PlanetscalePassword = { username: string; host: string; password: string }
 export type StatementInfo = { returns_values: boolean; status: QueryStatus; first_page: JsonValue; affected_rows: number | null; page_count: number; rows_received: number; error: string | null }
 export type TAURI_CHANNEL<TSend> = null
 export type TableInfo = { name: string; schema: string; columns: ColumnInfo[]; 
