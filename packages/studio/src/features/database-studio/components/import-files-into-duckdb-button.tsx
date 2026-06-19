@@ -15,8 +15,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@studio/shared/ui/alert-dialog'
-import { Button } from '@studio/shared/ui/button'
-import { useIsTauri } from '@studio/core/data-provider'
+import { DesktopOnlyButton } from '@studio/core/platform'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { cn } from '@studio/shared/utils/cn'
 import { FileUp, Loader2 } from 'lucide-react'
@@ -42,7 +41,6 @@ export function ImportFilesIntoDuckDbButton({
 	className,
 	disabled = false,
 }: Props) {
-	const isTauri = useIsTauri()
 	const { toast } = useToast()
 	const queryClient = useQueryClient()
 	const importFiles = useImportFilesIntoDuckdb()
@@ -95,15 +93,6 @@ export function ImportFilesIntoDuckDbButton({
 	}
 
 	async function handleClick() {
-		if (!isTauri) {
-			toast({
-				title: 'Import files unavailable',
-				description: 'Importing files into DuckDB requires the desktop app.',
-				variant: 'destructive',
-			})
-			return
-		}
-
 		const result = await commands.openDataFiles()
 		if (result.status !== 'ok' || result.data.length === 0) {
 			return
@@ -114,12 +103,13 @@ export function ImportFilesIntoDuckDbButton({
 
 	return (
 		<>
-			<Button
+			<DesktopOnlyButton
 				type='button'
 				variant='outline'
 				size='sm'
 				className={cn('h-7 px-2 text-xs gap-1.5', className)}
 				disabled={disabled || importFiles.isPending}
+				desktopHint='Desktop app only'
 				aria-busy={importFiles.isPending}
 				aria-label={
 					disabled
@@ -139,7 +129,7 @@ export function ImportFilesIntoDuckDbButton({
 					<FileUp className='h-3.5 w-3.5' aria-hidden />
 				)}
 				<span className='hidden sm:inline'>Import files</span>
-			</Button>
+			</DesktopOnlyButton>
 
 			<AlertDialog open={showCollisionDialog} onOpenChange={setShowCollisionDialog}>
 				<AlertDialogContent>

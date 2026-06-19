@@ -50,7 +50,7 @@ import { useDatabaseStudioSync } from './hooks/use-database-studio-sync'
 import { useDatabaseStudioActions } from './hooks/use-database-studio-actions'
 import { useDatabaseStudioEdits } from './hooks/use-database-studio-edits'
 import { useDatabaseStudioCommands } from './hooks/use-database-studio-commands'
-import { buildTableCacheKey } from './utils/table-cache'
+import { buildDefaultTableCacheKey, buildTableCacheKey } from './utils/table-cache'
 import { FilterConjunction, FilterDescriptor, FilterGroup, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
 import { flatFiltersToGroup, groupToFlatFilters } from '@studio/core/data-provider/filter-sql'
 import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
@@ -67,6 +67,7 @@ type Props = {
 	onAddConnection?: () => void
 	onEditConnection?: () => void
 	onConnectionSelect?: (connectionId: string) => void
+	onOpenSettings?: () => void
 	initialRowPK?: string | number | null
 	onRowSelectionChange?: (pk: string | number | null) => void
 }
@@ -78,13 +79,14 @@ export function DatabaseStudio({
 	onAddConnection,
 	onEditConnection,
 	onConnectionSelect,
+	onOpenSettings,
 	initialRowPK,
 	onRowSelectionChange
 }: Props) {
 	const tableRefName = tableId || tableName
 	const displayTableName = tableName || getTableRefParts(tableId ?? '').tableName
 	const initialCacheEntry = tableDataCache.get(
-		buildTableCacheKey(activeConnectionId, tableId, 50, 0, undefined, [])
+		buildDefaultTableCacheKey(activeConnectionId, tableId)
 	)
 	const adapter = useAdapter()
 	const { toast } = useToast()
@@ -659,6 +661,7 @@ export function DatabaseStudio({
 		tableId,
 		tableRefName,
 		tableData,
+		currentCacheKey,
 		isDryEditMode,
 		pendingEdits,
 		getEditsForTable,
@@ -796,6 +799,7 @@ export function DatabaseStudio({
 				connectionName={activeConnection?.name}
 				tableCount={schemaSummary.tableCount}
 				totalRecords={schemaSummary.totalRecords}
+				onOpenSettings={onOpenSettings}
 			/>
 		)
 	}

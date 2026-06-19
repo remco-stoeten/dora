@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SupabaseProject } from "@studio/lib/bindings";
+import { formatBackendError } from "@studio/shared/utils/backend-error";
 import { listSupabaseProjects } from "./supabase-api";
 
 export function useSupabaseProjects(enabled: boolean) {
@@ -14,7 +15,7 @@ export function useSupabaseProjects(enabled: boolean) {
     try {
       setProjects(await listSupabaseProjects());
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      setError(formatBackendError(error));
     } finally {
       setIsLoading(false);
     }

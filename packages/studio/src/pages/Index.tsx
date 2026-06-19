@@ -6,7 +6,7 @@ import { useAdapter, useIsTauri } from "@studio/core/data-provider";
 import { getAdapterError } from "@studio/core/data-provider/types";
 import { commands } from "@studio/lib/bindings";
 import { useSettings } from "@studio/core/settings";
-import { useEffectiveShortcuts, useShortcut } from "@studio/core/shortcuts";
+import { useEffectiveShortcuts, useShortcut, formatShortcut } from "@studio/core/shortcuts";
 import { LiveMonitorProvider } from "@studio/core/live-monitor";
 import { NavigationSidebar, SidebarProvider } from "@studio/features/app-sidebar";
 import { CommandPalette } from "@studio/features/command-palette";
@@ -59,15 +59,13 @@ const AiAssistantPanel = lazy(function () {
   });
 });
 import { DatabaseSidebar } from "@studio/features/sidebar/database-sidebar";
-import { SettingsView } from "@studio/features/sidebar/components/settings-panel";
+import { SettingsView, type SettingsSectionId } from "@studio/features/sidebar/components/settings-panel";
 import { WindowControls } from "@studio/components/window-controls";
 import { ErrorBoundary } from "@studio/shared/ui/error-boundary";
 import { mapConnectionError } from "@studio/shared/utils/error-messages";
-import { EmptyState } from "@studio/shared/ui/empty-state";
 import { ViewLoadingShell } from "@studio/shared/ui/view-loading-shell";
 import { Skeleton } from "@studio/shared/ui/skeleton";
 import { getTableRefParts } from "@studio/shared/utils/table-ref";
-import { Plug } from "lucide-react";
 
 function IndexInner() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -92,6 +90,8 @@ function IndexInner() {
   const [activeNavId, setActiveNavId] = useState<string>(() => {
     return urlView || "database-studio";
   });
+  const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSectionId | undefined>();
+  const [settingsHighlightSection, setSettingsHighlightSection] = useState<SettingsSectionId | undefined>();
 
   const {
     tabs,
@@ -194,7 +194,14 @@ function IndexInner() {
 
   $.bind(shortcuts.newConnection.combo).on(
     function () {
-      setIsConnectionDialogOpen(true);
+      if (isConnectionDialogOpenRef.current) {
+        setIsConnectionDialogOpen(false);
+        setEditingConnection(undefined);
+        setConnectionDialogDroppedPaths(null);
+        setConnectionDialogDragActive(false);
+      } else {
+        setIsConnectionDialogOpen(true);
+      }
     },
     { description: shortcuts.newConnection.description },
   );
@@ -251,9 +258,18 @@ function IndexInner() {
     .except("typing")
     .on(
       function () {
-        setActiveNavId("settings");
+        handleOpenSettings();
       },
       { description: shortcuts.gotoSettings.description },
+    );
+
+  $.bind(shortcuts.openSettings.combo)
+    .except("typing")
+    .on(
+      function () {
+        handleOpenSettings();
+      },
+      { description: shortcuts.openSettings.description },
     );
 
   $.bind(shortcuts.gotoConnections.combo)
@@ -677,7 +693,16 @@ function IndexInner() {
 
   async function handleConnectionSelect(connectionId: string) {
     setActiveConnection(connectionId);
-    autoSelectFirstTableRef.current = false;
+    autoSelectFirstTableRef.current = settings.startupConnectionMode === 'auto';
+  }
+
+  function handleOpenSettings(
+    section?: SettingsSectionId,
+    options?: { highlight?: SettingsSectionId },
+  ) {
+    setSettingsInitialSection(section);
+    setSettingsHighlightSection(options?.highlight);
+    setActiveNavId("settings");
   }
 
   // Close a connection tab (issue #96): disconnect its backend session and drop
@@ -688,6 +713,36 @@ function IndexInner() {
     closeConnection(connectionId);
     closeTabsForConnection(connectionId);
     disconnectFromDatabase.mutate(connectionId);
+  }
+
+  function handleCloseOtherConnections(connectionId: string) {
+    const idsToClose = openConnectionIds.filter(function (id) {
+      return id !== connectionId;
+    });
+    idsToClose.forEach(function (id) {
+      handleCloseConnection(id);
+    });
+    setActiveConnection(connectionId);
+  }
+
+  function handleCloseConnectionsToLeft(connectionId: string) {
+    const connectionIndex = openConnectionIds.indexOf(connectionId);
+    if (connectionIndex <= 0) return;
+
+    openConnectionIds.slice(0, connectionIndex).forEach(function (id) {
+      handleCloseConnection(id);
+    });
+    setActiveConnection(connectionId);
+  }
+
+  function handleCloseConnectionsToRight(connectionId: string) {
+    const connectionIndex = openConnectionIds.indexOf(connectionId);
+    if (connectionIndex < 0 || connectionIndex >= openConnectionIds.length - 1) return;
+
+    openConnectionIds.slice(connectionIndex + 1).forEach(function (id) {
+      handleCloseConnection(id);
+    });
+    setActiveConnection(connectionId);
   }
 
   // Cycle through open connection tabs (Ctrl+Shift+[ / Ctrl+Shift+]).
@@ -735,6 +790,18 @@ function IndexInner() {
       setIsConnectionDialogOpen(true);
     }
   }
+
+  const handleConnectionDialogOpenChange = useCallback(
+    function (open: boolean) {
+      setIsConnectionDialogOpen(open);
+      if (!open) {
+        setEditingConnection(undefined);
+        setConnectionDialogDroppedPaths(null);
+        setConnectionDialogDragActive(false);
+      }
+    },
+    [],
+  );
 
   function handleOpenNewConnection() {
     setEditingConnection(undefined);
@@ -829,6 +896,11 @@ function IndexInner() {
       activeConnectionId={activeConnectionId}
       onSelect={handleConnectionSelect}
       onClose={handleCloseConnection}
+      onViewConnection={handleViewConnection}
+      onEditConnection={handleEditConnection}
+      onCloseOtherConnections={handleCloseOtherConnections}
+      onCloseConnectionsToLeft={handleCloseConnectionsToLeft}
+      onCloseConnectionsToRight={handleCloseConnectionsToRight}
       onAddConnection={handleOpenNewConnection}
     />
   ) : null;
@@ -853,6 +925,12 @@ function IndexInner() {
 
               {showDatabasePanel && isSidebarOpen && (
                 <DatabaseSidebar
+                  // Remount on connection change so the schema/table tree always
+                  // regenerates for the newly-active database — mirrors the
+                  // `key` on DatabaseStudio below. Without this the sidebar keeps
+                  // the previous connection's tables until a `dora-schema-refresh`
+                  // happens to fire (e.g. on a view switch).
+                  key={activeConnectionId || "no-connection"}
                   activeNavId={activeNavId}
                   onNavSelect={setActiveNavId}
                   onTableSelect={handleTableSelect}
@@ -903,14 +981,14 @@ function IndexInner() {
                         onTabClose={function () {}}
                         rightSlot={<WindowControls />}
                       />
-                      <EmptyState
-                        icon={<Plug className="h-16 w-16" />}
-                        title="No Connections"
-                        description="Add a database connection to start exploring your data."
-                        action={{
-                          label: "Add Connection",
-                          onClick: handleOpenNewConnection,
-                        }}
+                      <WorkspaceStartScreen
+                        newConnectionShortcut={formatShortcut(
+                          Array.isArray(shortcuts.newConnection.combo)
+                            ? shortcuts.newConnection.combo[0]
+                            : shortcuts.newConnection.combo,
+                        )}
+                        canDropFiles={isTauri}
+                        onAddConnection={handleOpenNewConnection}
                       />
                     </div>
                   ) : activeNavId === "database-studio" ? (
@@ -949,6 +1027,12 @@ function IndexInner() {
                                 }
                               : undefined
                           }
+                          onOpenSettings={function () {
+                            // Open the general Settings tab (no deep-link to a
+                            // specific control) and highlight the Startup section,
+                            // which holds the table-preview / auto-select toggle.
+                            handleOpenSettings(undefined, { highlight: "startup" });
+                          }}
                         />
                       </ErrorBoundary>
                     </div>
@@ -984,7 +1068,11 @@ function IndexInner() {
                     </ErrorBoundary>
                   ) : activeNavId === "settings" ? (
                     <ErrorBoundary feature="Settings">
-                      <SettingsView windowControls={<WindowControls />} />
+                      <SettingsView
+                        windowControls={<WindowControls />}
+                        initialSection={settingsInitialSection}
+                        highlightSection={settingsHighlightSection}
+                      />
                     </ErrorBoundary>
                   ) : activeNavId === "docker" ? (
                     <ErrorBoundary feature="Docker Manager">
@@ -1032,14 +1120,7 @@ function IndexInner() {
 
               <ConnectionDialog
                 open={isConnectionDialogOpen}
-                onOpenChange={function (open) {
-                  setIsConnectionDialogOpen(open);
-                  if (!open) {
-                    setEditingConnection(undefined);
-                    setConnectionDialogDroppedPaths(null);
-                    setConnectionDialogDragActive(false);
-                  }
-                }}
+                onOpenChange={handleConnectionDialogOpenChange}
                 onSave={handleDialogSave}
                 droppedFilePaths={connectionDialogDroppedPaths}
                 externalDropActive={connectionDialogDragActive}
@@ -1100,6 +1181,37 @@ export default function Index() {
     <TabsProvider>
       <IndexInner />
     </TabsProvider>
+  );
+}
+
+function WorkspaceStartScreen({
+  newConnectionShortcut,
+  canDropFiles,
+  onAddConnection,
+}: {
+  newConnectionShortcut: string;
+  canDropFiles: boolean;
+  onAddConnection: () => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 select-none">
+      <span className="text-sm font-medium lowercase tracking-[0.2em] text-muted-foreground/70">
+        dora
+      </span>
+      <p className="mt-3 text-sm text-muted-foreground/60">
+        {canDropFiles ? "Drop a database file, or " : "Press "}
+        <kbd className="rounded border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
+          {newConnectionShortcut}
+        </kbd>
+        {" to connect"}
+      </p>
+      <button
+        onClick={onAddConnection}
+        className="mt-6 rounded-md border border-border/70 px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:border-border hover:text-foreground"
+      >
+        New connection
+      </button>
+    </div>
   );
 }
 

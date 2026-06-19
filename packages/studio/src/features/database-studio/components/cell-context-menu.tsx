@@ -74,9 +74,7 @@ export function CellContextMenu({
 	}
 
 	function handleEdit() {
-		setTimeout(function () {
-			onAction?.('edit', value, column)
-		}, 100)
+		onAction?.('edit', value, column)
 	}
 
 	function handleSetNull() {
@@ -110,7 +108,15 @@ export function CellContextMenu({
 	return (
 		<ContextMenu onOpenChange={handleOpenChange}>
 			<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-			<ContextMenuContent className='w-[180px]'>
+			<ContextMenuContent
+				className='w-[180px]'
+				onCloseAutoFocus={function (e) {
+					// Don't restore focus to the trigger cell on close. "Edit cell"
+					// opens an inline <input>; letting Radix refocus the cell would
+					// blur that input the instant it mounts and close the editor.
+					e.preventDefault()
+				}}
+			>
 				<ContextMenuItem onClick={handleEdit}>
 					<Pencil />
 					<span>Edit cell</span>

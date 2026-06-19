@@ -8,9 +8,11 @@ import {
 } from '@/core/config/guide-structured-data'
 
 export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
-    const related = GUIDES.filter(function (item) {
-        return item.slug !== guide.slug
-    })
+    const others = GUIDES.filter((item) => item.slug !== guide.slug)
+    const related = [
+        ...others.filter((item) => item.engine === guide.engine),
+        ...others.filter((item) => item.engine !== guide.engine)
+    ]
 
     return (
         <>
@@ -125,6 +127,18 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                                 href="/downloads"
                             >
                                 Download Dora
+                            </Link>
+                            <Link
+                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                href="/features"
+                            >
+                                Browse features
+                            </Link>
+                            <Link
+                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                href="/docs"
+                            >
+                                All connection guides
                             </Link>
                         </div>
                     </article>

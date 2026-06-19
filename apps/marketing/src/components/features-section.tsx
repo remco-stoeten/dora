@@ -10,6 +10,7 @@ import { RegionGlobeCard } from '@/components/features/region-globe-card'
 import { NativePerformanceCard } from '@/components/features/native-performance-card'
 import { PasteConnectCard } from '@/components/features/paste-connect-card'
 import { DockerContainersCard } from '@/components/features/docker-containers-card'
+import { MultiConnectionCard } from '@/components/features/multi-connection-card'
 import { SchemaDiagramCard } from '@/components/features/schema-diagram-card'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { usePageVisible } from '@/shared/hooks/use-page-visible'
@@ -98,6 +99,15 @@ export function FeaturesSection() {
                 <FeatureCell id="feature-paste-connect" delay={275}>
                     <PasteConnectCard animate={animate} />
                 </FeatureCell>
+            </div>
+
+            <div
+                id="feature-multi-connection"
+                className="relative min-h-[260px] scroll-mt-28 border-b border-r border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]"
+            >
+                <ScrollReveal className="flex h-full w-full" delay={330}>
+                    <MultiConnectionCard animate={animate} />
+                </ScrollReveal>
             </div>
         </section>
     )

@@ -75,6 +75,7 @@ type TableItemRowProps = {
 	onEditSave?: (tableId: string, newName: string) => void
 	onEditCancel?: () => void
 	onSelect?: () => void
+	onPrefetch?: () => void
 	onMultiSelect?: (checked: boolean) => void
 	onContextAction?: (action: string) => void
 	onRightClickAction?: (action: TableRightClickAction, tableId: string) => void
@@ -91,15 +92,40 @@ function TableItemRow({
 	onEditSave,
 	onEditCancel,
 	onSelect,
+	onPrefetch,
 	onMultiSelect,
 	onContextAction,
 	onRightClickAction
 }: TableItemRowProps) {
 	const [showContextMenu, setShowContextMenu] = useState(false)
+	const [isMenuClosing, setIsMenuClosing] = useState(false)
+	const closingTimerRef = useRef<number | undefined>(undefined)
 	const [editValue, setEditValue] = useState(item.name)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const Icon = getTableIcon(item.type)
 	const hasSortedColumns = hasSorting && item.sortedColumns && item.sortedColumns.length > 0
+
+	useEffect(function () {
+		return function () {
+			window.clearTimeout(closingTimerRef.current)
+		}
+	}, [])
+
+	// Keep the trigger button mounted with a valid bounding box while the dropdown
+	// plays its exit animation. Otherwise the anchor collapses to display:none and
+	// Radix re-positions the still-visible menu to the top-left of the screen.
+	function handleContextMenuOpenChange(open: boolean) {
+		setShowContextMenu(open)
+		window.clearTimeout(closingTimerRef.current)
+		if (open) {
+			setIsMenuClosing(false)
+		} else {
+			setIsMenuClosing(true)
+			closingTimerRef.current = window.setTimeout(function () {
+				setIsMenuClosing(false)
+			}, 250)
+		}
+	}
 
 	useEffect(() => {
 		if (!isEditing) return
@@ -198,6 +224,8 @@ function TableItemRow({
 						aria-selected={isMultiSelectMode ? isSelected : undefined}
 						aria-label={`${item.name}, ${item.type}, ${formatRowCount(item.rowCount)} rows`}
 						onClick={onSelect}
+						onMouseEnter={onPrefetch}
+						onFocus={onPrefetch}
 						onKeyDown={handleRowKeyDown}
 					>
 						{isMultiSelectMode && (
@@ -257,7 +285,7 @@ function TableItemRow({
 							</span>
 						)}
 
-						{!showContextMenu && (
+						{!showContextMenu && !isMenuClosing && (
 							<span className='text-xs text-muted-foreground tabular-nums shrink-0 group-hover:hidden'>
 								{formatRowCount(item.rowCount)}
 							</span>
@@ -265,7 +293,7 @@ function TableItemRow({
 
 						<TableContextMenu
 							open={showContextMenu}
-							onOpenChange={setShowContextMenu}
+							onOpenChange={handleContextMenuOpenChange}
 							onAction={(action) => onContextAction?.(action)}
 						>
 							<Button
@@ -273,7 +301,7 @@ function TableItemRow({
 								size='icon'
 								className={cn(
 									'h-5 w-5 shrink-0 hidden group-hover:flex group-focus-within:flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent',
-									showContextMenu && 'opacity-100 flex'
+									(showContextMenu || isMenuClosing) && 'opacity-100 flex'
 								)}
 								aria-label={`Open actions for ${item.name}`}
 								onClick={(e) => {
@@ -375,6 +403,7 @@ type Props = {
 	activeSortingTableIds?: string[]
 	editingTableId?: string
 	onTableSelect?: (tableId: string) => void
+	onTablePrefetch?: (tableId: string) => void
 	onTableMultiSelect?: (tableId: string, checked: boolean) => void
 	onContextAction?: (tableId: string, action: string) => void
 	onRightClickAction?: (action: TableRightClickAction, tableId: string) => void
@@ -389,6 +418,7 @@ export function TableList({
 	activeSortingTableIds = [],
 	editingTableId,
 	onTableSelect,
+	onTablePrefetch,
 	onTableMultiSelect,
 	onContextAction,
 	onRightClickAction,
@@ -424,6 +454,7 @@ export function TableList({
 					onEditSave={handleEditSave}
 					onEditCancel={handleEditCancel}
 					onSelect={() => onTableSelect?.(table.id)}
+					onPrefetch={() => onTablePrefetch?.(table.id)}
 					onMultiSelect={(checked) => onTableMultiSelect?.(table.id, checked)}
 					onContextAction={(action) => onContextAction?.(table.id, action)}
 					onRightClickAction={onRightClickAction}

@@ -14,9 +14,8 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@studio/shared/ui/alert-dialog'
-import { Button } from '@studio/shared/ui/button'
 import { useConnections } from '@studio/core/data-provider'
-import { useIsTauri } from '@studio/core/data-provider'
+import { DesktopOnlyButton } from '@studio/core/platform'
 import { mapSaveDataFileSessionError } from '@studio/features/connections/local-file-errors'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { cn } from '@studio/shared/utils/cn'
@@ -46,7 +45,6 @@ export function SaveAsDuckDbButton({
 	className,
 	onConnectionSelect,
 }: Props) {
-	const isTauri = useIsTauri()
 	const { toast } = useToast()
 	const { data: connections = [] } = useConnections()
 	const { saveSession, openSavedConnection } = useSaveDataFileSession()
@@ -101,15 +99,6 @@ export function SaveAsDuckDbButton({
 	}
 
 	async function handleClick() {
-		if (!isTauri) {
-			toast({
-				title: 'Save as DuckDB unavailable',
-				description: 'Saving data-file sessions requires the desktop app.',
-				variant: 'destructive',
-			})
-			return
-		}
-
 		const defaultPath = `${connection.name.replace(/[^\w.-]+/g, '_')}.duckdb`
 		const destinationPath = await save({
 			filters: [{ name: 'DuckDB database', extensions: ['duckdb'] }],
@@ -131,12 +120,13 @@ export function SaveAsDuckDbButton({
 
 	return (
 		<div className={cn(className)}>
-			<Button
+			<DesktopOnlyButton
 				type='button'
 				variant='outline'
 				size='sm'
 				className='h-7 gap-1 px-2 text-xs'
 				disabled={isBusy}
+				desktopHint='Desktop app only'
 				aria-busy={isBusy}
 				aria-label={
 					isBusy
@@ -154,7 +144,7 @@ export function SaveAsDuckDbButton({
 					<Database className='h-3 w-3' aria-hidden />
 				)}
 				{SAVE_AS_DUCKDB_PLACEHOLDER_LABEL}
-			</Button>
+			</DesktopOnlyButton>
 
 			<AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
 				<AlertDialogContent>

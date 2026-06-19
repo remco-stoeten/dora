@@ -40,7 +40,12 @@ export function TableContextMenu({ open, onOpenChange, onAction, children }: Pro
 					<div key={item.id}>
 						{item.id === 'truncate' && <DropdownMenuSeparator />}
 						<DropdownMenuItem
-							onClick={() => onAction(item.id)}
+							onClick={() => {
+								// Let the dropdown commit its close before running the
+								// action, which may switch views and trigger a heavy
+								// re-render. Avoids janking the menu's exit animation.
+								requestAnimationFrame(() => onAction(item.id))
+							}}
 							className={
 								item.variant === 'destructive'
 									? 'text-destructive focus:text-destructive focus:bg-red-50 dark:text-red-400 dark:focus:bg-red-900/20'

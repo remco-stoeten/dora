@@ -2,6 +2,7 @@
 layer(base);
 
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 /*
  * Explicitly scan this package's components for class names. Tailwind v4's
@@ -14,8 +15,6 @@ layer(base);
  * so this is redundant-but-harmless there.
  */
 @source './**/*.{ts,tsx}';
-
-@plugin 'tailwindcss-animate';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -599,6 +598,26 @@ layer(base);
 		overflow: hidden;
 	}
 
+	/*
+	 * Companion to the scroll fix above — the *other* Radix-overlay flash, this
+	 * one on close. Every overlay (popover, dropdown, context menu, dialog,
+	 * tooltip, select) plays a tw-animate-css `animate-out` exit when it closes.
+	 * That animation's fill-mode defaults to `none`, so the instant it finishes
+	 * the element snaps back to its base, fully-visible style and lingers there
+	 * for the one frame between `animationend` firing and React unmounting it:
+	 * Radix's <Presence> unmounts via an ordinary (async) state update — not
+	 * flushSync — and this app's heavy on-close re-renders widen that gap enough
+	 * to paint. The result reads as the overlay "reopening" for ~1 frame (~20ms)
+	 * before it vanishes. Holding the exit animation's final (hidden) frame keeps
+	 * that gap invisible. `--tw-animation-fill-mode` feeds tw-animate-css's
+	 * `animation` shorthand; the longhand covers a fallback to the classic
+	 * tailwindcss-animate plugin.
+	 */
+	[data-state='closed'] {
+		--tw-animation-fill-mode: forwards;
+		animation-fill-mode: forwards;
+	}
+
 	body {
 		@apply bg-background text-foreground antialiased;
 		font-family: var(--font-sans);
@@ -837,6 +856,120 @@ layer(base);
 		background-clip: text;
 		color: transparent;
 		animation: asyncShimmer 1.8s ease-in-out infinite;
+	}
+
+	/*
+	 * A bright sheen that sweeps across the selected provider's SVG glyph only.
+	 * A white copy of the icon is clipped by a moving diagonal gradient mask, so
+	 * the streak follows the icon's shape rather than its bounding box. It fires,
+	 * then rests, for an intermittent "thunder" cadence.
+	 */
+	@keyframes dbTypeIconGlint {
+		0% {
+			-webkit-mask-position: 150% center;
+			mask-position: 150% center;
+		}
+		32% {
+			-webkit-mask-position: -50% center;
+			mask-position: -50% center;
+		}
+		100% {
+			-webkit-mask-position: -50% center;
+			mask-position: -50% center;
+		}
+	}
+
+	.db-type-icon-glint {
+		display: inline-flex;
+		mix-blend-mode: screen;
+		-webkit-mask-image: linear-gradient(
+			105deg,
+			transparent 38%,
+			#000 47%,
+			#000 53%,
+			transparent 62%
+		);
+		mask-image: linear-gradient(
+			105deg,
+			transparent 38%,
+			#000 47%,
+			#000 53%,
+			transparent 62%
+		);
+		-webkit-mask-size: 280% 100%;
+		mask-size: 280% 100%;
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		animation: dbTypeIconGlint 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.db-type-icon-glint {
+			animation: none;
+			opacity: 0;
+		}
+
+		.desktop-only-hint {
+			animation: none;
+		}
+
+		.desktop-only-notice__shimmer::after {
+			animation: none;
+			opacity: 0;
+		}
+	}
+
+	@keyframes desktopOnlyPulse {
+		0%,
+		100% {
+			box-shadow: 0 0 0 0 color-mix(in srgb, hsl(var(--primary)) 0%, transparent);
+		}
+		50% {
+			box-shadow: 0 0 0 2px color-mix(in srgb, hsl(var(--primary)) 38%, transparent);
+		}
+	}
+
+	.desktop-only-hint {
+		animation: desktopOnlyPulse 1.1s ease-in-out 2;
+	}
+
+	@keyframes settingsSectionHighlight {
+		0%,
+		100% {
+			box-shadow: inset 0 0 0 0 color-mix(in srgb, hsl(var(--sidebar-primary)) 0%, transparent);
+			background-color: transparent;
+		}
+		20%,
+		55% {
+			box-shadow: inset 0 0 0 2px color-mix(in srgb, hsl(var(--sidebar-primary)) 55%, transparent);
+			background-color: color-mix(in srgb, hsl(var(--sidebar-primary)) 9%, transparent);
+		}
+	}
+
+	.settings-section-highlight {
+		animation: settingsSectionHighlight 2.2s ease-in-out 1;
+	}
+
+	@keyframes desktopOnlyNoticeShimmer {
+		0% {
+			transform: translateX(-120%);
+		}
+		100% {
+			transform: translateX(120%);
+		}
+	}
+
+	.desktop-only-notice__shimmer::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			100deg,
+			transparent 35%,
+			color-mix(in srgb, hsl(var(--primary)) 16%, transparent) 50%,
+			transparent 65%
+		);
+		animation: desktopOnlyNoticeShimmer 3.2s ease-in-out infinite;
 	}
 }
 

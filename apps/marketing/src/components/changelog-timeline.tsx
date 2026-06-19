@@ -1,6 +1,7 @@
 'use client'
 
 import { ExternalLink } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { ScrollReveal } from '@/components/scroll-reveal'
 import type { ChangelogRelease } from '@/core/content/changelog-data'
@@ -15,6 +16,53 @@ const GROUP_TONE: Record<string, string> = {
     Documentation: 'bg-blue-400/70',
     Testing: 'bg-teal-400/70',
     Other: 'bg-zinc-500/50'
+}
+
+const ISSUE_PATTERN = /#(\d+)/g
+
+// Derive the repo's issues URL from a release tag URL so links always point at
+// wherever the repo currently lives (single source of truth: changelog-data).
+// e.g. https://github.com/owner/repo/releases/tag/v1.2.3 -> https://github.com/owner/repo/issues
+function issuesBaseUrl(tagUrl: string): string | null {
+    const match = tagUrl.match(/^(https?:\/\/github\.com\/[^/]+\/[^/]+)/)
+    return match ? `${match[1]}/issues` : null
+}
+
+function renderItem(item: string, issuesUrl: string | null): ReactNode {
+    if (!issuesUrl) return item
+
+    const nodes: ReactNode[] = []
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    ISSUE_PATTERN.lastIndex = 0
+    while ((match = ISSUE_PATTERN.exec(item)) !== null) {
+        const [token, issueNumber] = match
+
+        if (match.index > lastIndex) {
+            nodes.push(item.slice(lastIndex, match.index))
+        }
+
+        nodes.push(
+            <a
+                key={`${match.index}-${issueNumber}`}
+                href={`${issuesUrl}/${issueNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[#f5c0c0] underline decoration-[#f5c0c0]/30 underline-offset-2 transition-colors hover:decoration-[#f5c0c0]"
+            >
+                {token}
+            </a>
+        )
+
+        lastIndex = match.index + token.length
+    }
+
+    if (lastIndex < item.length) {
+        nodes.push(item.slice(lastIndex))
+    }
+
+    return nodes
 }
 
 function formatDate(dateString: string): string {
@@ -43,6 +91,7 @@ function ChangelogReleaseCard({
     isLatest: boolean
 }) {
     const hasNotes = releaseHasNotes(release)
+    const issuesUrl = issuesBaseUrl(release.tagUrl)
 
     return (
         <article
@@ -96,7 +145,7 @@ function ChangelogReleaseCard({
                                                 key={item}
                                                 className="relative pl-3 text-[14px] leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.62em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-[#3a3138]"
                                             >
-                                                {item}
+                                                {renderItem(item, issuesUrl)}
                                             </li>
                                         )
                                     })}

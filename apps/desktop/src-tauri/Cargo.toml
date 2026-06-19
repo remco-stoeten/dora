@@ -23,6 +23,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-log = "0.2"
 tauri = { version = "2.8.0", features = ["macos-private-api"] }
+# `tauri-runtime`/`tauri-runtime-wry` are published ahead of the `tauri` crate
+# itself (a 2.11.x runtime exists while the latest `tauri` is 2.10.3). Cargo's
+# caret resolution otherwise floats `tauri-runtime` up to 2.11, which `tauri`
+# 2.10.3 cannot compile against (the 2.11 runtime adds trait methods the matching
+# 2.10 `tauri-runtime-wry` doesn't implement). Pin both to the 2.10 line — these
+# constraints can be removed once the `tauri` crate itself reaches 2.11.
+tauri-runtime = "~2.10"
+tauri-runtime-wry = "~2.10"
 tauri-plugin-log = "2"
 thiserror = "2.0.12"
 tokio-postgres = { version = "0.7", features = [
@@ -85,7 +93,10 @@ fake = { version = "3", features = ["derive"] }
 rand = "0.9"
 bcrypt = "0.15"
 reqwest = { version = "0.12", features = ["json", "stream"] }
+tauri-plugin-opener = "2"
 tauri-plugin-shell = "2.3.4"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 dotenvy = "0.15"

@@ -72,7 +72,7 @@ export function BottomToolbar({ onAction, onToggleSidebar, isSidebarOpen = true 
   }
 
   return (
-    <div className="mt-auto flex items-end justify-between gap-2 border-t border-sidebar-border px-2 py-1.5">
+    <div className="flex shrink-0 items-end justify-between gap-2 border-t border-sidebar-border px-2 py-1.5">
       <div className="flex items-center gap-1">
       {TOOLBAR_ITEMS.map(function (item) {
         if (item.id === "changelog") {

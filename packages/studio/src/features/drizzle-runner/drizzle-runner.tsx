@@ -159,6 +159,7 @@ export function DrizzleRunner({ connectionId }: Props) {
 						className='h-7 w-7 text-muted-foreground hover:text-foreground'
 						onClick={handlePrettify}
 						title='Format code (Shift+Alt+F)'
+						aria-label='Format code'
 					>
 						<Sparkles className='h-3.5 w-3.5' />
 					</Button>
@@ -172,6 +173,8 @@ export function DrizzleRunner({ connectionId }: Props) {
 						)}
 						onClick={() => setShowJson(!showJson)}
 						title='Toggle JSON view'
+						aria-label='Toggle JSON view'
+						aria-pressed={showJson}
 					>
 						<Braces className='h-3.5 w-3.5' />
 					</Button>
@@ -186,6 +189,7 @@ export function DrizzleRunner({ connectionId }: Props) {
 						onClick={handleExport}
 						disabled={!result || result.rows.length === 0}
 						title='Export results as JSON'
+						aria-label='Export results as JSON'
 					>
 						<Download className='h-3.5 w-3.5' />
 					</Button>
@@ -197,6 +201,8 @@ export function DrizzleRunner({ connectionId }: Props) {
 						size='sm'
 						className={cn('h-7 text-xs', isSidebarCollapsed && 'bg-sidebar-accent')}
 						onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+						aria-expanded={!isSidebarCollapsed}
+						aria-label={isSidebarCollapsed ? 'Show schema sidebar' : 'Hide schema sidebar'}
 					>
 						{isSidebarCollapsed ? 'Show Schema' : 'Hide Schema'}
 					</Button>

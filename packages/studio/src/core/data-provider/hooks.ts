@@ -186,7 +186,15 @@ export function useSchema(connectionId: string | undefined) {
 			return res.data
 		},
 		enabled: !!connectionId,
-		retry: false
+		retry: false,
+		// Schema freshness is driven explicitly by `dora-schema-refresh` events
+		// (DDL, imports, data mutations), so we don't auto-refetch on focus or
+		// reconnect. Without this, closing a focus-trapping modal like the
+		// connection dialog re-runs connect + getSchema and reloads everything,
+		// even when nothing was edited.
+		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: false,
+		refetchOnReconnect: false
 	})
 }
 

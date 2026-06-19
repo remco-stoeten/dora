@@ -462,7 +462,9 @@ func (m model) handleSelect() (tea.Model, tea.Cmd) {
 	// ------------------------------------------------------------------
 	case sectionBuilds:
 		if len(m.buildFiles) > 0 {
-			return m.startExec(executeCommand(m.buildFiles[m.buildCursor].Path))
+			if target := runnableTarget(m.buildFiles[m.buildCursor].Path); target != "" {
+				return m.startExec(executeCommand(target))
+			}
 		}
 
 	// ------------------------------------------------------------------
@@ -663,6 +665,34 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
+// runnableTarget resolves a selected build artifact to an executable path.
+// Directly-runnable bundles (AppImage/exe/msi/dmg) are returned as-is.
+// Package artifacts (.deb/.rpm) cannot be exec'd, so we launch the binary
+// extracted alongside them, falling back to the compiled release binary.
+func runnableTarget(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".appimage", ".exe", ".msi", ".dmg":
+		return path
+	case ".deb", ".rpm":
+		// Tauri extracts the binary next to the package, e.g.
+		// .../deb/Dora_x_amd64/data/usr/bin/dora
+		base := strings.TrimSuffix(path, filepath.Ext(path))
+		extracted := filepath.Join(base, "data", "usr", "bin", "dora")
+		if _, err := os.Stat(extracted); err == nil {
+			return extracted
+		}
+		bin := filepath.Join(findProjectRoot(),
+			"apps/desktop/src-tauri/target/release", "dora")
+		if runtime.GOOS == "windows" {
+			bin += ".exe"
+		}
+		if _, err := os.Stat(bin); err == nil {
+			return bin
+		}
+	}
+	return ""
+}
+
 func findBuilds(mode string) []buildFile {
 	root := findProjectRoot()
 	bundleDir := filepath.Join(root, "apps/desktop/src-tauri/target/release/bundle")
@@ -682,7 +712,9 @@ func findBuilds(mode string) []buildFile {
 			case "darwin":
 				valid = ext == ".dmg"
 			default:
-				valid = ext == ".appimage"
+				// AppImage runs directly; .deb/.rpm are installers but we
+				// surface them too and launch the bundled binary on run.
+				valid = ext == ".appimage" || ext == ".deb" || ext == ".rpm"
 			}
 		case "deb":
 			valid = ext == ".deb"

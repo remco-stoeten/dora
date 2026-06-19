@@ -275,10 +275,10 @@ function HeroText({ release }: { release: TLatest | null }) {
                     explorah.
                 </span>
             </h1>
-            <p className="mt-6 max-w-[420px] [font-family:system-ui,sans-serif] text-[14px] leading-relaxed text-muted-foreground">
-                Dora is a native, keyboard-first SQL workbench for developers
-                who think in tables. Browse millions of rows, edit live, ship
-                faster.
+            <p className="mt-6 max-w-[440px] [font-family:system-ui,sans-serif] text-[14px] leading-relaxed text-muted-foreground">
+                A native, keyboard-first database workbench. Connect Postgres,
+                MySQL, SQLite, or Turso, or just drop in a CSV. Then query it
+                in SQL, type-safe Drizzle/Prisma, or plain English.
             </p>
             <div className="mt-10">
                 <HeroDownload release={release} />

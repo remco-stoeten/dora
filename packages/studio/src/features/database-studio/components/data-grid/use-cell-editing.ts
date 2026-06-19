@@ -39,6 +39,11 @@ export function useCellEditing({
 	const editingCellRef = useRef(editingCell)
 	editingCellRef.current = editingCell
 	const skipNextBlurSaveRef = useRef(false)
+	// True for a short window right after the editor mounts. A blur that fires
+	// in this window is a spurious focus-steal (Radix context-menu close
+	// restoring focus to the trigger, a JsonCell button unmounting, etc.), not
+	// the user clicking away — so we re-focus instead of tearing the editor down.
+	const justOpenedRef = useRef(false)
 	// How the editor should treat the seeded text once it focuses:
 	// 'all' selects everything (Enter/F2/double-click/Tab — overwrite-on-type),
 	// 'end' leaves the caret at the end (type-to-edit — the first keystroke is
@@ -118,10 +123,27 @@ export function useCellEditing({
 		[onCellEdit, refocusGrid]
 	)
 
+	// Explicit commit — Enter key, or clicking another cell. Always saves.
 	const handleSaveEdit = useCallback(
+		function () {
+			commitEdit({ clear: true, refocus: true })
+		},
+		[commitEdit]
+	)
+
+	// Blur commit. Distinct from handleSaveEdit because a blur can be spurious:
+	// fired by a focus-steal in the moment the editor opens rather than by the
+	// user leaving the cell. In that case keep editing and grab focus back.
+	const handleEditBlur = useCallback(
 		function () {
 			if (skipNextBlurSaveRef.current) {
 				skipNextBlurSaveRef.current = false
+				return
+			}
+			if (justOpenedRef.current) {
+				requestAnimationFrame(function () {
+					editInputRef.current?.focus()
+				})
 				return
 			}
 			commitEdit({ clear: true, refocus: true })
@@ -215,6 +237,13 @@ export function useCellEditing({
 			} else {
 				input.select()
 			}
+			justOpenedRef.current = true
+			const timer = setTimeout(function () {
+				justOpenedRef.current = false
+			}, 250)
+			return function () {
+				clearTimeout(timer)
+			}
 		},
 		[editingCell]
 	)
@@ -228,6 +257,7 @@ export function useCellEditing({
 		handleCellDoubleClick,
 		startTypeEdit,
 		handleSaveEdit,
+		handleEditBlur,
 		handleEditKeyDown
 	}
 }

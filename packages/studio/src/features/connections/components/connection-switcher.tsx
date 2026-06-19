@@ -16,7 +16,7 @@ import {
 	useRef,
 	useState,
 	type ComponentPropsWithoutRef,
-	type KeyboardEvent,
+	type KeyboardEvent
 } from 'react'
 import {
 	ContextMenu,
@@ -45,13 +45,13 @@ import {
 	isDataFileConnection,
 	resolveDataFileConnectionSummary,
 	resolveDataFileHealth,
-	type DataFileHealth,
+	type DataFileHealth
 } from '../data-file-health'
 import { useDataFileEntriesCatalog } from '../hooks/use-data-file-entries-catalog'
 import {
 	resolveConnectionLocationLabel,
 	resolveConnectionSearchText,
-	resolveProviderLabel,
+	resolveProviderLabel
 } from '../source-labels'
 
 function normalizeTimestamp(value: number | null | undefined): number | null {
@@ -259,8 +259,7 @@ export function ConnectionSwitcher({
 	const activeConnection = connections.find((c) => c.id === activeConnectionId)
 	const status = activeConnection?.status || 'idle'
 	const catalogEnabled =
-		dropdownOpen ||
-		(activeConnection != null && isDataFileConnection(activeConnection))
+		dropdownOpen || (activeConnection != null && isDataFileConnection(activeConnection))
 	const dataFileEntriesCatalog = useDataFileEntriesCatalog(connections, catalogEnabled)
 	const activeDataFileEntries = activeConnection
 		? dataFileEntriesCatalog.get(activeConnection.id)
@@ -269,7 +268,7 @@ export function ConnectionSwitcher({
 		activeConnection && isDataFileConnection(activeConnection)
 			? resolveDataFileHealth({
 					entries: activeDataFileEntries,
-					connectionStatus: activeConnection.status,
+					connectionStatus: activeConnection.status
 				})
 			: null
 
@@ -363,9 +362,7 @@ export function ConnectionSwitcher({
 		if (e.key === 'ArrowDown') {
 			e.preventDefault()
 			const nextIndex =
-				focusedIndex === -1
-					? 0
-					: Math.min(focusedIndex + 1, filteredConnections.length - 1)
+				focusedIndex === -1 ? 0 : Math.min(focusedIndex + 1, filteredConnections.length - 1)
 			focusConnectionRow(nextIndex)
 			return
 		}
@@ -373,9 +370,7 @@ export function ConnectionSwitcher({
 		if (e.key === 'ArrowUp') {
 			e.preventDefault()
 			const nextIndex =
-				focusedIndex === -1
-					? filteredConnections.length - 1
-					: Math.max(focusedIndex - 1, 0)
+				focusedIndex === -1 ? filteredConnections.length - 1 : Math.max(focusedIndex - 1, 0)
 			focusConnectionRow(nextIndex)
 			return
 		}
@@ -392,127 +387,174 @@ export function ConnectionSwitcher({
 		}
 	}
 
+	function handleConnectionListKeyDownCapture(e: KeyboardEvent) {
+		if (e.key !== 'Tab') return
+
+		const container = e.currentTarget
+		if (!(container instanceof HTMLElement)) return
+
+		const tabStops = Array.from(
+			container.querySelectorAll<HTMLElement>(
+				'input:not([disabled]), [data-connection-id], [data-connection-footer-action]'
+			)
+		).filter(function (element) {
+			return (
+				!element.hasAttribute('disabled') &&
+				element.getAttribute('aria-disabled') !== 'true'
+			)
+		})
+
+		if (tabStops.length === 0) return
+
+		const activeElement = document.activeElement
+		const currentIndex =
+			activeElement instanceof HTMLElement ? tabStops.indexOf(activeElement) : -1
+		const fallbackIndex = e.shiftKey ? tabStops.length - 1 : 0
+		const nextIndex =
+			currentIndex === -1 ? fallbackIndex : e.shiftKey ? currentIndex - 1 : currentIndex + 1
+
+		if (nextIndex < 0 || nextIndex >= tabStops.length) {
+			setDropdownOpen(false)
+			return
+		}
+
+		e.preventDefault()
+		e.stopPropagation()
+		tabStops[nextIndex]?.focus()
+	}
+
 	return (
 		<>
-		<DropdownMenu
-			open={dropdownOpen}
-			onOpenChange={function handleMenuOpenChange(open) {
-				if (!open && keepOpenAfterDeleteRef.current) {
-					keepOpenAfterDeleteRef.current = false
-					setDropdownOpen(true)
-					return
-				}
-				setDropdownOpen(open)
-			}}
-		>
-			<DropdownMenuTrigger asChild>
-				<button
-					type='button'
-					aria-label={
-						activeConnection
-							? `Change database connection. Current connection: ${activeConnection.name}`
-							: 'Select database connection'
+			<DropdownMenu
+				open={dropdownOpen}
+				onOpenChange={function handleMenuOpenChange(open) {
+					if (!open && keepOpenAfterDeleteRef.current) {
+						keepOpenAfterDeleteRef.current = false
+						setDropdownOpen(true)
+						return
 					}
-					aria-haspopup='menu'
-					className={cn(
-						'group/trigger relative w-full rounded-lg px-2 py-2 text-left',
-						'flex items-center gap-3',
-						'text-sidebar-foreground',
-						'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
-						'hover:bg-sidebar-accent',
-						'data-[state=open]:bg-sidebar-accent',
-						'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
-					)}
-				>
-					<div
+					setDropdownOpen(open)
+				}}
+			>
+				<DropdownMenuTrigger asChild>
+					<button
+						type='button'
+						aria-label={
+							activeConnection
+								? `Change database connection. Current connection: ${activeConnection.name}`
+								: 'Select database connection'
+						}
+						aria-haspopup='menu'
 						className={cn(
-							'flex h-9 w-9 items-center justify-center rounded-md shrink-0',
+							'group/trigger relative w-full rounded-lg px-2 py-2 text-left',
+							'flex items-center gap-3',
+							'text-sidebar-foreground',
 							'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
-							status === 'error'
-								? 'bg-destructive/10 text-destructive'
-								: 'bg-primary/10 text-primary group-hover/trigger:bg-primary/15'
+							'hover:bg-sidebar-accent',
+							'data-[state=open]:bg-sidebar-accent',
+							'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40'
 						)}
 					>
-						{status === 'error' ? (
-							<AlertCircle className='h-4 w-4' />
-						) : activeConnection ? (
-							<DatabaseTypeIcon type={activeConnection.type} className='h-4 w-4' />
-						) : (
-							<Database className='h-4 w-4' />
-						)}
-					</div>
-					<div className='grid flex-1 min-w-0 text-left text-sm leading-tight'>
-						<span
+						<div
 							className={cn(
-								'truncate font-semibold',
-								status === 'error' ? 'text-destructive' : 'text-foreground'
+								'flex h-9 w-9 items-center justify-center rounded-md shrink-0',
+								'transition-[background-color,color] duration-150 ease-[var(--ease-out)]',
+								status === 'error'
+									? 'bg-destructive/10 text-destructive'
+									: 'bg-primary/10 text-primary group-hover/trigger:bg-primary/15'
 							)}
 						>
-							{activeConnection?.name || 'Select Database'}
-						</span>
-						{activeConnection && status !== 'error' ? (
-							<span className='mt-1 flex flex-wrap items-center gap-1'>
-								<SourceBadges connection={activeConnection} compact showReadonly={false} />
-								{activeDataFileHealth && (
-									<DataFileHealthIndicator health={activeDataFileHealth} compact />
+							{status === 'error' ? (
+								<AlertCircle className='h-4 w-4' />
+							) : activeConnection ? (
+								<DatabaseTypeIcon
+									type={activeConnection.type}
+									className='h-4 w-4'
+								/>
+							) : (
+								<Database className='h-4 w-4' />
+							)}
+						</div>
+						<div className='grid flex-1 min-w-0 text-left text-sm leading-tight'>
+							<span
+								className={cn(
+									'truncate font-semibold',
+									status === 'error' ? 'text-destructive' : 'text-foreground'
 								)}
+							>
+								{activeConnection?.name || 'Select Database'}
 							</span>
-						) : (
-							<span className='truncate text-xs text-muted-foreground'>
-								{activeConnection ? 'Connection failed' : 'No connection'}
-							</span>
-						)}
-					</div>
-					<ChevronsUpDown
-						className={cn(
-							'ml-auto h-4 w-4 shrink-0 text-muted-foreground',
-							'transition-[color,transform] duration-200 ease-[var(--ease-out)]',
-							'group-hover/trigger:text-foreground',
-							'group-data-[state=open]/trigger:text-foreground group-data-[state=open]/trigger:rotate-180'
-						)}
-					/>
-				</button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				className='w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] p-1'
-				align='start'
-				side='bottom'
-				sideOffset={6}
-				onCloseAutoFocus={function preventCloseFocusRing(e) {
-					e.preventDefault()
-				}}
-				onInteractOutside={function handleDropdownInteractOutside() {
-					setContextMenuConnectionId(null)
-				}}
-				onKeyDown={handleConnectionListKeyDown}
-			>
-				<div className='px-2 pt-1.5 pb-2 space-y-2'>
-					<div className='flex items-center justify-between'>
-						<DropdownMenuLabel className='p-0 text-[10px] uppercase tracking-wider font-medium text-muted-foreground'>
-							Databases
-						</DropdownMenuLabel>
-						<span className='text-[10px] tabular-nums text-muted-foreground/70'>
-							{searchQuery.trim()
-								? `${filteredConnections.length}/${connections.length}`
-								: connections.length}
-						</span>
-					</div>
-					<div className='relative'>
-						<Search className='pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70' />
-						<Input
-							value={searchQuery}
-							onChange={function handleSearchChange(e) {
-								setSearchQuery(e.target.value)
-							}}
-							placeholder='Search connections...'
-							className='h-7 pl-7 text-xs'
+							{activeConnection && status !== 'error' ? (
+								<span className='mt-1 flex flex-wrap items-center gap-1'>
+									<SourceBadges
+										connection={activeConnection}
+										compact
+										showReadonly={false}
+									/>
+									{activeDataFileHealth && (
+										<DataFileHealthIndicator
+											health={activeDataFileHealth}
+											compact
+										/>
+									)}
+								</span>
+							) : (
+								<span className='truncate text-xs text-muted-foreground'>
+									{activeConnection ? 'Connection failed' : 'No connection'}
+								</span>
+							)}
+						</div>
+						<ChevronsUpDown
+							className={cn(
+								'ml-auto h-4 w-4 shrink-0 text-muted-foreground',
+								'transition-[color,transform] duration-200 ease-[var(--ease-out)]',
+								'group-hover/trigger:text-foreground',
+								'group-data-[state=open]/trigger:text-foreground group-data-[state=open]/trigger:rotate-180'
+							)}
 						/>
+					</button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent
+					className='w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)] p-1'
+					align='start'
+					side='bottom'
+					sideOffset={6}
+					onCloseAutoFocus={function preventCloseFocusRing(e) {
+						e.preventDefault()
+					}}
+					onInteractOutside={function handleDropdownInteractOutside() {
+						setContextMenuConnectionId(null)
+					}}
+					onKeyDownCapture={handleConnectionListKeyDownCapture}
+					onKeyDown={handleConnectionListKeyDown}
+				>
+					<div className='px-2 pt-1.5 pb-2 space-y-2'>
+						<div className='flex items-center justify-between'>
+							<DropdownMenuLabel className='p-0 text-[10px] uppercase tracking-wider font-medium text-muted-foreground'>
+								Databases
+							</DropdownMenuLabel>
+							<span className='text-[10px] tabular-nums text-muted-foreground/70'>
+								{searchQuery.trim()
+									? `${filteredConnections.length}/${connections.length}`
+									: connections.length}
+							</span>
+						</div>
+						<div className='relative'>
+							<Search className='pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70' />
+							<Input
+								value={searchQuery}
+								onChange={function handleSearchChange(e) {
+									setSearchQuery(e.target.value)
+								}}
+								placeholder='Search connections...'
+								className='h-7 pl-7 text-xs'
+							/>
+						</div>
 					</div>
-				</div>
 
-				<div className='max-h-[320px] overflow-y-auto px-1'>
-					{filteredConnections.length > 0 ? (
-						filteredConnections.map(function renderConnection(connection) {
+					<div className='max-h-[320px] overflow-y-auto px-1'>
+						{filteredConnections.length > 0 ? (
+							filteredConnections.map(function renderConnection(connection) {
 								const isActive = connection.id === activeConnectionId
 								const rowEntries = dataFileEntriesCatalog.get(connection.id)
 								const rowIsDataFile = isDataFileConnection(connection)
@@ -522,143 +564,154 @@ export function ConnectionSwitcher({
 								const rowHealth = rowIsDataFile
 									? resolveDataFileHealth({
 											entries: rowEntries,
-											connectionStatus: connection.status,
+											connectionStatus: connection.status
 										})
 									: null
 								return (
 									<div key={connection.id}>
-									<ContextMenu modal={false}>
-									<DropdownMenuItem
-										asChild
-										onSelect={function handleMenuItemSelect(e) {
-											const target = e.target
-											if (
-												target instanceof HTMLElement &&
-												target.closest('[data-connection-action]')
-											) {
-												e.preventDefault()
-											}
-										}}
-									>
-										<ContextMenuTrigger asChild>
-											<ConnectionMenuRow
-												ref={function setConnectionRowRef(node) {
-													if (node) {
-														connectionRowRefs.current.set(connection.id, node)
-													} else {
-														connectionRowRefs.current.delete(connection.id)
-													}
-												}}
-												connection={connection}
-												isActive={isActive}
-												rowSummary={rowSummary}
-												rowHealth={rowHealth}
-												onEditConnection={onEditConnection}
-												onDeleteConnection={onDeleteConnection}
-												onConfirmDelete={confirmDelete}
-												onKeepOpenAfterDelete={function markKeepOpenAfterDelete() {
-													keepOpenAfterDeleteRef.current = true
-												}}
-												onContextMenuCapture={function handleConnectionContextMenu() {
-													setContextMenuConnectionId(connection.id)
-													setDropdownOpen(true)
-												}}
-												onClick={function handleConnectionClick() {
-													selectConnection(connection.id)
-												}}
-												onKeyDown={function handleRowKeyDown(e) {
-													if (e.key === 'Enter' || e.key === ' ') {
+										<ContextMenu modal={false}>
+											<DropdownMenuItem
+												asChild
+												onSelect={function handleMenuItemSelect(e) {
+													const target = e.target
+													if (
+														target instanceof HTMLElement &&
+														target.closest('[data-connection-action]')
+													) {
 														e.preventDefault()
-														selectConnection(connection.id)
 													}
 												}}
-											/>
-										</ContextMenuTrigger>
-									</DropdownMenuItem>
-									<ContextMenuContent
-										className='w-48'
-										onEscapeKeyDown={function handleContextEscape() {
-											setContextMenuConnectionId(null)
-										}}
-										onPointerDownOutside={function handleContextPointerOutside() {
-											setContextMenuConnectionId(null)
-										}}
-									>
-										{onViewConnection && (
-										<ContextMenuItem
-											onSelect={function viewConnection() {
-												onViewConnection(connection.id)
-												closeMenus()
-											}}
-										>
-											<Eye />
-											View Details
-										</ContextMenuItem>
-									)}
-									{onEditConnection && (
-										<ContextMenuItem
-											onSelect={function editConnection() {
-												onEditConnection(connection.id)
-												closeMenus()
-											}}
-										>
-											<Pencil />
-											Edit Connection
-										</ContextMenuItem>
-									)}
-									{onDeleteConnection && (
-										<>
-											<ContextMenuSeparator />
-											<ContextMenuItem
-												onSelect={function deleteConnection() {
-													confirmDelete(connection.id)
+											>
+												<ContextMenuTrigger asChild>
+													<ConnectionMenuRow
+														ref={function setConnectionRowRef(node) {
+															if (node) {
+																connectionRowRefs.current.set(
+																	connection.id,
+																	node
+																)
+															} else {
+																connectionRowRefs.current.delete(
+																	connection.id
+																)
+															}
+														}}
+														connection={connection}
+														isActive={isActive}
+														rowSummary={rowSummary}
+														rowHealth={rowHealth}
+														onEditConnection={onEditConnection}
+														onDeleteConnection={onDeleteConnection}
+														onConfirmDelete={confirmDelete}
+														onKeepOpenAfterDelete={function markKeepOpenAfterDelete() {
+															keepOpenAfterDeleteRef.current = true
+														}}
+														onContextMenuCapture={function handleConnectionContextMenu() {
+															setContextMenuConnectionId(
+																connection.id
+															)
+															setDropdownOpen(true)
+														}}
+														onClick={function handleConnectionClick() {
+															selectConnection(connection.id)
+														}}
+														onKeyDown={function handleRowKeyDown(e) {
+															if (
+																e.key === 'Enter' ||
+																e.key === ' '
+															) {
+																e.preventDefault()
+																selectConnection(connection.id)
+															}
+														}}
+													/>
+												</ContextMenuTrigger>
+											</DropdownMenuItem>
+											<ContextMenuContent
+												className='w-48'
+												onEscapeKeyDown={function handleContextEscape() {
 													setContextMenuConnectionId(null)
 												}}
-												variant='destructive'
+												onPointerDownOutside={function handleContextPointerOutside() {
+													setContextMenuConnectionId(null)
+												}}
 											>
-												<Trash2 />
-												Delete Connection
-											</ContextMenuItem>
-										</>
-									)}
-									</ContextMenuContent>
-									</ContextMenu>
+												{onViewConnection && (
+													<ContextMenuItem
+														onSelect={function viewConnection() {
+															onViewConnection(connection.id)
+															closeMenus()
+														}}
+													>
+														<Eye />
+														View Details
+													</ContextMenuItem>
+												)}
+												{onEditConnection && (
+													<ContextMenuItem
+														onSelect={function editConnection() {
+															onEditConnection(connection.id)
+															closeMenus()
+														}}
+													>
+														<Pencil />
+														Edit Connection
+													</ContextMenuItem>
+												)}
+												{onDeleteConnection && (
+													<>
+														<ContextMenuSeparator />
+														<ContextMenuItem
+															onSelect={function deleteConnection() {
+																confirmDelete(connection.id)
+																setContextMenuConnectionId(null)
+															}}
+															variant='destructive'
+														>
+															<Trash2 />
+															Delete Connection
+														</ContextMenuItem>
+													</>
+												)}
+											</ContextMenuContent>
+										</ContextMenu>
 									</div>
 								)
 							})
-					) : (
-						<div className='px-2 py-6 text-xs text-center text-muted-foreground'>
-							{connections.length > 0
-								? 'No matching connections'
-								: 'No connections found'}
+						) : (
+							<div className='px-2 py-6 text-xs text-center text-muted-foreground'>
+								{connections.length > 0
+									? 'No matching connections'
+									: 'No connections found'}
+							</div>
+						)}
+					</div>
+
+					<DropdownMenuSeparator />
+
+					<DropdownMenuItem
+						data-connection-footer-action
+						onClick={onAddConnection}
+						className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
+					>
+						<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
+							<Plus className='h-3.5 w-3.5 text-muted-foreground' />
 						</div>
-					)}
-				</div>
+						<span className='text-sm text-muted-foreground'>Add connection</span>
+					</DropdownMenuItem>
 
-				<DropdownMenuSeparator />
-
-				<DropdownMenuItem
-					onClick={onAddConnection}
-					className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
-				>
-					<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
-						<Plus className='h-3.5 w-3.5 text-muted-foreground' />
-					</div>
-					<span className='text-sm text-muted-foreground'>Add connection</span>
-				</DropdownMenuItem>
-
-				<DropdownMenuItem
-					onClick={onManageConnections}
-					className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
-				>
-					<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
-						<Settings className='h-3.5 w-3.5 text-muted-foreground' />
-					</div>
-					<span className='text-sm text-muted-foreground'>Manage connections</span>
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-
+					<DropdownMenuItem
+						data-connection-footer-action
+						onClick={onManageConnections}
+						className='gap-2.5 p-2 transition-[background-color,color] duration-150 ease-[var(--ease-out)]'
+					>
+						<div className='flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background'>
+							<Settings className='h-3.5 w-3.5 text-muted-foreground' />
+						</div>
+						<span className='text-sm text-muted-foreground'>Manage connections</span>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</>
 	)
 }

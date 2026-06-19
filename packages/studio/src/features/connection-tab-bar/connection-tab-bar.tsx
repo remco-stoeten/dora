@@ -1,7 +1,14 @@
 import type { ReactNode } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Eye, Pencil, Plus, X, Trash2 } from 'lucide-react'
 import { cn } from '@studio/shared/utils/cn'
 import type { Connection } from '@studio/features/connections/types'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@studio/shared/ui/context-menu'
 
 // Connection tab bar (issue #96). Renders one tab per open connection above the
 // table TabBar so the user can keep several databases open at once and switch
@@ -14,6 +21,11 @@ type Props = {
   activeConnectionId: string
   onSelect: (connectionId: string) => void
   onClose: (connectionId: string) => void
+  onViewConnection?: (connectionId: string) => void
+  onEditConnection?: (connectionId: string) => void
+  onCloseOtherConnections?: (connectionId: string) => void
+  onCloseConnectionsToLeft?: (connectionId: string) => void
+  onCloseConnectionsToRight?: (connectionId: string) => void
   onAddConnection: () => void
   rightSlot?: ReactNode
 }
@@ -47,6 +59,11 @@ export function ConnectionTabBar({
   activeConnectionId,
   onSelect,
   onClose,
+  onViewConnection,
+  onEditConnection,
+  onCloseOtherConnections,
+  onCloseConnectionsToLeft,
+  onCloseConnectionsToRight,
   onAddConnection,
   rightSlot,
 }: Props) {
@@ -58,47 +75,93 @@ export function ConnectionTabBar({
       <div className="flex h-full min-w-0 flex-1 items-center overflow-x-auto scrollbar-none">
         {connections.map((connection) => {
           const isActive = connection.id === activeConnectionId
+          const connectionIndex = connections.findIndex((item) => item.id === connection.id)
+          const hasClosableLeftConnections = connectionIndex > 0
+          const hasClosableRightConnections = connectionIndex >= 0 && connectionIndex < connections.length - 1
+          const hasClosableOtherConnections = connections.some((item) => item.id !== connection.id)
           return (
-            <div
-              key={connection.id}
-              className={cn(
-                'relative flex items-center h-full shrink-0 border-r border-border transition-colors',
-                isActive
-                  ? 'bg-background text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
-              )}
-              data-tauri-drag-region="false"
-            >
-              <button
-                onClick={() => onSelect(connection.id)}
-                className="flex items-center gap-1.5 h-full px-2 pl-3 text-xs font-medium"
-                data-tauri-drag-region="false"
-                title={`${connection.name} — ${statusLabel(connection.status)}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(connection.status))}
-                />
-                <span className="max-w-[140px] truncate">{connection.name}</span>
-              </button>
-              <button
-                aria-label={`Close ${connection.name}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onClose(connection.id)
-                }}
-                onAuxClick={(e) => {
-                  if (e.button === 1) {
-                    e.preventDefault()
-                    onClose(connection.id)
-                  }
-                }}
-                className="h-full px-1 pr-2 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
-                data-tauri-drag-region="false"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
+            <ContextMenu key={connection.id}>
+              <ContextMenuTrigger asChild>
+                <div
+                  className={cn(
+                    'relative flex items-center h-full shrink-0 border-r border-border transition-colors',
+                    isActive
+                      ? 'bg-background text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
+                  )}
+                  data-tauri-drag-region="false"
+                >
+                  <button
+                    onClick={() => onSelect(connection.id)}
+                    className="flex items-center gap-1.5 h-full px-2 pl-3 text-xs font-medium"
+                    data-tauri-drag-region="false"
+                    title={`${connection.name} — ${statusLabel(connection.status)}`}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-label={`${connection.name}, ${statusLabel(connection.status)}`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(connection.status))}
+                    />
+                    <span className="max-w-[140px] truncate">{connection.name}</span>
+                  </button>
+                  <button
+                    aria-label={`Close ${connection.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onClose(connection.id)
+                    }}
+                    onAuxClick={(e) => {
+                      if (e.button === 1) {
+                        e.preventDefault()
+                        onClose(connection.id)
+                      }
+                    }}
+                    className="h-full px-1 pr-2 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground"
+                    data-tauri-drag-region="false"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-52">
+                {onViewConnection ? (
+                  <ContextMenuItem onClick={() => onViewConnection(connection.id)}>
+                    <Eye className="h-4 w-4" />
+                    View connection
+                  </ContextMenuItem>
+                ) : null}
+                {onEditConnection ? (
+                  <ContextMenuItem onClick={() => onEditConnection(connection.id)}>
+                    <Pencil className="h-4 w-4" />
+                    Edit connection
+                  </ContextMenuItem>
+                ) : null}
+                {(onViewConnection || onEditConnection) ? <ContextMenuSeparator /> : null}
+                <ContextMenuItem onClick={() => onClose(connection.id)} variant="destructive">
+                  <Trash2 className="h-4 w-4" />
+                  Close connection
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => onCloseOtherConnections?.(connection.id)}
+                  disabled={!onCloseOtherConnections || !hasClosableOtherConnections}
+                >
+                  Close other connections
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => onCloseConnectionsToLeft?.(connection.id)}
+                  disabled={!onCloseConnectionsToLeft || !hasClosableLeftConnections}
+                >
+                  Close connections to left
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => onCloseConnectionsToRight?.(connection.id)}
+                  disabled={!onCloseConnectionsToRight || !hasClosableRightConnections}
+                >
+                  Close connections to right
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           )
         })}
         <button

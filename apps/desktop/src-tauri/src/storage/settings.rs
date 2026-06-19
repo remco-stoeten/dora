@@ -46,4 +46,26 @@ impl Storage {
             .context("Failed to delete setting")?;
         Ok(())
     }
+
+    /// Deletes every setting whose key begins with `prefix`. Used to clear a
+    /// family of related keys at once (e.g. all per-project integration
+    /// passwords) without tracking each key individually.
+    pub fn delete_settings_with_prefix(&self, prefix: &str) -> Result<()> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|_| crate::Error::Internal("lock poisoned".into()))?;
+        // Escape LIKE wildcards in the prefix so a key fragment containing `%`
+        // or `_` can't widen the match, then match `prefix%` literally.
+        let escaped = prefix
+            .replace('\\', "\\\\")
+            .replace('%', "\\%")
+            .replace('_', "\\_");
+        conn.execute(
+            "DELETE FROM app_settings WHERE key LIKE ?1 ESCAPE '\\'",
+            [format!("{escaped}%")],
+        )
+        .context("Failed to delete settings by prefix")?;
+        Ok(())
+    }
 }

@@ -3,6 +3,7 @@ import { useRef, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Badge } from '@studio/shared/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@studio/shared/ui/popover'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 import type { ChangeEvent, ChangeType } from '@studio/core/live-monitor'
 
@@ -64,21 +65,30 @@ export function ChangeFeed({ events, unreadCount, onClear, onMarkRead }: TProps)
 				if (open) onMarkRead()
 			}}
 		>
-			<PopoverTrigger asChild>
-				<Button
-					variant='ghost'
-					size='icon'
-					className='h-7 w-7 relative'
-					title={unreadCount > 0 ? `${unreadCount} unread changes` : 'Change feed'}
-				>
-					<Bell className='h-4 w-4' />
-					{unreadCount > 0 && (
-						<span className='absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-emerald-500 text-[10px] font-medium text-white'>
-							{unreadCount > 9 ? '9+' : unreadCount}
-						</span>
-					)}
-				</Button>
-			</PopoverTrigger>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<PopoverTrigger asChild>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-7 w-7 relative'
+							aria-label={
+								unreadCount > 0 ? `${unreadCount} unread changes` : 'Change feed'
+							}
+						>
+							<Bell className='h-4 w-4' />
+							{unreadCount > 0 && (
+								<span className='absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-emerald-500 text-[10px] font-medium text-white'>
+									{unreadCount > 9 ? '9+' : unreadCount}
+								</span>
+							)}
+						</Button>
+					</PopoverTrigger>
+				</TooltipTrigger>
+				<TooltipContent>
+					{unreadCount > 0 ? `${unreadCount} unread changes` : 'Change feed'}
+				</TooltipContent>
+			</Tooltip>
 			<PopoverContent className='w-80 p-0' align='end' sideOffset={8}>
 				<div className='flex items-center justify-between p-3 border-b border-sidebar-border'>
 					<div className='flex items-center gap-2'>

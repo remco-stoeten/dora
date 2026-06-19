@@ -7,7 +7,7 @@ import { toast } from "@studio/shared/ui/notifier";
 import type { AdapterResult, DataAdapter } from "@studio/core/data-provider/types";
 import type { DatabaseSchema } from "@studio/lib/bindings";
 import { enrichColumnsWithFKs } from "../utils/fk-enrichment";
-import { buildTableCacheKey, schemaHasTable } from "../utils/table-cache";
+import { buildDefaultTableCacheKey, schemaHasTable } from "../utils/table-cache";
 import { createDefaultValues } from "../utils/studio-data";
 import { getTableRefParts } from "@studio/shared/utils/table-ref";
 import type { FilterConjunction, FilterDescriptor, FilterGroup, PaginationState, SortDescriptor, TableData } from "../types";
@@ -99,6 +99,11 @@ export function useDatabaseStudioSync(args: Args) {
   const initializedFromUrlRef = useRef(false);
   const isUpdatingUrlRef = useRef(false);
   const loadRequestIdRef = useRef(0);
+  // The cache key whose data is currently painted on screen. Used to tell a
+  // genuine view switch (paint the cache for an instant result) apart from an
+  // in-place refresh of the view already shown (don't paint the now-stale
+  // cache — it flashes the pre-mutation rows before the fetch returns).
+  const displayedCacheKeyRef = useRef<string | null>(null);
 
   const stableUrlState = useMemo(
     function () {
@@ -130,12 +135,17 @@ export function useDatabaseStudioSync(args: Args) {
     let schemaForTable: AdapterResult<DatabaseSchema> | null = null;
     const cached = tableDataCache.get(currentCacheKey);
 
-    if (cached) {
+    // Skip the instant cache-paint when we're refreshing the view already on
+    // screen (same key) — e.g. after a delete/insert/column change. The cache
+    // is stale relative to the mutation, so painting it here is the "flash back
+    // to the old state". Keep the current rows visible and swap in fresh data.
+    if (cached && currentCacheKey !== displayedCacheKeyRef.current) {
       setTableData(cached.data);
       if (cached.visibleColumns.length > 0) {
         setVisibleColumns(new Set(cached.visibleColumns));
       }
       setIsTableTransitioning(false);
+      displayedCacheKeyRef.current = currentCacheKey;
     }
 
     try {
@@ -187,6 +197,7 @@ export function useDatabaseStudioSync(args: Args) {
         }
 
         setTableData(data);
+        displayedCacheKeyRef.current = currentCacheKey;
         let nextVisibleColumns: string[] = [];
         if (data.columns.length > 0) {
           setVisibleColumns((prev) => {
@@ -283,7 +294,7 @@ export function useDatabaseStudioSync(args: Args) {
       setFilters([]);
       initializedFromUrlRef.current = false;
 
-      const defaultCacheKey = buildTableCacheKey(activeConnectionId, tableId, 50, 0, undefined, []);
+      const defaultCacheKey = buildDefaultTableCacheKey(activeConnectionId, tableId);
       const cached = tableDataCache.get(defaultCacheKey);
 
       if (cached) {

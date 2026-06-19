@@ -9,10 +9,18 @@ type Props = {
 	onChange: (value: string | string[]) => boolean | void
 	onReset: () => void
 	isDefault: boolean
+	actionLabel: string
 	conflict?: string | null
 }
 
-export function ShortcutRecorder({ value, onChange, onReset, isDefault, conflict }: Props) {
+export function ShortcutRecorder({
+	value,
+	onChange,
+	onReset,
+	isDefault,
+	actionLabel,
+	conflict
+}: Props) {
 	const [isRecording, setIsRecording] = useState(false)
 	const [tempCombo, setTempCombo] = useState<string | null>(null)
 	const [internalConflict, setInternalConflict] = useState<string | null>(null)
@@ -25,6 +33,14 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault, conflict
 			function handleKeyDown(e: KeyboardEvent) {
 				e.preventDefault()
 				e.stopPropagation()
+
+				if (e.key === 'Escape') {
+					setIsRecording(false)
+					setTempCombo(null)
+					setInternalConflict(null)
+					buttonRef.current?.focus()
+					return
+				}
 
 				// Ignore standalone (non-modifier) key releases or just plain modifiers being pressed
 				if (
@@ -133,6 +149,13 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault, conflict
 			<div className='flex items-center gap-2'>
 				<Button
 					ref={buttonRef}
+					data-shortcut-recording={isRecording ? 'true' : undefined}
+					aria-label={
+						isRecording
+							? `Recording shortcut for ${actionLabel}. Press Escape to cancel.`
+							: `Edit shortcut for ${actionLabel}. Current shortcut: ${formatted}`
+					}
+					aria-pressed={isRecording}
 					variant={isRecording ? 'destructive' : conflictMessage ? 'destructive' : 'outline'}
 					size='sm'
 					className={cn(
@@ -159,11 +182,11 @@ export function ShortcutRecorder({ value, onChange, onReset, isDefault, conflict
 						variant='ghost'
 						size='icon'
 						className='h-8 w-8'
+						aria-label={`Reset shortcut for ${actionLabel} to default`}
 						onClick={function () {
 							setInternalConflict(null)
 							onReset()
 						}}
-						title='Reset to default'
 					>
 						<RotateCcw className='w-3 h-3' />
 					</Button>

@@ -1,8 +1,48 @@
 import type { NextConfig } from 'next'
+import { createMDX } from 'fumadocs-mdx/next'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const marketingDir = path.dirname(fileURLToPath(import.meta.url))
+const rootDir = path.join(marketingDir, '..', '..')
+
+// Map of Tauri module specifiers to their web stub, by path relative to the
+// studio package. The desktop globals don't exist on the web, so these resolve
+// to no-op stubs in the marketing build.
+const tauriStubModules = {
+    '@tauri-apps/api/core': 'packages/studio/src/lib/stubs/tauri-api-core.ts',
+    '@tauri-apps/api/event': 'packages/studio/src/lib/stubs/tauri-api-event.ts',
+    '@tauri-apps/plugin-shell':
+        'packages/studio/src/lib/stubs/tauri-plugin-shell.ts',
+    '@tauri-apps/plugin-dialog':
+        'packages/studio/src/lib/stubs/tauri-plugin-dialog.ts',
+    '@tauri-apps/plugin-fs': 'packages/studio/src/lib/stubs/tauri-plugin-fs.ts',
+    '@tauri-apps/plugin-updater':
+        'packages/studio/src/lib/stubs/tauri-plugin-updater.ts',
+    '@tauri-apps/plugin-process':
+        'packages/studio/src/lib/stubs/tauri-plugin-process.ts'
+} as const
+
+// Turbopack's resolveAlias resolves relative paths from the project dir and
+// rejects absolute paths (it treats them as server-relative), so feed it
+// `./`-style paths — same as the @studio/monaco-workers alias below.
+const tauriStubAliasesTurbopack = Object.fromEntries(
+    Object.entries(tauriStubModules).map(([spec, rel]) => {
+        const relPath = path
+            .relative(marketingDir, path.join(rootDir, rel))
+            .split(path.sep)
+            .join('/')
+        return [spec, relPath.startsWith('.') ? relPath : './' + relPath]
+    })
+)
+
+// Webpack resolves aliases from absolute paths.
+const tauriStubAliasesWebpack = Object.fromEntries(
+    Object.entries(tauriStubModules).map(([spec, rel]) => [
+        spec,
+        path.join(rootDir, rel)
+    ])
+)
 
 const nextConfig: NextConfig = {
     reactStrictMode: true,
@@ -22,9 +62,20 @@ const nextConfig: NextConfig = {
             // The studio package's monaco-workers module uses Vite's `?worker`
             // import syntax, which Next/turbopack can't resolve. On the web,
             // @monaco-editor/react loads workers from a CDN, so stub it out.
-            '@studio/monaco-workers': './src/stubs/monaco-workers.ts'
+            '@studio/monaco-workers': './src/stubs/monaco-workers.ts',
+            ...tauriStubAliasesTurbopack
         }
+    },
+    webpack(config) {
+        config.resolve ??= {}
+        config.resolve.alias = {
+            ...config.resolve.alias,
+            ...tauriStubAliasesWebpack
+        }
+        return config
     }
 }
 
-export default nextConfig
+const withMDX = createMDX()
+
+export default withMDX(nextConfig)

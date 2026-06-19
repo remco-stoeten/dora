@@ -2,7 +2,6 @@ import { Key, Link, Hash, Type, TextQuote, Lock, Calendar, Layers, Check } from 
 import { Popover, PopoverContent, PopoverTrigger } from '@studio/shared/ui/popover'
 import { Badge } from '@studio/shared/ui/badge'
 import { TableInfo } from '@studio/lib/bindings'
-import { ScrollArea } from '@studio/shared/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 
@@ -52,72 +51,70 @@ function getColumnTooltip(type: string, isPk?: boolean, isFk?: boolean): string 
 
 export function SidebarBottomPanel({ table }: Props) {
 	return (
-		<div className='flex flex-col border-t border-sidebar-border bg-sidebar h-full min-h-0'>
-			<div className='flex items-center justify-between px-3 py-2 border-b border-sidebar-border bg-sidebar/50'>
+		<div className='flex shrink-0 flex-col border-t border-sidebar-border bg-sidebar'>
+			<div className='flex items-center justify-between px-3 py-2 border-b border-sidebar-border bg-sidebar/50 shrink-0'>
 				<span className='text-xs font-medium text-sidebar-foreground'>STRUCTURE</span>
 				<span className='text-xs text-muted-foreground'>
 					{table.columns.length} columns
 				</span>
 			</div>
 
-			<ScrollArea className='flex-1'>
-				<div className='flex flex-col py-1'>
-					{table.columns.map(function (col) {
-						const Icon = getColumnIcon(
-							col.data_type,
-							col.is_primary_key,
-							!!col.foreign_key
-						)
-						const tooltip = getColumnTooltip(
-							col.data_type,
-							col.is_primary_key,
-							!!col.foreign_key
-						)
+			<div className='flex max-h-48 flex-col overflow-y-auto py-1'>
+				{table.columns.map(function (col) {
+					const Icon = getColumnIcon(
+						col.data_type,
+						col.is_primary_key,
+						!!col.foreign_key
+					)
+					const tooltip = getColumnTooltip(
+						col.data_type,
+						col.is_primary_key,
+						!!col.foreign_key
+					)
 
-						return (
-							<div
-								key={col.name}
-								className='flex items-center gap-2 px-3 py-1.5 text-xs group hover:bg-sidebar-accent/50 transition-colors'
+					return (
+						<div
+							key={col.name}
+							className='flex items-center gap-2 px-3 py-1.5 text-xs group hover:bg-sidebar-accent/50 transition-colors'
+						>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Icon
+										className={cn(
+											'h-3 w-3 shrink-0 cursor-help',
+											col.is_primary_key
+												? 'text-amber-500'
+												: col.foreign_key
+													? 'text-blue-500'
+													: 'text-muted-foreground'
+										)}
+									/>
+								</TooltipTrigger>
+								<TooltipContent side='right' className='text-xs'>
+									{tooltip}
+								</TooltipContent>
+							</Tooltip>
+							<span
+								className={cn(
+									'font-medium truncate flex-1',
+									col.is_primary_key || col.foreign_key
+										? 'text-sidebar-foreground'
+										: 'text-muted-foreground group-hover:text-sidebar-foreground'
+								)}
 							>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Icon
-											className={cn(
-												'h-3 w-3 shrink-0 cursor-help',
-												col.is_primary_key
-													? 'text-amber-500'
-													: col.foreign_key
-														? 'text-blue-500'
-														: 'text-muted-foreground'
-											)}
-										/>
-									</TooltipTrigger>
-									<TooltipContent side='right' className='text-xs'>
-										{tooltip}
-									</TooltipContent>
-								</Tooltip>
-								<span
-									className={cn(
-										'font-medium truncate flex-1',
-										col.is_primary_key || col.foreign_key
-											? 'text-sidebar-foreground'
-											: 'text-muted-foreground group-hover:text-sidebar-foreground'
-									)}
-								>
-									{col.name}
-								</span>
-								<span className='text-muted-foreground/60 font-mono text-[10px] shrink-0'>
-									{col.data_type}
-								</span>
-							</div>
-						)
-					})}
-				</div>
-			</ScrollArea>
+								{col.name}
+							</span>
+							<span className='text-muted-foreground/60 font-mono text-[10px] shrink-0'>
+								{col.data_type}
+							</span>
+						</div>
+					)
+				})}
+			</div>
 
 			<Popover>
 				<PopoverTrigger asChild>
-					<div className='flex h-10 items-center border-t border-sidebar-border px-3 bg-sidebar/50 cursor-pointer hover:bg-sidebar-accent/50 transition-colors'>
+					<div className='flex h-10 shrink-0 items-center border-t border-sidebar-border px-3 bg-sidebar/50 cursor-pointer hover:bg-sidebar-accent/50 transition-colors'>
 						<span className='text-xs font-medium text-muted-foreground'>INDEXES</span>
 						<span className='ml-auto text-xs text-muted-foreground/60'>
 							{table.indexes?.length || table.primary_key_columns?.length || 0}

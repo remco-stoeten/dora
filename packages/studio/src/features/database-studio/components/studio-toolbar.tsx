@@ -14,8 +14,9 @@ import {
 	Upload,
 	Gauge
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ComponentProps } from 'react'
 import { Button } from '@studio/shared/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@studio/shared/ui/tooltip'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -38,6 +39,25 @@ function countConditions(group: FilterGroup): number {
 	return group.conditions.reduce(function (total, node) {
 		return total + (isFilterGroup(node) ? countConditions(node) : 1)
 	}, 0)
+}
+
+type TooltipButtonProps = ComponentProps<typeof Button> & { tooltip: string }
+
+/**
+ * Icon button with the same hover tooltip used across the SQL console toolbar,
+ * so the data viewer's icons get matching tooltips instead of native `title`.
+ */
+function TooltipButton({ tooltip, children, ...props }: TooltipButtonProps) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<Button aria-label={tooltip} {...props}>
+					{children}
+				</Button>
+			</TooltipTrigger>
+			<TooltipContent>{tooltip}</TooltipContent>
+		</Tooltip>
+	)
 }
 
 type Props = {
@@ -121,7 +141,7 @@ export function StudioToolbar({
 			<div className='flex items-center h-10 pl-2 pr-2 gap-2 text-sm overflow-x-auto scrollbar-none'>
 				<div className='flex items-center gap-1 mr-2'>
 					<div className='flex items-center bg-sidebar-accent/50 rounded-md p-0.5'>
-						<Button
+						<TooltipButton
 							variant='ghost'
 							size='icon'
 							className={cn(
@@ -131,11 +151,11 @@ export function StudioToolbar({
 									: 'text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent'
 							)}
 							onClick={() => onViewModeChange('content')}
-							title='Content View'
+							tooltip='Content View'
 						>
 							<Table className='h-3.5 w-3.5' />
-						</Button>
-						<Button
+						</TooltipButton>
+						<TooltipButton
 							variant='ghost'
 							size='icon'
 							className={cn(
@@ -145,11 +165,11 @@ export function StudioToolbar({
 									: 'text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent'
 							)}
 							onClick={() => onViewModeChange('structure')}
-							title='Structure View'
+							tooltip='Structure View'
 						>
 							<FileJson className='h-3.5 w-3.5' />
-						</Button>
-						<Button
+						</TooltipButton>
+						<TooltipButton
 							variant='ghost'
 							size='icon'
 							className={cn(
@@ -159,10 +179,10 @@ export function StudioToolbar({
 									: 'text-muted-foreground hover:text-sidebar-foreground hover:bg-transparent'
 							)}
 							onClick={() => onViewModeChange('chart')}
-							title='Chart View'
+							tooltip='Chart View'
 						>
 							<BarChart3 className='h-3.5 w-3.5' />
-						</Button>
+						</TooltipButton>
 					</div>
 					<div className='h-4 w-px bg-sidebar-border mx-1' />
 					<Button
@@ -225,82 +245,76 @@ export function StudioToolbar({
 				{/* Right Section: Actions & Stats */}
 				<div className='flex items-center gap-2'>
 					{onDryEditModeChange && (
-						<Button
+						<TooltipButton
 							variant={isDryEditMode ? 'secondary' : 'ghost'}
-							size='sm'
+							size='icon'
 							className={cn(
-								'h-7 px-2 text-xs gap-1.5',
+								'h-7 w-7',
 								isDryEditMode &&
 									'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
 							)}
 							onClick={function () {
 								onDryEditModeChange(!isDryEditMode)
 							}}
-							title={
+							tooltip={
 								isDryEditMode
-									? 'Disable dry edit mode'
-									: 'Enable dry edit mode (stage changes before saving)'
+									? 'Dry Edit — disable (currently staging changes)'
+									: 'Dry Edit — stage changes before saving'
 							}
 						>
 							<Edit3 className='h-3.5 w-3.5' />
-							<span className='hidden sm:inline'>
-								{isDryEditMode ? 'Dry Edit' : 'Dry Edit'}
-							</span>
-						</Button>
+						</TooltipButton>
 					)}
 
 					{onSeed && (
-						<Button
+						<TooltipButton
 							variant='ghost'
-							size='sm'
-							className='h-7 px-2 text-xs gap-1.5'
+							size='icon'
+							className='h-7 w-7'
 							onClick={onSeed}
-							title='Generate mock data using AI'
+							tooltip='Seed Data — generate mock data using AI'
 						>
 							<Sparkles className='h-3.5 w-3.5 text-blue-400' />
-							<span className='hidden sm:inline'>Seed Data</span>
-						</Button>
+						</TooltipButton>
 					)}
 
 					{onSuggestIndexes && (
-						<Button
+						<TooltipButton
 							variant='ghost'
-							size='sm'
-							className='h-7 px-2 text-xs gap-1.5'
+							size='icon'
+							className='h-7 w-7'
 							onClick={onSuggestIndexes}
-							title='Suggest indexes for this table using AI'
+							tooltip='Suggest indexes for this table using AI'
 						>
 							<Gauge className='h-3.5 w-3.5 text-blue-400' />
-							<span className='hidden sm:inline'>Suggest indexes</span>
-						</Button>
+						</TooltipButton>
 					)}
 
 					{onImportCsv && (
-						<Button
+						<TooltipButton
 							variant='outline'
-							size='sm'
-							className='h-7 px-2 text-xs gap-1.5'
+							size='icon'
+							className='h-7 w-7'
 							onClick={onImportCsv}
-							title='Import CSV'
+							tooltip='Import CSV'
 						>
 							<Upload className='h-3.5 w-3.5' />
-							<span className='hidden sm:inline'>Import CSV</span>
-						</Button>
+						</TooltipButton>
 					)}
 
 					{importFilesAction}
 
-					<Button
+					<TooltipButton
 						variant='default'
 						size='sm'
 						className='h-7 px-2 text-xs gap-1 mr-2'
 						onClick={onAddRecord}
 						disabled={!onAddRecord}
-						title={onAddRecord ? 'Add new record' : 'Not connected to backend'}
+						tooltip={onAddRecord ? 'Add new record' : 'Not connected to backend'}
 					>
 						<Plus className='h-3.5 w-3.5' />
 						<span className='hidden sm:inline'>Add record</span>
-					</Button>
+					</TooltipButton>
 
 					<div className='h-4 w-px bg-sidebar-border mx-1' />
 
@@ -321,28 +335,33 @@ export function StudioToolbar({
 						/>
 					)}
 
-					<Button
+					<TooltipButton
 						variant='ghost'
 						size='icon'
 						className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
 						onClick={onRefresh}
 						disabled={isLoading}
-						title='Refresh'
+						tooltip='Refresh'
 					>
 						<RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
-					</Button>
+					</TooltipButton>
 
 					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								variant='ghost'
-								size='icon'
-								className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
-								title='Export'
-							>
-								<Download className='h-3.5 w-3.5' />
-							</Button>
-						</DropdownMenuTrigger>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant='ghost'
+										size='icon'
+										className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
+										aria-label='Export'
+									>
+										<Download className='h-3.5 w-3.5' />
+									</Button>
+								</DropdownMenuTrigger>
+							</TooltipTrigger>
+							<TooltipContent>Export</TooltipContent>
+						</Tooltip>
 						<DropdownMenuContent align='end'>
 							<DropdownMenuItem onClick={onExport}>Export JSON</DropdownMenuItem>
 							{onExportCsv && (
@@ -373,16 +392,21 @@ export function StudioToolbar({
 
 					{(onCopySchema || onCopyDrizzleSchema) && (
 						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant='ghost'
-									size='icon'
-									className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
-									title='Copy Schema'
-								>
-									<Copy className='h-3.5 w-3.5' />
-								</Button>
-							</DropdownMenuTrigger>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant='ghost'
+											size='icon'
+											className='h-7 w-7 text-muted-foreground hover:text-sidebar-foreground'
+											aria-label='Copy Schema'
+										>
+											<Copy className='h-3.5 w-3.5' />
+										</Button>
+									</DropdownMenuTrigger>
+								</TooltipTrigger>
+								<TooltipContent>Copy Schema</TooltipContent>
+							</Tooltip>
 							<DropdownMenuContent align='end'>
 								{onCopySchema && (
 									<DropdownMenuItem onClick={onCopySchema}>

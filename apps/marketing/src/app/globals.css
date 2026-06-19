@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -138,6 +140,305 @@
            unaffected. */
     overflow-x: clip;
   }
+}
+
+.docs-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3138 transparent;
+}
+
+.docs-sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.docs-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.docs-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #3a3138;
+  border: 2px solid #09080a;
+}
+
+.dora-docs {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: #161218;
+  --color-fd-muted-foreground: color-mix(
+    in srgb,
+    var(--muted-foreground) 88%,
+    #e3b2b3 12%
+  );
+  --color-fd-popover: #100d12;
+  --color-fd-popover-foreground: var(--foreground);
+  --color-fd-card: #0d0a0f;
+  --color-fd-card-foreground: var(--foreground);
+  --color-fd-border: #2b252c;
+  --color-fd-primary: #f5c0c0;
+  --color-fd-primary-foreground: #09080a;
+  --color-fd-secondary: #161218;
+  --color-fd-secondary-foreground: var(--foreground);
+  --color-fd-accent: rgba(245, 192, 192, 0.07);
+  --color-fd-accent-foreground: #f5c0c0;
+  --color-fd-ring: rgba(245, 192, 192, 0.48);
+  --fd-sidebar-width: 286px;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(245, 192, 192, 0.055),
+      transparent 34rem
+    ),
+    var(--background);
+  color: var(--foreground);
+}
+
+.dora-docs [data-docs-layout],
+.dora-docs #nd-page {
+  background: transparent;
+}
+
+.dora-docs #nd-sidebar {
+  border-color: #2b252c;
+  background:
+    linear-gradient(180deg, rgba(16, 13, 18, 0.92), rgba(9, 8, 10, 0.96)),
+    var(--background);
+  box-shadow: inset -1px 0 0 rgba(245, 192, 192, 0.035);
+}
+
+.dora-docs #nd-sidebar [class*="text-[0.9375rem]"] {
+  font-family: var(--font-geist-pixel-square), var(--font-geist-mono),
+    ui-monospace, monospace;
+  color: #f5c0c0;
+  text-shadow: 0 0 14px rgba(245, 192, 192, 0.28);
+}
+
+.dora-docs #nd-sidebar [role="button"],
+.dora-docs #nd-sidebar a,
+.dora-docs [data-sidebar-panel] button,
+.dora-docs [data-sidebar-panel] a {
+  border-radius: 2px;
+}
+
+.dora-docs #nd-sidebar a,
+.dora-docs #nd-sidebar button {
+  transition:
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dora-docs #nd-sidebar a:active,
+.dora-docs #nd-sidebar button:active {
+  transform: scale(0.985);
+}
+
+.dora-docs #nd-sidebar [data-active="true"] {
+  border-left: 1px solid #f5c0c0;
+  background: rgba(245, 192, 192, 0.065);
+  color: var(--foreground);
+}
+
+.dora-docs #nd-sidebar [data-active="true"]::before {
+  background: #f5c0c0;
+  box-shadow: 0 0 12px rgba(245, 192, 192, 0.45);
+}
+
+.dora-docs #nd-sidebar a:hover,
+.dora-docs #nd-sidebar button:hover {
+  background: rgba(245, 192, 192, 0.045);
+  color: #f5c0c0;
+}
+
+.dora-docs #nd-sidebar [cmdk-input],
+.dora-docs #nd-sidebar [data-search-trigger],
+.dora-docs [data-search-trigger],
+.dora-docs button[aria-label*="Search"] {
+  border: 1px solid #2b252c;
+  border-radius: 2px;
+  background: rgba(13, 10, 15, 0.82);
+  color: var(--muted-foreground);
+}
+
+.dora-docs [data-sidebar-panel] {
+  border-color: #2b252c;
+  border-radius: 2px;
+  background: #100d12;
+}
+
+.dora-docs #nd-page {
+  max-width: 860px;
+  padding-top: clamp(2.25rem, 5vw, 4.5rem);
+  padding-bottom: 5rem;
+}
+
+.dora-docs #nd-page > nav:first-child {
+  margin-bottom: 1.25rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--muted-foreground) 78%, #e3b2b3 22%);
+}
+
+.dora-docs #nd-page > h1 {
+  margin-bottom: 0.75rem;
+}
+
+.dora-docs #nd-page > p:first-of-type {
+  margin-bottom: 2rem;
+}
+
+.dora-docs-body {
+  --tw-prose-body: color-mix(in srgb, var(--foreground) 78%, #8a8a8a 22%);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: #f5c0c0;
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: #6a5f66;
+  --tw-prose-bullets: #f5c0c0;
+  --tw-prose-hr: #2b252c;
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: rgba(245, 192, 192, 0.42);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: #e3b2b3;
+  --tw-prose-pre-code: #ddd4dc;
+  --tw-prose-pre-bg: #0d0a0f;
+  --tw-prose-th-borders: #3a3138;
+  --tw-prose-td-borders: #2b252c;
+  max-width: none;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.dora-docs-body h2,
+.dora-docs-body h3,
+.dora-docs-body h4 {
+  scroll-margin-top: 6rem;
+  font-family: var(--font-geist-pixel-square), var(--font-geist-mono),
+    ui-monospace, monospace;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dora-docs-body h2 {
+  margin-top: 2.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #2b252c;
+  font-size: 1.35rem;
+}
+
+.dora-docs-body h3 {
+  font-size: 1.05rem;
+}
+
+.dora-docs-body a {
+  text-decoration-color: rgba(245, 192, 192, 0.32);
+  text-underline-offset: 3px;
+  transition:
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    text-decoration-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dora-docs-body a:hover {
+  color: #ffdada;
+  text-decoration-color: rgba(245, 192, 192, 0.85);
+}
+
+.dora-docs-body :not(pre) > code {
+  border: 1px solid #2b252c;
+  border-radius: 2px;
+  background: #0d0a0f;
+  padding: 0.12rem 0.32rem;
+  color: #e3b2b3;
+  font-weight: 500;
+}
+
+.dora-docs-body pre,
+.dora-docs-body figure[data-rehype-pretty-code-figure] pre {
+  border: 1px solid #2b252c;
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(245, 192, 192, 0.035), transparent 42px),
+    #0d0a0f;
+  box-shadow: inset 0 1px 0 rgba(245, 192, 192, 0.045);
+}
+
+.dora-docs-body table {
+  overflow: hidden;
+  border: 1px solid #2b252c;
+  border-radius: 2px;
+  background: rgba(13, 10, 15, 0.55);
+}
+
+.dora-docs-body thead {
+  border-bottom-color: #3a3138;
+  background: rgba(245, 192, 192, 0.045);
+}
+
+.dora-docs-body th {
+  color: #e3b2b3;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.dora-docs-body blockquote {
+  border-left-color: rgba(245, 192, 192, 0.48);
+  background: rgba(245, 192, 192, 0.035);
+  padding: 0.75rem 1rem;
+}
+
+.dora-docs-body hr {
+  border-color: #2b252c;
+}
+
+.dora-docs [data-toc-popover-trigger],
+.dora-docs [data-toc-popover-content],
+.dora-docs aside[class*="toc"],
+.dora-docs [data-toc] {
+  border-color: #2b252c;
+  background-color: rgba(13, 10, 15, 0.88);
+}
+
+.dora-docs [data-toc] a,
+.dora-docs aside[class*="toc"] a {
+  border-radius: 2px;
+  color: var(--muted-foreground);
+}
+
+.dora-docs [data-toc] a:hover,
+.dora-docs aside[class*="toc"] a:hover {
+  color: #f5c0c0;
+}
+
+.dora-docs [data-toc] a[data-active="true"],
+.dora-docs aside[class*="toc"] a[data-active="true"] {
+  color: #f5c0c0;
+}
+
+.dora-docs [data-radix-dialog-content],
+.dora-docs [data-sidebar-drawer] {
+  border-color: #2b252c;
+  background: #09080a;
 }
 
 .hero-frame {

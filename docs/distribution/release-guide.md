@@ -210,6 +210,10 @@ gh release create v0.28.0 \
 
 If `.github/release-notes/<tag>.md` exists, that file is used instead of git-cliff output.
 
+The job also builds the **updater manifest** (`latest.json`) from the signed
+`.sig` artifacts via [`tools/scripts/generate-latest-json.ts`](../../tools/scripts/generate-latest-json.ts)
+and attaches it to the release. See [Auto-updates](#auto-updates-tauri-updater).
+
 If an empty pre-created release exists for the tag, CI deletes it and recreates. If a release already has assets, the job fails rather than overwrite.
 
 ---
@@ -246,6 +250,55 @@ These jobs run in parallel after `publish-release` succeeds. Each dispatches a d
 | `build-flatpak` | `flatpak.yml` | Uploads `.flatpak` to the GitHub release |
 
 No manual repackaging is required per release. See [All distribution channels](#all-distribution-channels) below and [Appendix: package manager recovery](#appendix-package-manager-recovery-historic) if a store listing breaks.
+
+---
+
+## Auto-updates (Tauri updater)
+
+Installed apps check for updates via the [`tauri-plugin-updater`](https://v2.tauri.app/plugin/updater/).
+The in-app **Settings → Updates** section checks on open and lets the user install
+and restart. The desktop app polls a single endpoint:
+
+```
+https://github.com/remcostoeten/dora/releases/latest/download/latest.json
+```
+
+`latest.json` is generated during `publish-release` from the signed updater
+artifacts and points each platform at its download URL + signature:
+
+| Platform key | Artifact | Built by |
+| --- | --- | --- |
+| `linux-x86_64` | `.AppImage` + `.AppImage.sig` | `release-linux` |
+| `windows-x86_64` | NSIS `-setup.exe` + `.exe.sig` | `release-windows` |
+| `darwin-aarch64` | `.app.tar.gz` + `.app.tar.gz.sig` | `release-macos` |
+
+Config lives in [`tauri.conf.json`](../../apps/desktop/src-tauri/tauri.conf.json)
+under `plugins.updater` (endpoint + public key) and `bundle.createUpdaterArtifacts: true`.
+
+> **Intel macOS** is not in the manifest — only an Apple-Silicon build is produced,
+> so Intel users update by reinstalling. Add a `darwin-x86_64` build + map it in
+> `generate-latest-json.ts` to cover them.
+
+### One-time bootstrap (required before the first signed release)
+
+The updater only works once the signing key exists as a CI secret. The key pair
+was generated with `bun tauri signer generate` (minisign); the **public** key is
+committed in `tauri.conf.json`, the **private** key must be added as a secret:
+
+1. Generate (if rotating): `cd apps/desktop && bun x tauri signer generate -w ~/.tauri/dora-updater.key`
+2. Add GitHub repository secrets:
+   - `TAURI_SIGNING_PRIVATE_KEY` — full contents of `~/.tauri/dora-updater.key`
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — the key password (empty string if none)
+3. If you regenerated the key, replace `plugins.updater.pubkey` in `tauri.conf.json`
+   with the new `*.key.pub` contents and commit.
+
+Without these secrets the platform builds still succeed but produce **no `.sig`
+files**, and `generate-latest-json.ts` fails the publish job (by design — a
+release with no updater manifest would silently break auto-update).
+
+> **Key custody:** losing the private key means no installed app can verify a
+> future update — you'd have to ship a new pubkey and every existing user would
+> be stranded on their current version. Back it up in a password manager.
 
 ---
 

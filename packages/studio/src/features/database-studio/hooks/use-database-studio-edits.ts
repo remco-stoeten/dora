@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { areValuesEqual } from '@studio/shared/utils/value-equality'
+import { tableDataCache } from '@studio/core/table-cache'
 import { normalizeValueForInsert } from '../utils/studio-data'
 import type { TableData } from '../types'
 
@@ -17,6 +18,7 @@ type Args = {
 	tableId: string | null
 	tableRefName: string | null
 	tableData: TableData | null
+	currentCacheKey: string
 	isDryEditMode: boolean
 	pendingEdits: Map<string, { oldValue: unknown }>
 	getEditsForTable: (tableId: string) => PendingEdit[]
@@ -61,6 +63,7 @@ export function useDatabaseStudioEdits(args: Args) {
 		tableId,
 		tableRefName,
 		tableData,
+		currentCacheKey,
 		isDryEditMode,
 		pendingEdits,
 		getEditsForTable,
@@ -163,7 +166,24 @@ export function useDatabaseStudioEdits(args: Args) {
 						previousValue,
 						normalizedNewValue
 					)
-					loadTableData()
+					// Keep the optimistic value on screen — no refetch. Reloading
+					// here repaints the stale cached page first (the pre-edit
+					// value), which is the "flash back to original" the user sees.
+					// Patch the cached page so reopening the table later shows the
+					// new value too, instead of the stale pre-edit one.
+					const cached = tableDataCache.get(currentCacheKey)
+					if (cached) {
+						const patchedRows = cached.data.rows.map(function (cachedRow) {
+							if (cachedRow[primaryKeyColumn.name] === row[primaryKeyColumn.name]) {
+								return { ...cachedRow, [columnName]: normalizedNewValue }
+							}
+							return cachedRow
+						})
+						tableDataCache.set(currentCacheKey, {
+							...cached,
+							data: { ...cached.data, rows: patchedRows }
+						})
+					}
 				},
 				onError: function (error) {
 					setTableData(function (prev) {

@@ -26,7 +26,7 @@ type GridBodyProps = {
 	handleCellMouseDown: (e: React.MouseEvent, rowIndex: number, colIndex: number) => void
 	handleCellMouseEnter: (rowIndex: number, colIndex: number) => void
 	handleEditKeyDown: (e: React.KeyboardEvent) => void
-	handleSaveEdit: () => void
+	handleEditBlur: () => void
 	handleRowClick: (e: React.MouseEvent, rowIndex: number) => void
 	handleRowContextMenuChange: (open: boolean, row: number) => void
 	onBatchCellEdit?: (rowIndexes: number[], columnName: string, newValue: unknown) => void
@@ -77,7 +77,7 @@ export function GridBody({
 	handleCellMouseDown,
 	handleCellMouseEnter,
 	handleEditKeyDown,
-	handleSaveEdit,
+	handleEditBlur,
 	handleRowClick,
 	handleRowContextMenuChange,
 	onBatchCellEdit,
@@ -302,7 +302,7 @@ export function GridBody({
 														onChange={function (e) {
 															setEditValue(e.target.value)
 														}}
-														onBlur={handleSaveEdit}
+														onBlur={handleEditBlur}
 														onKeyDown={handleEditKeyDown}
 														data-no-shortcuts='true'
 														className='w-full h-full bg-sidebar-accent/35 outline outline-1 outline-offset-[-1px] outline-sidebar-foreground/25 font-mono text-sm -mx-3 -my-1.5 px-3 py-1.5 box-content'

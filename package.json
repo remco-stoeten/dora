@@ -24,6 +24,7 @@
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",
 		"test:desktop": "bun run --cwd apps/desktop test",
+		"verify:providers": "bun tools/scripts/verify-providers.ts",
 		"web:dev": "bun --cwd apps/desktop run dev",
 		"desktop:dev": "bun run --cwd apps/desktop tauri dev",
 		"desktop:build": "bun run --cwd apps/desktop tauri build",

@@ -42,6 +42,7 @@ import {
   getTableRefParts,
   getTableSqlIdentifier,
 } from "@studio/shared/utils/table-ref";
+import { prefetchTableData } from "../database-studio/utils/table-cache";
 
 const DEFAULT_FILTERS: FilterState = {
   showTables: true,
@@ -292,6 +293,13 @@ export function DatabaseSidebar({
     }
   }
 
+  const handleTablePrefetch = useCallback(
+    function (tableId: string) {
+      void prefetchTableData(adapter, activeConnectionId, tableId);
+    },
+    [adapter, activeConnectionId],
+  );
+
   function handleTableMultiSelect(tableId: string, checked: boolean) {
     if (checked) {
       setSelectedTableIds(function (prev) {
@@ -363,7 +371,9 @@ export function DatabaseSidebar({
         if (targetTableName === currentTableName) {
           setTargetTableName("");
         }
-        setSchema(null);
+        // Don't null the schema — that blanks the tree before the refetch
+        // returns (flash). The refetch keeps the current tree visible and
+        // swaps in the renamed table when it lands.
         setRefreshTrigger(function (prev) {
           return prev + 1;
         });
@@ -391,7 +401,8 @@ export function DatabaseSidebar({
       const result = await adapter.dropTable(activeConnectionId, targetTableName);
       if (result.ok) {
         setShowDropDialog(false);
-        setSchema(null);
+        // Keep the tree painted during the refetch; nulling it flashes an
+        // empty sidebar before the fresh schema arrives.
         setRefreshTrigger(function (prev) {
           return prev + 1;
         });
@@ -552,7 +563,8 @@ export function DatabaseSidebar({
           description: `Table "${tableName}" duplicated as "${newName}".`,
           variant: "success",
         });
-        setSchema(null);
+        // Keep the current tree visible during the refetch; the duplicated
+        // table appears when the fresh schema lands, no empty-tree flash.
         setRefreshTrigger(function (prev) {
           return prev + 1;
         });
@@ -598,7 +610,8 @@ export function DatabaseSidebar({
           });
           setSelectedTableIds([]);
           setIsMultiSelectMode(false);
-          setSchema(null);
+          // Don't blank the tree — let the refetch swap the dropped tables out
+          // when the fresh schema arrives, instead of flashing an empty list.
           setRefreshTrigger(function (prev) {
             return prev + 1;
           });
@@ -751,41 +764,6 @@ export function DatabaseSidebar({
     }
   }
 
-  const [topPanelRatio, setTopPanelRatio] = useState(0.45);
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    function handleMouseMove(e: MouseEvent) {
-      if (sidebarRef.current) {
-        const rect = sidebarRef.current.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top;
-        // Calculate used space by header (approx 40px + padding)
-        // We want ratio of the REMAINING space or total space?
-        // Total space is simpler.
-        const newRatio = Math.max(0.2, Math.min(0.6, relativeY / rect.height));
-        setTopPanelRatio(newRatio);
-      }
-    }
-
-    function handleMouseUp() {
-      setIsResizing(false);
-      document.body.style.cursor = "";
-    }
-
-    document.body.style.cursor = "row-resize";
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.body.style.cursor = "";
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing]);
-
   const availableSchemas =
     schema?.schemas.map(function (s) {
       return {
@@ -797,7 +775,6 @@ export function DatabaseSidebar({
 
   return (
     <div
-      ref={sidebarRef}
       className="relative flex flex-col h-full w-[244px] shrink-0 bg-sidebar border-r border-sidebar-border select-none"
     >
       <div className="flex flex-col shrink-0">
@@ -841,10 +818,8 @@ export function DatabaseSidebar({
         </div>
       )}
 
-      <ScrollArea
-        className={cn("min-h-0", !activeTable && "flex-1")}
-        style={activeTable ? { height: `${topPanelRatio * 100}%` } : undefined}
-      >
+      <div className="flex min-h-0 flex-1 flex-col">
+        <ScrollArea className="min-h-0 flex-1" style={{ flex: 1 }}>
         {isLoadingSchema && !schema ? (
           <SidebarTableSkeleton rows={8} />
         ) : schemaError ? (
@@ -907,6 +882,7 @@ export function DatabaseSidebar({
               activeSortingTableIds={[]}
               editingTableId={editingTableId}
               onTableSelect={handleTableSelect}
+              onTablePrefetch={handleTablePrefetch}
               onTableMultiSelect={handleTableMultiSelect}
               onContextAction={handleContextAction}
               onRightClickAction={handleRightClickAction}
@@ -919,26 +895,10 @@ export function DatabaseSidebar({
             )}
           </div>
         )}
-      </ScrollArea>
+        </ScrollArea>
 
-      {activeTable && (
-        <>
-          {/* Resizer Handle */}
-          <div
-            className="h-1.5 shrink-0 bg-sidebar-border/30 hover:bg-primary/20 cursor-row-resize flex items-center justify-center transition-colors z-20 -my-0.5"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setIsResizing(true);
-            }}
-          >
-            <div className="w-8 h-0.5 bg-sidebar-border rounded-full" />
-          </div>
-
-          <div className="flex-1 min-h-0 flex flex-col bg-sidebar overflow-hidden">
-            <SidebarBottomPanel table={activeTable} />
-          </div>
-        </>
-      )}
+        {activeTable ? <SidebarBottomPanel table={activeTable} /> : null}
+      </div>
 
       {isMultiSelectMode && selectedTableIds.length > 0 && (
         <ManageTablesDialog

@@ -4,6 +4,7 @@ import { Checkbox } from '@studio/shared/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@studio/shared/ui/popover'
 import { Slider } from '@studio/shared/ui/slider'
 import { Switch } from '@studio/shared/ui/switch'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 import type { LiveMonitorConfig, ChangeType } from '@studio/core/live-monitor'
 
@@ -54,21 +55,28 @@ export function LiveMonitorPopover({ config, onConfigChange, isPolling }: TProps
 
 	return (
 		<Popover>
-			<PopoverTrigger asChild>
-				<Button
-					variant='ghost'
-					size='icon'
-					className={cn('h-7 w-7 relative', config.enabled && 'text-emerald-400')}
-					title={config.enabled ? 'Live monitor active' : 'Live monitor off'}
-				>
-					<Activity
-						className={cn('h-4 w-4', config.enabled && isPolling && 'animate-pulse')}
-					/>
-					{config.enabled && (
-						<span className='absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400' />
-					)}
-				</Button>
-			</PopoverTrigger>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<PopoverTrigger asChild>
+						<Button
+							variant='ghost'
+							size='icon'
+							className={cn('h-7 w-7 relative', config.enabled && 'text-emerald-400')}
+							aria-label={config.enabled ? 'Live monitor active' : 'Live monitor off'}
+						>
+							<Activity
+								className={cn('h-4 w-4', config.enabled && isPolling && 'animate-pulse')}
+							/>
+							{config.enabled && (
+								<span className='absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400' />
+							)}
+						</Button>
+					</PopoverTrigger>
+				</TooltipTrigger>
+				<TooltipContent>
+					{config.enabled ? 'Live monitor active' : 'Live monitor off'}
+				</TooltipContent>
+			</Tooltip>
 			<PopoverContent className='w-72 p-0' align='end' sideOffset={8}>
 				<div className='p-3 border-b border-sidebar-border'>
 					<div className='flex items-center justify-between'>

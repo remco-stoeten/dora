@@ -247,6 +247,7 @@ export function AiAssistantPanel({
 								clear(activeConnectionId)
 							}}
 							title='Clear chat'
+							aria-label='Clear chat'
 						>
 							<Trash2 className='h-3.5 w-3.5' />
 						</Button>
@@ -258,6 +259,7 @@ export function AiAssistantPanel({
 						onClick={function () {
 							setOpen(false)
 						}}
+						aria-label='Close AI assistant'
 					>
 						<X className='h-3.5 w-3.5' />
 					</Button>
@@ -340,6 +342,7 @@ export function AiAssistantPanel({
 								className='h-7 w-7'
 								onClick={abort}
 								title='Stop'
+								aria-label='Stop generating response'
 							>
 								<Square className='h-3.5 w-3.5 fill-current' />
 							</Button>
@@ -350,6 +353,7 @@ export function AiAssistantPanel({
 								className='h-7 w-7'
 								onClick={handleSend}
 								disabled={!input.trim() || !keysAvailable}
+								aria-label='Send message'
 							>
 								<Send className='h-3.5 w-3.5' />
 							</Button>

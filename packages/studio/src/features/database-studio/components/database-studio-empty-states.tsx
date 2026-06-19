@@ -1,5 +1,5 @@
 import { Button } from '@studio/shared/ui/button'
-import { Database, Loader2, PlugZap, Plus, Table2 } from 'lucide-react'
+import { Database, Loader2, PlugZap, Plus, Settings, Table2 } from 'lucide-react'
 
 type NoConnectionProps = {
 	onAddConnection?: () => void
@@ -96,12 +96,6 @@ export function DatabaseStudioConnectionFailed({
 	)
 }
 
-type NoTableProps = {
-	connectionName?: string
-	tableCount: number
-	totalRecords: number
-}
-
 function formatRecordTotal(count: number): string {
 	return count.toLocaleString()
 }
@@ -109,8 +103,14 @@ function formatRecordTotal(count: number): string {
 export function DatabaseStudioNoTable({
 	connectionName,
 	tableCount,
-	totalRecords
-}: NoTableProps) {
+	totalRecords,
+	onOpenSettings
+}: {
+	connectionName?: string
+	tableCount: number
+	totalRecords: number
+	onOpenSettings?: () => void
+}) {
 	const tableLabel = tableCount === 1 ? 'table' : 'tables'
 	const recordLabel = totalRecords === 1 ? 'record' : 'records'
 
@@ -152,6 +152,18 @@ export function DatabaseStudioNoTable({
 					</>
 				)}
 			</p>
+
+			{onOpenSettings && (
+				<Button
+					variant='outline'
+					size='sm'
+					onClick={onOpenSettings}
+					className='mt-6 gap-1.5'
+				>
+					<Settings className='w-3.5 h-3.5' />
+					Enable table preview
+				</Button>
+			)}
 		</div>
 	)
 }

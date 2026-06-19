@@ -199,6 +199,27 @@ export function Supabase(p: TProps) {
 	)
 }
 
+export function Neon(p: TProps) {
+	const b = baseSvg(p, 'Neon')
+	return (
+		<svg
+			height={b.h}
+			width={b.w}
+			role={b.role}
+			viewBox='0 0 24 24'
+			xmlns='http://www.w3.org/2000/svg'
+			className={b.cls}
+			style={b.sty}
+			focusable={b.focusable}
+			fill='currentColor'
+			{...b.rest}
+		>
+			<title>{b.ttl}</title>
+			<path d='M0 4.879C0 2.184 2.185 0 4.879 0h14.242C21.816 0 24 2.184 24 4.879v11.494c0 2.748-3.475 3.926-5.139 1.741l-4.4-5.79v7.054A4.622 4.622 0 0 1 9.84 24H4.88C2.184 24 0 21.816 0 19.121V4.88Zm4.879-1.953a1.95 1.95 0 0 0-1.953 1.953V19.12c0 1.079.874 1.953 1.953 1.953h5.04a.078.078 0 0 0 .078-.078v-9.43c0-2.747 3.475-3.925 5.139-1.74l4.4 5.79V4.878a1.95 1.95 0 0 0-1.953-1.953H4.88Z' />
+		</svg>
+	)
+}
+
 export const icons: TIcon = {
 	sqlite: Sqlite,
 	turso: Turso,

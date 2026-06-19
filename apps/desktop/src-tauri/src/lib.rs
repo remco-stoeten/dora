@@ -131,7 +131,10 @@ pub fn run() {
     tauri::Builder::default()
         .manage(app_state)
         .manage(certificates)
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
@@ -194,9 +197,29 @@ pub fn run() {
             database::commands::supabase_save_token,
             database::commands::supabase_oauth_connect,
             database::commands::supabase_list_projects,
+            database::commands::supabase_account,
             database::commands::supabase_pooler_host,
             database::commands::supabase_disconnect,
             database::commands::supabase_is_connected,
+            database::commands::supabase_save_project_password,
+            database::commands::supabase_get_project_password,
+            database::commands::turso_save_token,
+            database::commands::turso_list_databases,
+            database::commands::turso_create_token,
+            database::commands::turso_disconnect,
+            database::commands::turso_is_connected,
+            database::commands::turso_cli_available,
+            database::commands::turso_mint_token,
+            database::commands::turso_install_cli,
+            database::commands::turso_cli_logged_in,
+            database::commands::turso_cli_login,
+            database::commands::turso_account,
+            database::commands::neon_save_token,
+            database::commands::neon_list_databases,
+            database::commands::neon_account,
+            database::commands::neon_create_connection_uri,
+            database::commands::neon_disconnect,
+            database::commands::neon_is_connected,
             // Mutation API commands
             database::commands::update_cell,
             database::commands::get_blob_bytes,

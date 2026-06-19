@@ -223,6 +223,18 @@ async supabaseListProjects() : Promise<Result<SupabaseProject[], { kind: string;
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * The Supabase organizations the stored token can access, so the UI can show
+ * which account is currently connected.
+ */
+async supabaseAccount() : Promise<Result<SupabaseOrganization[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("supabase_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async supabasePoolerHost(projectRef: string) : Promise<Result<string, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("supabase_pooler_host", { projectRef }) };
@@ -241,6 +253,166 @@ async supabaseDisconnect() : Promise<Result<null, { kind: string; detail: string
 },
 async supabaseIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("supabase_is_connected");
+},
+async supabaseSaveProjectPassword(projectRef: string, password: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("supabase_save_project_password", { projectRef, password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async supabaseGetProjectPassword(projectRef: string) : Promise<Result<string | null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("supabase_get_project_password", { projectRef }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async tursoSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async tursoListDatabases() : Promise<Result<TursoDatabase[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_list_databases") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async tursoCreateToken(organizationSlug: string, databaseName: string) : Promise<Result<string, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_create_token", { organizationSlug, databaseName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async tursoDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async tursoIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("turso_is_connected");
+},
+/**
+ * Whether the Turso CLI is installed locally, so the frontend can offer
+ * one-click minting instead of a manual token paste.
+ */
+async tursoCliAvailable() : Promise<boolean> {
+    return await TAURI_INVOKE("turso_cli_available");
+},
+/**
+ * Mints a Turso Platform API token via the local CLI (running `turso auth
+ * login` first if the user isn't signed in), then validates and stores it.
+ */
+async tursoMintToken() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_mint_token") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Installs the Turso CLI via the official install script. macOS/Linux only —
+ * returns an error on Windows with Scoop instructions.
+ */
+async tursoInstallCli() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_install_cli") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Whether the user is signed in to the local Turso CLI, so the frontend can
+ * prompt for sign-in before offering one-click minting.
+ */
+async tursoCliLoggedIn() : Promise<boolean> {
+    return await TAURI_INVOKE("turso_cli_logged_in");
+},
+/**
+ * Runs `turso auth login` (opens a browser) so the user can authenticate the
+ * Turso CLI without leaving Dora.
+ */
+async tursoCliLogin() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_cli_login") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Turso organizations the stored token can access, so the UI can show
+ * which account is currently connected.
+ */
+async tursoAccount() : Promise<Result<TursoOrganization[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("turso_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async neonSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async neonListDatabases() : Promise<Result<NeonDatabase[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_list_databases") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Neon account the stored key belongs to, so the UI can show which account
+ * is currently connected.
+ */
+async neonAccount() : Promise<Result<NeonAccount, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async neonCreateConnectionUri(projectId: string, branchId: string, databaseName: string, roleName: string) : Promise<Result<string, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_create_connection_uri", { projectId, branchId, databaseName, roleName }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async neonDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async neonIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("neon_is_connected");
 },
 async setConnectionPin(connectionId: string, pin: string | null) : Promise<Result<null, { kind: string; detail: string }>> {
     try {
@@ -1129,6 +1301,11 @@ deleted_at: number;
 undo_window_seconds: number }
 export type SshConfig = { host: string; port: number; username: string; private_key_path: string | null; password: string | null }
 export type SupabaseProject = { id: string; name: string; region: string; status: string; dbHost: string; dbVersion: string }
+export type SupabaseOrganization = { id: string; name: string }
+export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
+export type TursoOrganization = { slug: string; name?: string }
+export type NeonAccount = { email?: string; name?: string }
+export type NeonDatabase = { projectId: string; projectName: string; branchId: string; databaseName: string; roleName: string }
 export type StatementInfo = { returns_values: boolean; status: QueryStatus; first_page: JsonValue; affected_rows: number | null; page_count: number; rows_received: number; error: string | null }
 export type TAURI_CHANNEL<TSend> = null
 export type TableInfo = { name: string; schema: string; columns: ColumnInfo[]; 

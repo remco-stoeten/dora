@@ -1,5 +1,6 @@
 import { FolderOpen, Key } from "lucide-react";
 import { commands } from "@studio/lib/bindings";
+import { DesktopOnlyButton } from "@studio/core/platform";
 import { Button } from "@studio/shared/ui/button";
 import { Checkbox } from "@studio/shared/ui/checkbox";
 import { Input } from "@studio/shared/ui/input";
@@ -117,15 +118,16 @@ export function ConnectionForm({
             }}
             className="flex-1 input-glow font-mono text-sm"
           />
-          <Button
+          <DesktopOnlyButton
             variant="outline"
             size="icon"
             onClick={handleBrowseFile}
             className="shrink-0"
             title="Browse for file"
+            desktopHint="Desktop only"
           >
             <FolderOpen className="h-4 w-4" />
-          </Button>
+          </DesktopOnlyButton>
         </div>
         <p className="text-xs text-muted-foreground">
           {isDuckDb

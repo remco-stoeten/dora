@@ -1,27 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ExternalLink, Loader2, LogOut, PlugZap, Search } from "lucide-react";
+import { Check, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
-import type { SupabaseProject } from "@studio/lib/bindings";
+import type { SupabaseOrganization, SupabaseProject } from "@studio/lib/bindings";
 import { Button } from "@studio/shared/ui/button";
 import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
 import { toast } from "@studio/shared/ui/notifier";
 import { cn } from "@studio/shared/utils/cn";
+import { formatBackendError } from "@studio/shared/utils/backend-error";
 import type { Connection } from "../../connections/types";
 import {
   buildSupabaseConnectionUrl,
   connectSupabaseWithOauth,
   disconnectSupabase,
+  getSupabaseAccount,
   getSupabasePoolerHost,
+  getSupabaseProjectPassword,
   isSupabaseConnected,
+  saveSupabaseProjectPassword,
   saveSupabaseToken,
   type SupabaseConnectionMode,
 } from "./supabase-api";
 import { useSupabaseProjects } from "./use-supabase-projects";
+import { useIsTauri } from "@studio/core/data-provider";
+import { DesktopOnlyNotice } from "@studio/core/platform";
 
 type Props = {
   onComplete: (connection: Omit<Connection, "id" | "createdAt">) => void;
 };
+
+export function SupabaseConnectFlow({ onComplete }: Props) {
+  const isTauri = useIsTauri();
+
+  if (!isTauri) {
+    return (
+      <DesktopOnlyNotice
+        title="Supabase lives in the desktop app"
+        description="OAuth sign-in, encrypted token storage, and project discovery need the native app. Download Dora to connect your Supabase projects."
+      />
+    );
+  }
+
+  return <SupabaseConnectFlowInner onComplete={onComplete} />;
+}
 
 const TOKENS_URL = "https://supabase.com/dashboard/account/tokens";
 
@@ -35,8 +56,9 @@ const MODES: Array<{
   { id: "transaction", label: "Transaction", hint: "High concurrency" },
 ];
 
-export function SupabaseConnectFlow({ onComplete }: Props) {
+function SupabaseConnectFlowInner({ onComplete }: Props) {
   const [isConnected, setIsConnected] = useState(false);
+  const [account, setAccount] = useState<SupabaseOrganization[] | null>(null);
   const [tokenInput, setTokenInput] = useState("");
   const [showTokenFallback, setShowTokenFallback] = useState(false);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
@@ -60,6 +82,50 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
     };
   }, []);
 
+  // Prefill the remembered password whenever a project is (re)selected. The
+  // Management API never returns the password, so this is the only way a
+  // returning user avoids re-typing it.
+  useEffect(function prefillStoredPassword() {
+    const projectRef = selectedProject?.id;
+    if (!projectRef) return;
+    let cancelled = false;
+    // Reset to the per-project value: prefill if remembered, otherwise blank so
+    // one project's password never carries over to another.
+    void getSupabaseProjectPassword(projectRef).then(function (stored) {
+      if (!cancelled) setPassword(stored ?? "");
+    });
+    return function () {
+      cancelled = true;
+    };
+  }, [selectedProject?.id]);
+
+  // Resolve which account the stored token belongs to, so the user can confirm
+  // they're connected as the right one before picking a project.
+  useEffect(function loadAccount() {
+    if (!isConnected) {
+      setAccount(null);
+      return;
+    }
+    let cancelled = false;
+    void getSupabaseAccount()
+      .then(function (organizations) {
+        if (!cancelled) setAccount(organizations);
+      })
+      .catch(function () {
+        if (!cancelled) setAccount(null);
+      });
+    return function () {
+      cancelled = true;
+    };
+  }, [isConnected]);
+
+  const accountLabel = useMemo(function deriveAccountLabel() {
+    if (!account || account.length === 0) return null;
+    const primary = account[0];
+    const name = primary.name?.trim() ? primary.name : primary.id;
+    return account.length > 1 ? `${name} +${account.length - 1}` : name;
+  }, [account]);
+
   const filteredProjects = useMemo(function filterProjects() {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return projects;
@@ -80,7 +146,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
       setIsConnected(true);
       await refresh();
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : String(error));
+      setAuthError(formatBackendError(error));
     } finally {
       setIsOauthConnecting(false);
     }
@@ -97,7 +163,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
       setIsConnected(true);
       await refresh();
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : String(error));
+      setAuthError(formatBackendError(error));
     } finally {
       setIsAuthorizing(false);
     }
@@ -116,7 +182,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
         description: "Stored Supabase credentials were removed.",
       });
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : String(error));
+      setAuthError(formatBackendError(error));
     }
   }
 
@@ -132,6 +198,11 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
       const poolerHost =
         mode === "direct" ? undefined : await getSupabasePoolerHost(selectedProject.id);
       const url = buildSupabaseConnectionUrl(selectedProject, password, mode, poolerHost);
+      // Remember the password (encrypted on-device) so the next connect to this
+      // project prefills it instead of prompting again.
+      void saveSupabaseProjectPassword(selectedProject.id, password).catch(function () {
+        // Non-fatal: the connection still succeeds, we just won't prefill later.
+      });
       onComplete({
         name: selectedProject.name || `Supabase ${selectedProject.id}`,
         type: "postgres",
@@ -140,7 +211,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
         status: "idle",
       });
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : String(error));
+      setAuthError(formatBackendError(error));
     } finally {
       setIsBuilding(false);
     }
@@ -153,9 +224,22 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
           <Label className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             Supabase
           </Label>
-          <p className="mt-1 text-xs text-muted-foreground/75">
-            Connect your account to pick a project without copying host details.
-          </p>
+          {isConnected ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground/75">
+              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+              {accountLabel ? (
+                <span>
+                  Connected as <span className="font-medium text-foreground">{accountLabel}</span>
+                </span>
+              ) : (
+                <span>Connected</span>
+              )}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground/75">
+              Connect your account to pick a project without copying host details.
+            </p>
+          )}
         </div>
         {isConnected ? (
           <Button
@@ -163,6 +247,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
             variant="outline"
             onClick={handleDisconnect}
             className="gap-2 border-border/70"
+            title="Remove this Supabase account connection so you can connect a different one"
           >
             <LogOut className="h-3.5 w-3.5" />
             Disconnect
@@ -262,16 +347,31 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={function (event) {
-                setQuery(event.target.value);
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={function (event) {
+                  setQuery(event.target.value);
+                }}
+                placeholder="Search Supabase projects"
+                className="h-9 bg-background/70 pl-9"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={function () {
+                void refresh();
               }}
-              placeholder="Search Supabase projects"
-              className="h-9 bg-background/70 pl-9"
-            />
+              disabled={isLoading}
+              className="h-9 shrink-0 gap-1.5 border-border/70 px-3"
+              title="Re-fetch projects from Supabase"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
           </div>
 
           <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
@@ -286,6 +386,13 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
                 {error}
               </p>
             ) : null}
+            {!isLoading && !error && filteredProjects.length === 0 ? (
+              <p className="px-1 py-3 text-xs text-muted-foreground">
+                {projects.length === 0
+                  ? "No Supabase projects found for this account. Create one in the dashboard, then Refresh."
+                  : "No projects match your search."}
+              </p>
+            ) : null}
             {filteredProjects.map(function (project) {
               const isSelected = selectedProject?.id === project.id;
               const isHealthy = project.status === "ACTIVE_HEALTHY";
@@ -295,6 +402,7 @@ export function SupabaseConnectFlow({ onComplete }: Props) {
                   type="button"
                   onClick={function () {
                     setSelectedProject(project);
+                    setAuthError(null);
                   }}
                   className={cn(
                     "flex w-full items-center gap-3 border px-3 py-2.5 text-left transition-colors",

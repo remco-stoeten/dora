@@ -1,4 +1,5 @@
 import { getFeatureRouteEntries } from '@/core/config/features'
+import { getDocsRouteEntries } from '@/core/config/docs'
 import { getGuideRouteEntries } from '@/core/config/guides'
 
 export type TRouteConfig = {
@@ -58,6 +59,7 @@ export const routeConfig = [
         priority: 0.7,
         changeFrequency: 'weekly'
     },
+    ...getDocsRouteEntries(),
     {
         path: '/docs/go-cli-runner',
         title: 'Dora manager executor',

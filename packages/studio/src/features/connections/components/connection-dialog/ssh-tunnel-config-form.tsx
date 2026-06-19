@@ -1,5 +1,6 @@
 import { Lock, Key } from "lucide-react";
 import { commands } from "@studio/lib/bindings";
+import { DesktopOnlyButton } from "@studio/core/platform";
 import { Button } from "@studio/shared/ui/button";
 import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
@@ -157,7 +158,7 @@ export function SshTunnelConfigForm({ config, onChange }: Props) {
               }}
               className="flex-1 input-glow font-mono text-sm"
             />
-            <Button
+            <DesktopOnlyButton
               variant="outline"
               size="icon"
               onClick={async function () {
@@ -173,9 +174,10 @@ export function SshTunnelConfigForm({ config, onChange }: Props) {
               }}
               className="shrink-0"
               title="Browse for key file"
+              desktopHint="Desktop only"
             >
               <FolderOpenIcon className="h-4 w-4" />
-            </Button>
+            </DesktopOnlyButton>
           </div>
         </div>
       )}

@@ -1,25 +1,44 @@
 ---
-title: Introduction
-description: Welcome to the Dora documentation.
+title: Dora docs
+description: Connection guides and setup docs for Dora.
 ---
 
-# Introduction
+# Dora docs
 
-**Dora** is a modern, lightweight, and blazing fast SQL client built with Tauri and Next.js.
-It supports Postgres, SQLite, and LibSQL (Turso) out of the box.
+Dora connects to local files, hosted databases, and team infrastructure from one desktop SQL client. These docs cover setup, provider connection guides, and lower-level developer references.
 
-## Architecture
+## Developer docs
 
-Dora is built on a split architecture:
+- [Dora manager executor](/docs/go-cli-runner)
+  Go-based CLI and TUI executor for VM workflows, CI dispatch, and local automation.
 
-- **Frontend**: A Next.js application handling the UI, state, and visualization.
-- **Backend**: A Rust (Tauri) process handling database connections, query execution, and secure storage.
+## Connection guides
 
-Communication happens exclusively via the [Tauri Command API](./api).
+- [Connect Supabase](/docs/connect/supabase)
+- [Connect Neon](/docs/connect/neon)
+- [Connect Turso](/docs/connect/turso)
+- [Connect Railway](/docs/connect/railway)
+- [Connect Render](/docs/connect/render)
+- [Connect Vercel Postgres](/docs/connect/vercel-postgres)
+- [Connect Fly.io](/docs/connect/fly)
+- [Connect Aiven](/docs/connect/aiven)
+- [Connect DigitalOcean](/docs/connect/digitalocean)
+- [Connect Crunchy Bridge](/docs/connect/crunchy-bridge)
+- [Connect Timescale](/docs/connect/timescale)
+- [Connect AWS RDS](/docs/connect/aws-rds)
+- [Connect Azure Database](/docs/connect/azure)
+- [Connect Google Cloud SQL](/docs/connect/google-cloud-sql)
+- [Connect CockroachDB Cloud](/docs/connect/cockroachdb)
+- [Connect TiDB Cloud](/docs/connect/tidb)
+- [Connect PlanetScale](/docs/connect/planetscale)
+- [Connect Yugabyte](/docs/connect/yugabyte)
 
-## Features
+Dora connects to any PostgreSQL, MySQL, or libSQL host the same way. Railway, Render, Vercel Postgres, Fly.io, Aiven, DigitalOcean, Crunchy Bridge, Timescale, AWS RDS, Azure, Google Cloud SQL, CockroachDB Cloud, TiDB Cloud, PlanetScale, and self-hosted databases all work with a standard connection string, recognized automatically with the right engine and SSL.
 
-- **Multi-Database Support**: Connect to Postgres, SQLite, and LibSQL.
-- **Visual Query Builder**: (Coming soon)
-- **Safe Mode**: Dangerous operations like `DROP TABLE` require explicit confirmation.
-- **Themeable**: Customizable UI with color accents per connection.
+## Product reference
+
+- [Installation](/docs/installation)
+- [API reference](/docs/api)
+- [Shared types](/docs/types)
+- [Backend feature integration](/docs/guides/new-features)
+- [Mock data guide](/docs/guides/mock-data)

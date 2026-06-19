@@ -56,7 +56,7 @@ export const FEATURES_INDEX = {
     title: 'Dora features',
     description:
         'Explore Dora features for multi-database connections, schema visualization, query history, Docker workflows, SSH tunneling, and AI-assisted SQL.',
-    lead: 'Browse the capabilities that ship in Dora today — from connection management to schema exploration and AI-assisted querying.'
+    lead: 'Browse the capabilities that ship in Dora today, from connection management to schema exploration and AI-assisted querying.'
 } satisfies Pick<TRouteConfig, 'path' | 'title' | 'description'>
 
 export const FEATURES: TFeatureConfig[] = [
@@ -75,11 +75,11 @@ export const FEATURES: TFeatureConfig[] = [
         paragraphs: [
             'Dora keeps every connection in a searchable sidebar so you can move between production, staging, and local databases without reopening tools or retyping credentials.',
             'Connection strings are parsed on paste, and the desktop app stores credentials with OS-backed secure storage when available.',
-            'Hosted providers get first-class presets — Supabase, Neon, Railway, Fly.io, and a dozen more prefill the right host, port, and SSL so you are not hand-assembling URLs. For Supabase you can skip the string entirely and connect with one-click OAuth: authorize in the browser and pick a project.'
+            'Hosted providers get first-class presets: Supabase, Neon, Railway, Fly.io, and a dozen more prefill the right host, port, and SSL so you are not hand-assembling URLs. For Supabase you can skip the string entirely and connect with one-click OAuth: authorize in the browser and pick a project.'
         ],
         highlights: [
             'PostgreSQL, MySQL, SQLite, and libSQL support',
-            'One-click Supabase OAuth — authorize in the browser, pick a project',
+            'One-click Supabase OAuth: authorize in the browser, pick a project',
             'First-class presets for 10+ hosted Postgres & MySQL providers',
             'Saved connections with fast switching',
             'Connection string parsing on paste',
@@ -151,7 +151,7 @@ export const FEATURES: TFeatureConfig[] = [
         title: 'Schema visualization in Dora',
         description:
             'Inspect live database schema relationships with ER-style diagrams, foreign keys, and table structure in Dora.',
-        lead: 'See how tables relate before you write joins — foreign keys, column types, and relationship paths stay visible while you explore.',
+        lead: 'See how tables relate before you write joins. Foreign keys, column types, and relationship paths stay visible while you explore.',
         paragraphs: [
             'Dora renders schema structure as an explorable diagram so you can understand foreign keys and table layout without leaving the app.',
             'The schema view complements the data grid, making it easier to navigate from relationships to the rows that back them.'
@@ -179,7 +179,7 @@ export const FEATURES: TFeatureConfig[] = [
         homepageAnchor: 'feature-docker',
         title: 'Docker database workflows in Dora',
         description:
-            'Manage local database containers from Dora and connect to running Docker workloads without leaving your SQL workbench.',
+            'Manage local database containers from Dora and connect to running Docker workloads without leaving your database workbench.',
         lead: 'Spin up the databases you need for development, inspect container state, and connect directly from the same desktop app you use to query data.',
         paragraphs: [
             'Dora includes a Docker manager surface for developers who run Postgres, MySQL, and other services locally during feature work.',
@@ -209,7 +209,7 @@ export const FEATURES: TFeatureConfig[] = [
         title: 'SSH tunneling for private databases in Dora',
         description:
             'Connect to databases behind firewalls or in private networks through encrypted SSH tunnels configured directly in the Dora desktop app.',
-        lead: 'Reach staging, production, and cloud databases that are not publicly exposed — without a VPN or a separate tunnel process running in a terminal.',
+        lead: 'Reach staging, production, and cloud databases that are not publicly exposed, without a VPN or a separate tunnel process running in a terminal.',
         paragraphs: [
             'Dora handles the SSH tunnel lifecycle alongside the database connection so you open one thing and get one working session, not a tunnel process you have to babysit separately.',
             'Tunnel config is stored with the connection and encrypted in the same OS-backed credential store, so credentials and jump hosts stay private across machine restarts.'
@@ -296,7 +296,7 @@ export const FEATURES: TFeatureConfig[] = [
         title: 'Prisma runner in Dora',
         description:
             'Write Prisma Client queries in Dora and run them against your live database, with a SQL preview and no schema file or Node runtime required.',
-        lead: 'Query the way you already do in your app — Prisma Client syntax — and watch Dora translate it to SQL you can read before it runs.',
+        lead: 'Query the way you already do in your app, in Prisma Client syntax, and watch Dora translate it to SQL you can read before it runs.',
         paragraphs: [
             'Dora adds a Prisma tab next to the SQL console and the Drizzle runner. Write queries like prisma.user.findMany({ where: { active: true } }) and Dora translates them to SQL on the fly, executes them through the same native engine as everything else, and shows the rows in the standard results panel.',
             'It is a translation layer, not a Prisma runtime: there is no generated client, no schema.prisma file, and no Node process to manage. Dora derives the model names from your live schema, so the runner reflects the database you are actually connected to.'
@@ -326,7 +326,7 @@ export const FEATURES: TFeatureConfig[] = [
         title: 'Custom theming in Dora',
         description:
             'Personalise Dora with custom themes, accent colours, and font choices to match your workflow and reduce visual fatigue.',
-        lead: 'Make the workbench yours — choose a colour scheme, tweak the accent, and pick a density that fits how you work.',
+        lead: 'Make the workbench yours: choose a colour scheme, tweak the accent, and pick a density that fits how you work.',
         paragraphs: [
             'Dora ships with a dark base and a set of built-in themes, and lets you override accent colours and surface tones without touching config files.',
             'Theme changes apply instantly across all panels so you can preview the result while you adjust, not after a restart.'

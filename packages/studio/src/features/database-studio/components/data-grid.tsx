@@ -142,6 +142,7 @@ export function DataGrid({
 		handleCellDoubleClick,
 		startTypeEdit,
 		handleSaveEdit,
+		handleEditBlur,
 		handleEditKeyDown
 	} = useCellEditing({
 		columns,
@@ -366,7 +367,7 @@ export function DataGrid({
 						handleEditKeyDown={handleEditKeyDown}
 						handleRowClick={handleRowClick}
 						handleRowContextMenuChange={handleRowContextMenuChange}
-						handleSaveEdit={handleSaveEdit}
+						handleEditBlur={handleEditBlur}
 						onBatchCellEdit={onBatchCellEdit}
 						onCellEdit={onCellEdit}
 						onDraftCancel={onDraftCancel}

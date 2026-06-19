@@ -399,37 +399,9 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
 
 export function DoraHeader() {
     const [menuOpen, setMenuOpen] = useState(false)
-    const [mounted, setMounted] = useState(false)
     const scrolled = useScrolled()
     const reduced = usePrefersReducedMotion()
     const $ = useShortcut()
-
-    // Slide + fade the bar in on first paint so the header doesn't pop in.
-    useEffect(() => {
-        const id = requestAnimationFrame(() => setMounted(true))
-        return () => cancelAnimationFrame(id)
-    }, [])
-
-    // Frame borders draw outward from their center once the bar has slid into
-    // place — horizontal lines scale on X, vertical lines on Y.
-    const borderEase = 'cubic-bezier(0.32,0.72,0,1)'
-    function growIn(axis: 'x' | 'y') {
-        const shown = reduced || mounted
-        const collapsed = axis === 'x' ? 'scaleX(0)' : 'scaleY(0)'
-        const full = axis === 'x' ? 'scaleX(1)' : 'scaleY(1)'
-        return {
-            transformOrigin: 'center',
-            transform: shown ? full : collapsed,
-            // start once the bar has finished sliding/fading in (~650ms)
-            transition: reduced ? 'none' : `transform 600ms ${borderEase} 700ms`
-        }
-    }
-
-    // Corner brackets fade in last, after the lines have reached the corners.
-    const cornerFade = {
-        opacity: reduced || mounted ? 1 : 0,
-        transition: reduced ? 'none' : 'opacity 240ms ease 1250ms'
-    }
 
     function renderNavItem(item: TNavItem) {
         return item.menu ? (
@@ -460,20 +432,22 @@ export function DoraHeader() {
 
     return (
         <header
-            className="sticky top-0 z-50 w-full"
-            style={{
-                opacity: reduced || mounted ? 1 : 0,
-                transform:
-                    reduced || mounted ? 'translateY(0)' : 'translateY(-100%)',
-                transition: reduced
-                    ? 'opacity 200ms ease'
-                    : 'opacity 500ms ease, transform 650ms cubic-bezier(0.32,0.72,0,1)'
-            }}
+            className="sticky top-0 z-50 w-full bg-background px-3 pt-3"
         >
+            {/* Sidebar border lines that align with the marketing-container edges */}
+            <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-[#3a3138]"
+                style={{ left: 'max(16px, calc(50% - 550px))' }}
+            />
+            <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-[#3a3138]"
+                style={{ right: 'max(16px, calc(50% - 550px))' }}
+            />
             <div
                 aria-hidden
                 className="h-px w-full bg-[linear-gradient(90deg,transparent,rgba(227,178,179,0.4),transparent)]"
-                style={growIn('x')}
             />
             <nav
                 className={`relative backdrop-blur-xl transition-colors duration-300 ${
@@ -502,39 +476,24 @@ export function DoraHeader() {
                             : 'height 420ms cubic-bezier(0.32,0.72,0,1)'
                     }}
                 >
-                    {/* Frame borders, drawn outward from center on load */}
+                    {/* Frame borders */}
                     <span
                         aria-hidden
                         className="pointer-events-none absolute left-0 top-0 h-px w-full bg-[#3a3138]"
-                        style={growIn('x')}
                     />
                     <span
                         aria-hidden
                         className="pointer-events-none absolute left-0 top-0 h-full w-px bg-[#3a3138]"
-                        style={growIn('y')}
                     />
                     <span
                         aria-hidden
                         className="pointer-events-none absolute right-0 top-0 h-full w-px bg-[#3a3138]"
-                        style={growIn('y')}
                     />
 
-                    <CornerTick
-                        className="-left-px -top-px -translate-x-1/2 -translate-y-1/2"
-                        style={cornerFade}
-                    />
-                    <CornerTick
-                        className="-right-px -top-px translate-x-1/2 -translate-y-1/2"
-                        style={cornerFade}
-                    />
-                    <CornerTick
-                        className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2"
-                        style={cornerFade}
-                    />
-                    <CornerTick
-                        className="-bottom-px -right-px translate-x-1/2 translate-y-1/2"
-                        style={cornerFade}
-                    />
+                    <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
+                    <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
+                    <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
+                    <CornerTick className="-bottom-px -right-px translate-x-1/2 translate-y-1/2" />
 
                     {/* Mobile: logo + hamburger */}
                     <div className="flex w-full items-center justify-between md:hidden">

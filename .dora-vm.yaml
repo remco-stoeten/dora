@@ -1,0 +1,16 @@
+name: dora-linux-test
+uri: qemu:///session
+storage_dir: /home/remcostoeten/dev/dora/.cache/dora-vm
+base_image: /home/remcostoeten/dev/dora/.cache/dora-vm/base.qcow2
+base_image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+overlay_image: /home/remcostoeten/dev/dora/.cache/dora-vm/overlay.qcow2
+seed_iso: /home/remcostoeten/dev/dora/.cache/dora-vm/seed.iso
+domain_xml: /home/remcostoeten/dev/dora/.cache/dora-vm/domain.xml
+serial_log: /home/remcostoeten/dev/dora/.cache/dora-vm/serial.log
+memory_mb: 8192
+vcpus: 4
+disk_size_gb: 80
+network: default
+guest_shell: /bin/bash -lc
+guest_run_command: uname -a && echo dora vm smoke test ok
+agent_timeout_sec: 180

@@ -129,6 +129,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: ./apps/desktop
 
@@ -182,6 +184,7 @@ jobs:
             ./apps/desktop/src-tauri/target/release/bundle/deb/*.deb
             ./apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
             ./apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            ./apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
             ./apps/desktop/src-tauri/target/release/bundle/checksums-linux.txt
 
   release-windows:
@@ -238,6 +241,8 @@ jobs:
           VCPKGRS_TRIPLET: ${{ env.VCPKGRS_TRIPLET }}
           LIB: ${{ env.LIB }}
           INCLUDE: ${{ env.INCLUDE }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: ./apps/desktop
 
@@ -252,6 +257,7 @@ jobs:
           path: |
             ./apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             ./apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+            ./apps/desktop/src-tauri/target/release/bundle/nsis/*.exe.sig
             ./apps/desktop/src-tauri/target/release/bundle/checksums-windows.txt
 
   release-macos:
@@ -289,6 +295,9 @@ jobs:
         working-directory: ./apps/desktop
 
       - uses: tauri-apps/tauri-action@v0
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: ./apps/desktop
 
@@ -298,6 +307,8 @@ jobs:
           name: release-macos-assets
           path: |
             ./apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            ./apps/desktop/src-tauri/target/release/bundle/macos/*.app.tar.gz
+            ./apps/desktop/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
 
   publish-release:
     needs: [release-linux, release-windows, release-macos]
@@ -309,6 +320,9 @@ jobs:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
         with:
           fetch-depth: 0
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
 
       - name: Install git-cliff
         uses: taiki-e/install-action@git-cliff
@@ -370,6 +384,16 @@ jobs:
             echo "Generating release notes with git-cliff (${PREV_TAG}..${VERSION})"
             git-cliff "${PREV_TAG}..${VERSION}" > "$NOTES_FILE"
           fi
+
+          # Build the Tauri updater manifest from the signed (.sig) artifacts so
+          # installed apps can auto-update from this release.
+          bun tools/scripts/generate-latest-json.ts \
+            --assets-dir=/tmp/release-assets \
+            --version="$VERSION" \
+            --notes-file="$NOTES_FILE" \
+            --repo="${{ github.repository }}" \
+            --output=/tmp/latest.json
+          ASSETS+=("/tmp/latest.json")
 
           gh release create "$VERSION" \
             --title "Dora ${VERSION}" \

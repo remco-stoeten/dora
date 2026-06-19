@@ -12,6 +12,10 @@ use crate::{security, storage::Storage, Error, Result};
 const TOKEN_SETTING_KEY: &str = "integration.supabase.access_token";
 // One-click OAuth credentials: encrypted JSON of access/refresh token + expiry.
 const OAUTH_SETTING_KEY: &str = "integration.supabase.oauth";
+// Prefix for per-project database passwords, encrypted on-device. The
+// Management API never returns the database password, so once a user enters it
+// we remember it (keyed by project ref) and prefill it on the next connect.
+const PASSWORD_SETTING_PREFIX: &str = "integration.supabase.password.";
 const API_BASE_URL: &str = "https://api.supabase.com/v1";
 
 // Base URL of the hosted OAuth proxy (the marketing app's route handlers). The
@@ -142,20 +146,85 @@ pub fn is_connected(storage: &Storage) -> bool {
 
 pub fn disconnect(storage: &Storage) -> Result<()> {
     // Remove both credential kinds so "Disconnect" fully signs the user out
-    // regardless of how they connected.
+    // regardless of how they connected, plus any remembered project passwords.
     storage.delete_setting(OAUTH_SETTING_KEY)?;
-    storage.delete_setting(TOKEN_SETTING_KEY)
+    storage.delete_setting(TOKEN_SETTING_KEY)?;
+    storage.delete_settings_with_prefix(PASSWORD_SETTING_PREFIX)
 }
 
-/// GETs `/projects` with a bearer token, returning the raw response without
-/// mapping any status. Callers decide how to treat 401 (e.g. refresh + retry).
-async fn get_projects_raw(token: &str) -> Result<reqwest::Response> {
-    reqwest::Client::new()
-        .get(format!("{API_BASE_URL}/projects"))
+fn password_key(project_ref: &str) -> String {
+    format!("{PASSWORD_SETTING_PREFIX}{project_ref}")
+}
+
+/// Stores (or, when `password` is empty, clears) the remembered database
+/// password for a project, encrypted on-device.
+pub fn save_project_password(storage: &Storage, project_ref: &str, password: &str) -> Result<()> {
+    let key = password_key(project_ref);
+    if password.is_empty() {
+        return storage.delete_setting(&key);
+    }
+    let encrypted = security::encrypt(password).map_err(|error| {
+        Error::Any(anyhow::anyhow!(
+            "Failed to encrypt Supabase project password: {error}"
+        ))
+    })?;
+    storage.set_setting(&key, &encrypted)
+}
+
+/// Returns the remembered database password for a project, if one was saved.
+pub fn load_project_password(storage: &Storage, project_ref: &str) -> Result<Option<String>> {
+    let Some(encrypted) = storage.get_setting(&password_key(project_ref))? else {
+        return Ok(None);
+    };
+    let decrypted = security::decrypt(&encrypted).map_err(|error| {
+        Error::Any(anyhow::anyhow!(
+            "Failed to decrypt Supabase project password: {error}"
+        ))
+    })?;
+    Ok(Some(decrypted))
+}
+
+/// Reads a response body, preserving context when it's empty or unreadable so a
+/// failed request doesn't collapse into a bare `HTTP 502: ` with no detail.
+async fn read_body(response: reqwest::Response) -> String {
+    match response.text().await {
+        Ok(text) if !text.trim().is_empty() => text,
+        Ok(_) => "(empty response body)".to_string(),
+        Err(error) => format!("(failed to read response body: {error})"),
+    }
+}
+
+/// GETs an API path with a bearer token, returning `(status, body)`. Callers
+/// decide how to treat a 401 (validate-only paths surface it; `authed_get`
+/// refreshes and retries).
+async fn send_get(token: &str, path: &str) -> Result<(reqwest::StatusCode, String)> {
+    let response = reqwest::Client::new()
+        .get(format!("{API_BASE_URL}{path}"))
         .bearer_auth(token)
         .send()
         .await
-        .map_err(|error| Error::Any(anyhow::anyhow!("Supabase request failed: {error}")))
+        .map_err(|error| Error::Any(anyhow::anyhow!("Supabase request failed: {error}")))?;
+    let status = response.status();
+    let body = read_body(response).await;
+    Ok((status, body))
+}
+
+/// GETs an API path with the current stored token, transparently refreshing an
+/// expired OAuth access token and retrying once on a 401 before surfacing it.
+/// Used by every authenticated read so the refresh-retry is consistent.
+async fn authed_get(storage: &Storage, path: &str) -> Result<(reqwest::StatusCode, String)> {
+    let token = current_access_token(storage).await?;
+    let (status, body) = send_get(&token, path).await?;
+    if status == reqwest::StatusCode::UNAUTHORIZED {
+        if let Some(tokens) = load_oauth(storage)? {
+            if !tokens.refresh_token.is_empty() {
+                let refreshed = refresh_oauth(&tokens.refresh_token).await?;
+                store_oauth(storage, &refreshed)?;
+                return send_get(&refreshed.access_token, path).await;
+            }
+        }
+    }
+    Ok((status, body))
 }
 
 fn decode_projects_response(status: reqwest::StatusCode, body: &str) -> Result<Vec<SupabaseProject>> {
@@ -187,9 +256,7 @@ pub async fn save_token(storage: &Storage, token: String) -> Result<()> {
             "Supabase access token is empty"
         )));
     }
-    let response = get_projects_raw(&token).await?;
-    let status = response.status();
-    let body = response.text().await.unwrap_or_default();
+    let (status, body) = send_get(&token, "/projects").await?;
     decode_projects_response(status, &body)?;
     store_pat(storage, &token)
 }
@@ -214,28 +281,36 @@ async fn current_access_token(storage: &Storage) -> Result<String> {
 }
 
 pub async fn list_projects(storage: &Storage) -> Result<Vec<SupabaseProject>> {
-    let token = current_access_token(storage).await?;
-
-    let response = get_projects_raw(&token).await?;
-    let status = response.status();
-    let body = response.text().await.unwrap_or_default();
-
-    // A 401 on an OAuth connection can mean the access token died early; try one
-    // refresh-and-retry before surfacing the error to the user.
-    if status == reqwest::StatusCode::UNAUTHORIZED {
-        if let Some(tokens) = load_oauth(storage)? {
-            if !tokens.refresh_token.is_empty() {
-                let refreshed = refresh_oauth(&tokens.refresh_token).await?;
-                store_oauth(storage, &refreshed)?;
-                let retry = get_projects_raw(&refreshed.access_token).await?;
-                let retry_status = retry.status();
-                let retry_body = retry.text().await.unwrap_or_default();
-                return decode_projects_response(retry_status, &retry_body);
-            }
-        }
-    }
-
+    let (status, body) = authed_get(storage, "/projects").await?;
     decode_projects_response(status, &body)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SupabaseOrganization {
+    pub id: String,
+    pub name: String,
+}
+
+/// The organizations the stored token can access, so the UI can show which
+/// account is connected. Mirrors Turso/Neon account visibility.
+pub async fn current_account(storage: &Storage) -> Result<Vec<SupabaseOrganization>> {
+    let (status, body) = authed_get(storage, "/organizations").await?;
+    if status == reqwest::StatusCode::UNAUTHORIZED {
+        return Err(Error::Any(anyhow::anyhow!(
+            "Supabase rejected this access token. Reconnect your Supabase account and try again."
+        )));
+    }
+    if !status.is_success() {
+        return Err(Error::Any(anyhow::anyhow!(
+            "Supabase organizations request failed with HTTP {status}: {body}"
+        )));
+    }
+    serde_json::from_str(&body).map_err(|error| {
+        Error::Any(anyhow::anyhow!(
+            "Failed to decode Supabase organizations response: {error}"
+        ))
+    })
 }
 
 /// Returns the project's Supavisor pooler hostname (e.g.
@@ -244,16 +319,8 @@ pub async fn list_projects(storage: &Storage) -> Result<Vec<SupabaseProject>> {
 /// pooler config and pull the host out of whatever field carries it. Requires
 /// the OAuth app's Database:Read scope.
 pub async fn pooler_host(storage: &Storage, project_ref: &str) -> Result<String> {
-    let token = current_access_token(storage).await?;
-    let response = reqwest::Client::new()
-        .get(format!("{API_BASE_URL}/projects/{project_ref}/config/database/pooler"))
-        .bearer_auth(&token)
-        .send()
-        .await
-        .map_err(|error| Error::Any(anyhow::anyhow!("Supabase pooler request failed: {error}")))?;
-
-    let status = response.status();
-    let body = response.text().await.unwrap_or_default();
+    let (status, body) =
+        authed_get(storage, &format!("/projects/{project_ref}/config/database/pooler")).await?;
     if !status.is_success() {
         return Err(Error::Any(anyhow::anyhow!(
             "Couldn't load Supabase pooler details (HTTP {status}). The project may be paused, or the connection lacks the Database scope."
@@ -371,9 +438,7 @@ where
         .map_err(|error| Error::Any(anyhow::anyhow!("OAuth listener task failed: {error}")))??;
 
     // Validate the freshly issued token before persisting, mirroring save_token.
-    let response = get_projects_raw(&tokens.access_token).await?;
-    let status = response.status();
-    let body = response.text().await.unwrap_or_default();
+    let (status, body) = send_get(&tokens.access_token, "/projects").await?;
     decode_projects_response(status, &body)?;
 
     store_oauth(storage, &tokens)

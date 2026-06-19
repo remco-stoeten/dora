@@ -1,5 +1,7 @@
+#[cfg(any(debug_assertions, test))]
 use tauri_specta::{collect_commands, Builder};
 
+#[cfg(any(debug_assertions, test))]
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::database::commands as db_commands;
     use crate::window::commands as window_commands;
@@ -33,9 +35,29 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::supabase_save_token,
         db_commands::supabase_oauth_connect,
         db_commands::supabase_list_projects,
+        db_commands::supabase_account,
         db_commands::supabase_pooler_host,
         db_commands::supabase_disconnect,
         db_commands::supabase_is_connected,
+        db_commands::supabase_save_project_password,
+        db_commands::supabase_get_project_password,
+        db_commands::turso_save_token,
+        db_commands::turso_list_databases,
+        db_commands::turso_create_token,
+        db_commands::turso_disconnect,
+        db_commands::turso_is_connected,
+        db_commands::turso_cli_available,
+        db_commands::turso_mint_token,
+        db_commands::turso_install_cli,
+        db_commands::turso_cli_logged_in,
+        db_commands::turso_cli_login,
+        db_commands::turso_account,
+        db_commands::neon_save_token,
+        db_commands::neon_list_databases,
+        db_commands::neon_account,
+        db_commands::neon_create_connection_uri,
+        db_commands::neon_disconnect,
+        db_commands::neon_is_connected,
         db_commands::set_connection_pin,
         db_commands::verify_pin_and_get_credentials,
         db_commands::cancel_query,
@@ -129,6 +151,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 }
 
 /// Export TypeScript bindings to the frontend.
+#[cfg(any(debug_assertions, test))]
 pub fn export_ts_bindings() {
     generate_bindings()
         .export(

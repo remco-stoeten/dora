@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
 	registerShortcutMap,
 	useShortcut as useShortcutBase,
@@ -570,14 +570,58 @@ export function useActiveScope(
 	}, [scope])
 }
 
+// Wraps a BoundShortcutChain so that calling .on() / .handle() first unbinds any
+// previous registration for the same combo key, preventing handler accumulation
+// across re-renders when shortcuts are registered in the component body.
+function createDedupChain(
+	chain: BoundShortcutChain,
+	comboKey: string,
+	registrations: Map<string, () => void>
+): BoundShortcutChain {
+	return {
+		on: function (handler, options) {
+			registrations.get(comboKey)?.()
+			const result = chain.on(handler, options)
+			registrations.set(comboKey, result.unbind)
+			return result
+		},
+		handle: function (options) {
+			registrations.get(comboKey)?.()
+			const result = chain.handle(options)
+			registrations.set(comboKey, result.unbind)
+			return result
+		},
+		except: function (condition) {
+			return createDedupChain(chain.except(condition), comboKey, registrations)
+		},
+		in: function (scopes) {
+			return createDedupChain(chain.in(scopes), comboKey, registrations)
+		}
+	}
+}
+
 export function useShortcut(options?: UseShortcutOptions): ShortcutBuilder {
 	const builder = useShortcutBase(options)
+	const registrationsRef = useRef<Map<string, () => void>>(new Map())
+
+	useEffect(() => {
+		const map = registrationsRef.current
+		return () => {
+			map.forEach(function (unbind) { unbind() })
+			map.clear()
+		}
+	}, [])
 
 	return new Proxy(builder, {
 		get(target, prop, receiver) {
 			if (prop === 'bind') {
 				return function bind(combo: string | string[]) {
-					return createBoundShortcutChain(builder, combo)
+					const comboKey = Array.isArray(combo) ? combo.join('\0') : combo
+					return createDedupChain(
+						createBoundShortcutChain(builder, combo),
+						comboKey,
+						registrationsRef.current
+					)
 				}
 			}
 

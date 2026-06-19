@@ -1,5 +1,7 @@
 # Dora marketing agent instructions
 
+See root [AGENTS.md](../AGENTS.md) for project-wide conventions.
+
 This app is the public marketing and SEO surface for Dora. Keep identity,
 metadata, route policy, and crawl behavior centralized instead of scattering SEO
 logic through pages.

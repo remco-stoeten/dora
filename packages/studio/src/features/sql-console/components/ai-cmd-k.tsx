@@ -266,7 +266,13 @@ export function AiCmdK({ open, onClose, onApplySql, activeConnectionId, isTauri 
 						{isGenerating && (
 							<Loader2 className='h-3.5 w-3.5 animate-spin text-muted-foreground' />
 						)}
-						<Button variant='ghost' size='icon' className='h-6 w-6' onClick={handleClose}>
+						<Button
+							variant='ghost'
+							size='icon'
+							className='h-6 w-6'
+							onClick={handleClose}
+							aria-label='Close AI SQL dialog'
+						>
 							<X className='h-3.5 w-3.5' />
 						</Button>
 					</div>
