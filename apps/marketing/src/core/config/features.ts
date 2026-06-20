@@ -3,6 +3,7 @@ import {
     Boxes,
     Braces,
     Database,
+    GitCompare,
     History,
     MessageSquare,
     Network,
@@ -22,6 +23,7 @@ export type TFeatureSlug =
     | 'ai-assistant'
     | 'drizzle-runner'
     | 'prisma-runner'
+    | 'orm-cockpit'
     | 'theming'
 
 export type TFeatureDemo =
@@ -33,6 +35,7 @@ export type TFeatureDemo =
     | 'ai-assistant'
     | 'drizzle-runner'
     | 'prisma-runner'
+    | 'orm-cockpit'
     | 'theming'
 
 export type TFeatureConfig = {
@@ -75,15 +78,16 @@ export const FEATURES: TFeatureConfig[] = [
         paragraphs: [
             'Dora keeps every connection in a searchable sidebar so you can move between production, staging, and local databases without reopening tools or retyping credentials.',
             'Connection strings are parsed on paste, and the desktop app stores credentials with OS-backed secure storage when available.',
-            'Hosted providers get first-class presets: Supabase, Neon, Railway, Fly.io, and a dozen more prefill the right host, port, and SSL so you are not hand-assembling URLs. For Supabase you can skip the string entirely and connect with one-click OAuth: authorize in the browser and pick a project.'
+            'Hosted providers get first-class presets: Supabase, Neon, Railway, Fly.io, and a dozen more prefill the right host, port, and SSL so you are not hand-assembling URLs. For Supabase you can skip the string entirely and connect with one-click OAuth: authorize in the browser and pick a project.',
+            'Several providers go further than a preset. Neon and PlanetScale connect branch-aware, with a picker for the branch you want. Vercel Postgres and Xata have dedicated connect flows, and Cloudflare D1 is a native engine — Dora speaks its HTTP API directly, not a Postgres shim.'
         ],
         highlights: [
             'PostgreSQL, MySQL, SQLite, and libSQL support',
             'One-click Supabase OAuth: authorize in the browser, pick a project',
-            'First-class presets for 10+ hosted Postgres & MySQL providers',
-            'Saved connections with fast switching',
-            'Connection string parsing on paste',
-            'SSH tunnel and credential storage in the desktop app'
+            'Branch-aware connects for Neon and PlanetScale',
+            'Native Cloudflare D1 engine, plus Xata and Vercel Postgres connectors',
+            'First-class presets for a dozen more hosted Postgres & MySQL providers',
+            'Saved connections, connection-string parsing, and SSH tunneling'
         ],
         keywords: [
             'multi database client',
@@ -100,10 +104,14 @@ export const FEATURES: TFeatureConfig[] = [
             'render postgres gui',
             'digitalocean database gui',
             'planetscale gui',
+            'planetscale branch client',
             'aws rds desktop client',
             'cockroachdb gui',
             'tidb cloud client',
             'vercel postgres gui',
+            'cloudflare d1 client',
+            'cloudflare d1 gui',
+            'xata database client',
             'crunchy bridge client',
             'timescale cloud gui',
             'azure database client',
@@ -316,6 +324,43 @@ export const FEATURES: TFeatureConfig[] = [
         ]
     },
     {
+        slug: 'orm-cockpit',
+        demo: 'orm-cockpit',
+        menuLabel: 'ORM Cockpit',
+        menuDescription: 'Diff Drizzle/Prisma schema, preview migrations',
+        icon: GitCompare,
+        inNav: true,
+        homepageAnchor: 'feature-orm-cockpit',
+        title: 'ORM Cockpit in Dora',
+        description:
+            'Link a Drizzle or Prisma project in Dora, diff its schema against the live database, and preview a confidence-graded migration before any SQL runs.',
+        lead: 'See exactly how your code schema has drifted from the live database — then generate the migration that reconciles them, with destructive changes flagged and gated.',
+        paragraphs: [
+            'The ORM Cockpit links a project folder, detects whether it uses Drizzle or Prisma, and parses the schema directly — no codegen, no generated client, and no Node runtime to manage. It then introspects the database you are connected to and compares the two, table by table and column by column.',
+            'Every change in the drift is graded by confidence. Adding a nullable column or an index is safe; a lossy type change is flagged for review; dropping a table or column is marked destructive. You can read the whole diff before deciding anything.',
+            'When you generate a migration, Dora emits dialect-correct SQL for Postgres, MySQL, or SQLite, with destructive operations commented out behind an explicit opt-in. Nothing is applied from the cockpit: the SQL hands off to the SQL console, where Dora’s normal production guardrails apply.'
+        ],
+        highlights: [
+            'Link a Drizzle or Prisma project — schema parsed in place, no codegen',
+            'Live-database introspection diffed against your code schema',
+            'Every change graded safe, review, or destructive',
+            'Dialect-correct migration SQL for Postgres, MySQL & SQLite',
+            'Destructive operations commented out and gated behind opt-in',
+            'Preview-only — generated SQL hands off to the SQL console'
+        ],
+        keywords: [
+            'drizzle migration tool',
+            'prisma migration preview',
+            'schema diff tool',
+            'database drift detection',
+            'orm schema sync',
+            'drizzle vs database diff',
+            'prisma db pull alternative',
+            'generate migration sql',
+            'schema migration gui'
+        ]
+    },
+    {
         slug: 'theming',
         demo: 'theming',
         menuLabel: 'Theming',
@@ -346,7 +391,9 @@ export const FEATURES: TFeatureConfig[] = [
     }
 ]
 
-const featureBySlug = new Map(FEATURES.map((feature) => [feature.slug, feature]))
+const featureBySlug = new Map(
+    FEATURES.map((feature) => [feature.slug, feature])
+)
 
 export function getFeature(slug: string): TFeatureConfig | undefined {
     return featureBySlug.get(slug as TFeatureSlug)

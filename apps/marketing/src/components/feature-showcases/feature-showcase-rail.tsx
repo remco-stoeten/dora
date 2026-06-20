@@ -3,6 +3,7 @@
 import {
     Braces,
     Container,
+    GitCompare,
     Network,
     SquareTerminal,
     Table2,
@@ -19,6 +20,7 @@ type TRailId =
     | 'docker'
     | 'drizzle'
     | 'prisma'
+    | 'orm-cockpit'
 
 const RAIL_ITEMS: { id: TRailId; icon: LucideIcon; label: string }[] = [
     { id: 'sql-console', icon: SquareTerminal, label: 'SQL Console' },
@@ -26,7 +28,8 @@ const RAIL_ITEMS: { id: TRailId; icon: LucideIcon; label: string }[] = [
     { id: 'schema', icon: Network, label: 'Schema' },
     { id: 'docker', icon: Container, label: 'Docker Manager' },
     { id: 'drizzle', icon: Terminal, label: 'Drizzle Runner' },
-    { id: 'prisma', icon: Braces, label: 'Prisma Runner' }
+    { id: 'prisma', icon: Braces, label: 'Prisma Runner' },
+    { id: 'orm-cockpit', icon: GitCompare, label: 'ORM Cockpit' }
 ]
 
 const DEMO_ACTIVE: Record<TFeatureDemo, TRailId> = {
@@ -38,7 +41,8 @@ const DEMO_ACTIVE: Record<TFeatureDemo, TRailId> = {
     'ai-assistant': 'sql-console',
     'drizzle-runner': 'drizzle',
     'prisma-runner': 'prisma',
-    'theming': 'data-viewer'
+    'orm-cockpit': 'orm-cockpit',
+    theming: 'data-viewer'
 }
 
 function Tip({ label }: { label: string }) {

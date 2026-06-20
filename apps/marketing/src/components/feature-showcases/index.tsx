@@ -5,6 +5,7 @@ import { DockerContainersShowcase } from '@/components/feature-showcases/docker-
 import { DrizzleRunnerShowcase } from '@/components/feature-showcases/drizzle-runner-showcase'
 import { FeatureShowcaseShell } from '@/components/feature-showcases/feature-showcase-shell'
 import { MultiDatabaseShowcase } from '@/components/feature-showcases/multi-database-showcase'
+import { OrmCockpitShowcase } from '@/components/feature-showcases/orm-cockpit-showcase'
 import { PrismaRunnerShowcase } from '@/components/feature-showcases/prisma-runner-showcase'
 import { QueryHistoryShowcase } from '@/components/feature-showcases/query-history-showcase'
 import { SshTunnelingShowcase } from '@/components/feature-showcases/ssh-tunneling-showcase'
@@ -34,6 +35,8 @@ function ShowcaseContent({ demo }: { demo: TFeatureDemo }) {
             return <DrizzleRunnerShowcase />
         case 'prisma-runner':
             return <PrismaRunnerShowcase />
+        case 'orm-cockpit':
+            return <OrmCockpitShowcase />
         case 'theming':
             return <ThemingShowcase />
     }
