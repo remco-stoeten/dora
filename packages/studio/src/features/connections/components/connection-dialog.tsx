@@ -31,6 +31,7 @@ import { SupabaseConnectFlow } from '@studio/features/integrations/supabase/supa
 import { TursoConnectFlow } from '@studio/features/integrations/turso/turso-connect-flow'
 import { NeonConnectFlow } from '@studio/features/integrations/neon/neon-connect-flow'
 import { PlanetscaleConnectFlow } from '@studio/features/integrations/planetscale/planetscale-connect-flow'
+import { VercelConnectFlow } from '@studio/features/integrations/vercel/vercel-connect-flow'
 import { Connection, DatabaseType, SshAuthMethod, SshTunnelConfig } from '../types'
 import { getSourceCaps } from '../source-caps'
 import {
@@ -110,11 +111,12 @@ export function ConnectionDialog({
 	// resolve to an engine connection but live outside formData.type. When one is
 	// active, the standard form is swapped for that provider's connect flow.
 	const [selectedIntegration, setSelectedIntegration] = useState<
-		'supabase' | 'turso' | 'neon' | 'planetscale' | null
+		'supabase' | 'turso' | 'neon' | 'planetscale' | 'vercel' | null
 	>(null)
 	const supabaseSelected = selectedIntegration === 'supabase'
 	const tursoSelected = selectedIntegration === 'turso'
 	const planetscaleSelected = selectedIntegration === 'planetscale'
+	const vercelSelected = selectedIntegration === 'vercel'
 	const integrationSelected = selectedIntegration !== null
 	const [showDesktopOnlyHint, setShowDesktopOnlyHint] = useState(false)
 	const isTauri = useIsTauri()
@@ -329,7 +331,13 @@ export function ConnectionDialog({
 			void onOpenDataFiles?.()
 			return
 		}
-		if (key === 'supabase' || key === 'turso' || key === 'neon' || key === 'planetscale') {
+		if (
+			key === 'supabase' ||
+			key === 'turso' ||
+			key === 'neon' ||
+			key === 'planetscale' ||
+			key === 'vercel'
+		) {
 			setSelectedIntegration(key)
 			setTestStatus('idle')
 			return
@@ -749,6 +757,7 @@ export function ConnectionDialog({
 							showTurso={!initialValues}
 							showNeon={!initialValues}
 							showPlanetscale={!initialValues}
+							showVercel={!initialValues}
 							showFiles={!!onOpenDataFiles}
 							compact={integrationSelected}
 						/>
@@ -776,6 +785,13 @@ export function ConnectionDialog({
 								/>
 							) : planetscaleSelected ? (
 								<PlanetscaleConnectFlow
+									onComplete={function (connection) {
+										onSave(connection)
+										onOpenChange(false)
+									}}
+								/>
+							) : vercelSelected ? (
+								<VercelConnectFlow
 									onComplete={function (connection) {
 										onSave(connection)
 										onOpenChange(false)

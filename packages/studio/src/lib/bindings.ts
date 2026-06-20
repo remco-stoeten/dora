@@ -79,6 +79,30 @@ async probeDatabaseFile(path: string) : Promise<Result<DatabaseFileKind, { kind:
     else return { status: "error", error: e  as any };
 }
 },
+async pickFolder() : Promise<Result<string | null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pick_folder") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async readProjectFile(path: string) : Promise<Result<string, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_project_file", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listDir(path: string) : Promise<Result<string[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_dir", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async addConnection(name: string, databaseInfo: DatabaseInfo, color: number | null) : Promise<Result<ConnectionInfo, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("add_connection", { name, databaseInfo, color }) };
@@ -384,6 +408,18 @@ async neonListDatabases() : Promise<Result<NeonDatabase[], { kind: string; detai
 }
 },
 /**
+ * Lists every branch of a Neon project so the user can connect to a non-primary
+ * branch (e.g. a preview branch) instead of always landing on the default one.
+ */
+async neonListBranches(projectId: string) : Promise<Result<NeonBranch[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_list_branches", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * The Neon account the stored key belongs to, so the UI can show which account
  * is currently connected.
  */
@@ -475,6 +511,52 @@ async planetscaleDisconnect() : Promise<Result<null, { kind: string; detail: str
 },
 async planetscaleIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("planetscale_is_connected");
+},
+/**
+ * Validates and stores a Vercel access token (encrypted on-device).
+ */
+async vercelSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Lists connectable Vercel Postgres stores (one per project), attaching a
+ * connection string when the API can read it.
+ */
+async vercelListStores() : Promise<Result<VercelStore[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_list_stores") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Vercel account the stored token belongs to, so the UI can show which
+ * account is currently connected.
+ */
+async vercelAccount() : Promise<Result<VercelAccount, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async vercelDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async vercelIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("vercel_is_connected");
 },
 async setConnectionPin(connectionId: string, pin: string | null) : Promise<Result<null, { kind: string; detail: string }>> {
     try {
@@ -1367,6 +1449,7 @@ export type SupabaseOrganization = { id: string; name: string }
 export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
 export type TursoOrganization = { slug: string; name?: string }
 export type NeonAccount = { email?: string; name?: string }
+export type NeonBranch = { id: string; name: string; isDefault: boolean }
 export type NeonDatabase = { projectId: string; projectName: string; branchId: string; databaseName: string; roleName: string }
 /**
  * A branch of a PlanetScale database. `is_default` marks the database's default
@@ -1390,6 +1473,23 @@ export type PlanetscaleOrganization = { name: string }
  * immediately to assemble a connection string — the user never copies a secret.
  */
 export type PlanetscalePassword = { username: string; host: string; password: string }
+export type VercelAccount = { username?: string; email?: string; name?: string }
+/**
+ * A selectable Vercel Postgres "store" (one per project that has a Postgres
+ * connection string in its environment). `connection_string` is `None` when the
+ * value couldn't be read (e.g. the env var is marked `sensitive`), in which case
+ * the connect-flow asks the user to paste the `POSTGRES_URL` instead.
+ */
+export type VercelStore = { projectId: string; projectName: string;
+/**
+ * The env key the connection string came from (e.g. `POSTGRES_URL`), shown
+ * in the picker so the user knows which credential they're connecting with.
+ */
+envKey?: string | null;
+/**
+ * The decrypted connection string, when the API returned a readable value.
+ */
+connectionString?: string | null }
 export type StatementInfo = { returns_values: boolean; status: QueryStatus; first_page: JsonValue; affected_rows: number | null; page_count: number; rows_received: number; error: string | null }
 export type TAURI_CHANNEL<TSend> = null
 export type TableInfo = { name: string; schema: string; columns: ColumnInfo[]; 

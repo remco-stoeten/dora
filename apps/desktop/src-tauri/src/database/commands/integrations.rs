@@ -2,12 +2,13 @@ use tauri::State;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::{
-    integrations::neon::{self, NeonAccount, NeonDatabase},
+    integrations::neon::{self, NeonAccount, NeonBranch, NeonDatabase},
     integrations::supabase::{self, SupabaseOrganization, SupabaseProject},
     integrations::planetscale::{
         self, PlanetscaleBranch, PlanetscaleDatabase, PlanetscaleOrganization, PlanetscalePassword,
     },
     integrations::turso::{self, TursoDatabase, TursoOrganization},
+    integrations::vercel::{self, VercelAccount, VercelStore},
     AppState, Error,
 };
 
@@ -209,6 +210,17 @@ pub async fn neon_list_databases(
     neon::list_databases(&state.storage).await
 }
 
+/// Lists every branch of a Neon project so the user can connect to a non-primary
+/// branch (e.g. a preview branch) instead of always landing on the default one.
+#[tauri::command]
+#[specta::specta]
+pub async fn neon_list_branches(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<NeonBranch>, Error> {
+    neon::list_branches(&state.storage, &project_id).await
+}
+
 /// The Neon account the stored key belongs to, so the UI can show which account
 /// is currently connected.
 #[tauri::command]
@@ -317,4 +329,43 @@ pub fn planetscale_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
 #[specta::specta]
 pub fn planetscale_is_connected(state: State<'_, AppState>) -> bool {
     planetscale::is_connected(&state.storage)
+}
+
+// ---------------------------------------------------------------------------
+// Vercel
+// ---------------------------------------------------------------------------
+
+/// Validates and stores a Vercel access token (encrypted on-device).
+#[tauri::command]
+#[specta::specta]
+pub async fn vercel_save_token(token: String, state: State<'_, AppState>) -> Result<(), Error> {
+    vercel::save_token(&state.storage, token).await
+}
+
+/// Lists connectable Vercel Postgres stores (one per project), attaching a
+/// connection string when the API can read it.
+#[tauri::command]
+#[specta::specta]
+pub async fn vercel_list_stores(state: State<'_, AppState>) -> Result<Vec<VercelStore>, Error> {
+    vercel::list_stores(&state.storage).await
+}
+
+/// The Vercel account the stored token belongs to, so the UI can show which
+/// account is currently connected.
+#[tauri::command]
+#[specta::specta]
+pub async fn vercel_account(state: State<'_, AppState>) -> Result<VercelAccount, Error> {
+    vercel::current_account(&state.storage).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn vercel_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
+    vercel::disconnect(&state.storage)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn vercel_is_connected(state: State<'_, AppState>) -> bool {
+    vercel::is_connected(&state.storage)
 }

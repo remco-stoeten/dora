@@ -79,6 +79,43 @@ async probeDatabaseFile(path: string) : Promise<Result<DatabaseFileKind, { kind:
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Open a folder picker and return the chosen directory path. Used by the ORM
+ * cockpit to let the user link a project folder.
+ */
+async pickFolder() : Promise<Result<string | null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pick_folder") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read a project schema/config file (Drizzle `.ts`, Prisma `.prisma`, …) as
+ * UTF-8 text, size-capped. Feeds the ORM detection + parsers.
+ */
+async readProjectFile(path: string) : Promise<Result<string, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("read_project_file", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Shallowly list a directory's entries as absolute paths. ORM detection in TS
+ * filters these by extension / known names (e.g. a multi-file Drizzle
+ * `schema/` dir or Prisma `prisma/schema/` dir).
+ */
+async listDir(path: string) : Promise<Result<string[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_dir", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async addConnection(name: string, databaseInfo: DatabaseInfo, color: number | null) : Promise<Result<ConnectionInfo, { kind: string; detail: string }>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("add_connection", { name, databaseInfo, color }) };
@@ -407,6 +444,18 @@ async neonListDatabases() : Promise<Result<NeonDatabase[], { kind: string; detai
 }
 },
 /**
+ * Lists every branch of a Neon project so the user can connect to a non-primary
+ * branch (e.g. a preview branch) instead of always landing on the default one.
+ */
+async neonListBranches(projectId: string) : Promise<Result<NeonBranch[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_list_branches", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * The Neon account the stored key belongs to, so the UI can show which account
  * is currently connected.
  */
@@ -502,6 +551,52 @@ async planetscaleDisconnect() : Promise<Result<null, { kind: string; detail: str
 },
 async planetscaleIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("planetscale_is_connected");
+},
+/**
+ * Validates and stores a Vercel access token (encrypted on-device).
+ */
+async vercelSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Lists connectable Vercel Postgres stores (one per project), attaching a
+ * connection string when the API can read it.
+ */
+async vercelListStores() : Promise<Result<VercelStore[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_list_stores") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Vercel account the stored token belongs to, so the UI can show which
+ * account is currently connected.
+ */
+async vercelAccount() : Promise<Result<VercelAccount, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async vercelDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("vercel_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async vercelIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("vercel_is_connected");
 },
 async setConnectionPin(connectionId: string, pin: string | null) : Promise<Result<null, { kind: string; detail: string }>> {
     try {
@@ -1365,6 +1460,12 @@ export type LiveMonitorSession = { monitorId: string; eventName: string }
 export type MutationResult = { success: boolean; affected_rows: number; message: string | null }
 export type NeonAccount = { email?: string; name?: string }
 /**
+ * A selectable Neon branch within a project. Surfaced so the user can connect
+ * to a non-primary branch (e.g. a preview branch) instead of always landing on
+ * the default one. `is_default` lets the UI preselect the primary branch.
+ */
+export type NeonBranch = { id: string; name: string; isDefault: boolean }
+/**
  * A selectable Neon database, flattened across projects and their default
  * branch. The ids/names are carried so we can mint a pooled connection URI for
  * it later without re-discovering anything.
@@ -1445,6 +1546,23 @@ export type TruncateResult = { success: boolean; affected_rows: number; tables_t
  */
 export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
 export type TursoOrganization = { slug: string; name?: string }
+export type VercelAccount = { username?: string; email?: string; name?: string }
+/**
+ * A selectable Vercel Postgres "store" (one per project that has a Postgres
+ * connection string in its environment). `connection_string` is `None` when the
+ * value couldn't be read (e.g. the env var is marked `sensitive`), in which case
+ * the connect-flow asks the user to paste the `POSTGRES_URL` instead.
+ */
+export type VercelStore = { projectId: string; projectName: string; 
+/**
+ * The env key the connection string came from (e.g. `POSTGRES_URL`), shown
+ * in the picker so the user knows which credential they're connecting with.
+ */
+envKey?: string | null; 
+/**
+ * The decrypted connection string, when the API returned a readable value.
+ */
+connectionString?: string | null }
 
 /** tauri-specta globals **/
 
