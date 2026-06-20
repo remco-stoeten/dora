@@ -17,7 +17,7 @@
 
 Dora is a cross-platform database workbench built with Tauri and Rust. It ships as a **~10 MB binary** — versus the 100+ MB you get from Electron-based alternatives — and covers the full day-to-day loop without asking you to leave the app.
 
-Connect to PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, libSQL/Turso, and DuckDB. Open CSV, JSON, Parquet, and NDJSON as queryable data files. One-click presets for 10+ hosted providers (Supabase, Neon, PlanetScale, Fly.io, Railway, and more). Browse data, run SQL in a Monaco editor, generate SQL with AI, write ORM queries with Drizzle or Prisma, inspect schemas as an ER diagram, and manage local Docker databases — all keyboard-first.
+Connect to PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, libSQL/Turso, Cloudflare D1, and DuckDB. Open CSV, JSON, Parquet, and NDJSON as queryable data files. Sign in to a provider account — Supabase, Neon, Turso, PlanetScale, Vercel Postgres, Xata, or Cloudflare D1 — and pick a database without hunting for a connection string, or paste a string for any of 15+ auto-recognized hosted providers. Browse data, run SQL in a Monaco editor, generate SQL with AI, write ORM queries with Drizzle or Prisma, compare a Drizzle/Prisma schema against the live database and preview the migration, inspect schemas as an ER diagram, and manage local Docker databases — all keyboard-first.
 
 ## Install
 
@@ -64,13 +64,30 @@ sudo snap install dora
 | libSQL / Turso | Full support — local and remote |
 | MariaDB | Full support — MariaDB-aware dialect; native `UUID` / `INET4` / `INET6` types |
 | CockroachDB | Full support — CockroachDB-aware schema introspection, live monitor auto-tuned |
+| Cloudflare D1 | Full support — connects over Cloudflare's HTTP query API, no local file needed |
 | Data files (CSV / TSV / Parquet / JSON / NDJSON) | DuckDB-backed sessions — query, export, cross-file JOINs; save as DuckDB to edit |
 
-**Hosted & serverless providers** are auto-recognized from the connection string with one-click presets — correct engine, dialect, and SSL applied for you:
+### Connect a provider account
 
-Neon · Supabase · PlanetScale · Fly.io · Railway · Render · Vercel Postgres · Aiven · DigitalOcean · Crunchy Bridge · Timescale · AWS RDS/Aurora · Azure Database · Google Cloud SQL · CockroachDB Cloud · TiDB Cloud · Yugabyte
+Skip the connection string entirely. Sign in to a provider, and Dora lists your databases and mints the credential for you — the correct engine, dialect, and SSL are applied automatically.
 
-They all speak standard Postgres/MySQL/libSQL — no special integration to maintain, just paste the string. See [docs/architecture/data-sources.md](docs/architecture/data-sources.md).
+| Provider | How you connect |
+|---|---|
+| Supabase | Connect your account (OAuth), pick a project |
+| Neon | Add an API key, pick a project — branch-aware (choose a branch when a project has more than one) |
+| Turso | Add a token (or mint one with the Turso CLI), pick a database |
+| PlanetScale | Add a service token, pick a branch |
+| Vercel Postgres | Add a token, pick a store |
+| Xata | Add a key, pick a database |
+| Cloudflare D1 | Add an API token, pick a database |
+
+### Connection-string presets
+
+Any other **hosted or serverless provider** is auto-recognized from its connection string — correct engine, dialect, and SSL applied for you, no native integration required:
+
+Fly.io · Railway · Render · Aiven · DigitalOcean · Crunchy Bridge · Timescale · AWS RDS/Aurora · Azure Database · Google Cloud SQL · CockroachDB Cloud · TiDB Cloud · Yugabyte
+
+They all speak standard Postgres/MySQL/libSQL — just paste the string. See [docs/architecture/data-sources.md](docs/architecture/data-sources.md).
 
 ## Features
 
@@ -91,6 +108,10 @@ Press `⌘I` / `Ctrl+I`, describe what you want, get schema-grounded SQL back. H
 **Drizzle runner** — write and run Drizzle ORM queries with schema-aware autocomplete and a SQL preview before execution.
 
 **Prisma runner** — write and execute Prisma Client queries natively inside Dora, with schema-aware autocomplete. No separate script file or `ts-node` needed.
+
+### ORM cockpit
+
+Link a project folder, and Dora detects your Drizzle or Prisma schema, parses it, and compares it against the live database. The **drift view** groups every difference by table and flags each change as safe, review, or destructive. From there it generates a reconciling migration — dialect-correct `up`/`down` SQL — with destructive and review statements gated behind explicit opt-in toggles. The preview is read-only: hand the SQL off to the SQL console with one click, where the normal execution guardrails apply. Nothing is run behind your back.
 
 ### Query history
 

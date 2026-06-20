@@ -1,0 +1,62 @@
+---
+title: ORM Cockpit
+description: Link a Drizzle or Prisma project, see how its schema has drifted from the live database, and preview a migration before you run it.
+---
+
+# ORM Cockpit
+
+The ORM Cockpit connects your code to your running database. Link a project
+folder, and Dora reads its Drizzle or Prisma schema, compares it against the
+live database, and shows you exactly where the two have drifted apart. When
+there is drift, Dora generates a dialect-correct migration you can review before
+anything touches the database.
+
+<Callout type='info'>The cockpit is read-first. It never alters your database on its own — it shows drift and generates SQL, and you decide what to run.</Callout>
+
+## What it does
+
+1. **Link a project folder.** Point Dora at the root of a project that uses
+   Drizzle or Prisma.
+2. **Detect the ORM and parse the schema.** Dora finds the Drizzle schema
+   (`drizzle.config.*` / schema files) or Prisma schema (`prisma/schema.prisma`)
+   and parses it into an internal schema model.
+3. **Diff against the live database.** Dora introspects the connected database's
+   real schema and compares it to what your code declares.
+4. **Preview a migration.** For any drift, Dora generates the SQL to bring the
+   database in line with your schema, written for the connected database's
+   dialect.
+
+## Reading the drift
+
+Drift is grouped per table so you can scan it quickly. Each change is classified
+by how risky it is to apply:
+
+| Classification | Meaning | Examples |
+| --- | --- | --- |
+| **Safe** | Additive, non-destructive | Add a new table, add a nullable column |
+| **Review** | Could affect existing data | Change a column type, add a constraint |
+| **Destructive** | Removes or rewrites data | Drop a column, drop a table |
+
+This lets you see at a glance whether a migration is a routine additive change or
+something that needs care.
+
+## Previewing and running a migration
+
+When you open the migration preview, Dora shows the generated SQL statements in
+order. Safe statements are ready to go. **Review and destructive statements are
+gated behind an explicit opt-in** — you have to consciously include them before
+they become part of the SQL handed to the query console.
+
+From there you run the SQL in Dora's console like any other query, with the
+generated statements in front of you the whole time. Nothing is applied silently.
+
+<Callout type='warn'>Destructive statements (dropping columns or tables) permanently remove data. Review the generated SQL and take a backup before running anything in the destructive group.</Callout>
+
+## Supported ORMs
+
+- **Drizzle** — schema files and `drizzle.config.*`
+- **Prisma** — `prisma/schema.prisma`
+
+If you write type-safe queries with these ORMs, see the
+[ORM Runners](/docs/guides/orm-runners) guide for running Drizzle and Prisma
+Client queries directly inside Dora.

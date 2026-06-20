@@ -9,12 +9,16 @@ export type TGuideConfig = {
     slug: string
     provider: string
     logo: string
-    engine: 'PostgreSQL' | 'MySQL' | 'libSQL'
+    engine: 'PostgreSQL' | 'MySQL' | 'libSQL' | 'SQLite'
     title: string
     description: string
     lead: string
     keywords: string[]
     connectionString: string
+    // Overrides the "{engine} connection string" label above the credentials
+    // block — used for providers that connect via an API token rather than a
+    // libpq-style connection string (e.g. Cloudflare D1).
+    connectionLabel?: string
     intro: string[]
     steps: TGuideStep[]
     notes: string[]
@@ -169,11 +173,10 @@ export const GUIDES: TGuideConfig[] = [
             'Install the Turso CLI from the Turso docs if you do not have it; the dashboard can also surface the database URL.'
         ]
     },
-    // TODO: add railway logo at /providers/railway.svg
     {
         slug: 'railway',
         provider: 'Railway',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/railway.svg',
         engine: 'PostgreSQL',
         title: 'Connect Railway to Dora',
         description:
@@ -216,11 +219,10 @@ export const GUIDES: TGuideConfig[] = [
             'If you rotate the database password in Railway, update the connection string in Dora to match.'
         ]
     },
-    // TODO: add fly logo at /providers/fly.svg
     {
         slug: 'fly',
         provider: 'Fly.io',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/fly.svg',
         engine: 'PostgreSQL',
         title: 'Connect Fly.io Postgres to Dora',
         description:
@@ -267,11 +269,10 @@ export const GUIDES: TGuideConfig[] = [
             'For production databases, fly proxy is safer than opening public ports — it forwards traffic through an authenticated SSH channel.'
         ]
     },
-    // TODO: add aiven logo at /providers/aiven.svg
     {
         slug: 'aiven',
         provider: 'Aiven',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/aiven.svg',
         engine: 'PostgreSQL',
         title: 'Connect Aiven to Dora',
         description:
@@ -314,11 +315,10 @@ export const GUIDES: TGuideConfig[] = [
             'If you use Aiven\'s connection pooler (PgBouncer), the Service URI changes — find the pooler-specific URI under Advanced configuration in the Aiven console.'
         ]
     },
-    // TODO: add render logo at /providers/render.svg
     {
         slug: 'render',
         provider: 'Render',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/render.svg',
         engine: 'PostgreSQL',
         title: 'Connect Render to Dora',
         description:
@@ -361,11 +361,10 @@ export const GUIDES: TGuideConfig[] = [
             'Render enables SSL on Postgres connections. Dora connects securely without any extra SSL configuration.'
         ]
     },
-    // TODO: add digitalocean logo at /providers/digitalocean.svg
     {
         slug: 'digitalocean',
         provider: 'DigitalOcean',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/digitalocean.svg',
         engine: 'PostgreSQL',
         title: 'Connect DigitalOcean Managed Postgres to Dora',
         description:
@@ -454,11 +453,10 @@ export const GUIDES: TGuideConfig[] = [
             'Each PlanetScale branch has its own credentials. Create a separate password per branch and add each as its own connection in Dora.'
         ]
     },
-    // TODO: add aws-rds logo at /providers/aws-rds.svg
     {
         slug: 'aws-rds',
         provider: 'AWS RDS',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/aws-rds.svg',
         engine: 'PostgreSQL',
         title: 'Connect AWS RDS to Dora',
         description:
@@ -547,11 +545,10 @@ export const GUIDES: TGuideConfig[] = [
             'Dora has full CockroachDB dialect support — introspection, type mapping, and SQL syntax all account for CockroachDB\'s differences from vanilla Postgres.'
         ]
     },
-    // TODO: add tidb logo at /providers/tidb.svg
     {
         slug: 'tidb',
         provider: 'TiDB Cloud',
-        logo: '/providers/mysql.svg',
+        logo: '/providers/tidb.svg',
         engine: 'MySQL',
         title: 'Connect TiDB Cloud to Dora',
         description:
@@ -594,11 +591,10 @@ export const GUIDES: TGuideConfig[] = [
             'TiDB Serverless and TiDB Dedicated both use the same connection method. The port is 4000 by default for TiDB Cloud.'
         ]
     },
-    // TODO: add vercel-postgres logo at /providers/vercel-postgres.svg
     {
         slug: 'vercel-postgres',
         provider: 'Vercel Postgres',
-        logo: '/providers/neon.svg',
+        logo: '/providers/vercel.svg',
         engine: 'PostgreSQL',
         title: 'Connect Vercel Postgres to Dora',
         description:
@@ -641,11 +637,103 @@ export const GUIDES: TGuideConfig[] = [
             'Since Vercel Postgres runs on Neon, the Neon console (accessible from the Vercel Storage page) gives additional visibility into branches and usage.'
         ]
     },
-    // TODO: add crunchy-bridge logo at /providers/crunchy-bridge.svg
+    {
+        slug: 'xata',
+        provider: 'Xata',
+        logo: '/providers/xata.svg',
+        engine: 'PostgreSQL',
+        title: 'Connect Xata to Dora',
+        description:
+            'Connect a Xata database to Dora, the desktop database GUI. Xata is Postgres under the hood — use the direct Postgres connection string from your workspace.',
+        lead: 'Xata exposes a standard Postgres endpoint. Copy the connection string from your workspace settings and paste it into Dora.',
+        keywords: [
+            'xata gui',
+            'xata desktop client',
+            'xata postgres client',
+            'connect xata database',
+            'xata sql client'
+        ],
+        connectionString:
+            'postgresql://[WORKSPACE]:[API_KEY]@[REGION].sql.xata.sh/[DBNAME]:[BRANCH]?sslmode=require',
+        intro: [
+            'Xata is built on Postgres and exposes a direct Postgres wire endpoint, so Dora connects to it like any other Postgres database — no Xata SDK required.',
+            'Your API key acts as the password in the connection string, and the database and branch are part of the host path. Keep the key secret; Dora stores it encrypted on your device.'
+        ],
+        steps: [
+            {
+                title: 'Enable the Postgres endpoint in Xata',
+                body: 'In the Xata web app, open your database settings and make sure the direct Postgres (wire protocol) endpoint is enabled for the branch you want to connect to.'
+            },
+            {
+                title: 'Create an API key',
+                body: 'Under Account Settings, generate an API key. This key is used in place of a password in the connection string.'
+            },
+            {
+                title: 'Assemble the connection string',
+                body: 'Copy the Postgres connection string shown in your workspace settings. It includes your workspace, region, database, and branch, and ends with sslmode=require.'
+            },
+            {
+                title: 'Add the connection in Dora',
+                body: 'Create a new connection in Dora, paste the string, then Test and Connect. Your Xata tables load into the sidebar.'
+            }
+        ],
+        notes: [
+            'Xata requires SSL. Keep sslmode=require in the connection string.',
+            'The branch is part of the host path (for example main). To inspect a different branch, add a separate connection in Dora pointing at that branch.',
+            'Treat the API key like a password — it grants access to your data. Disconnect in Dora to remove the stored credentials.'
+        ]
+    },
+    {
+        slug: 'cloudflare-d1',
+        provider: 'Cloudflare D1',
+        logo: '/providers/cloudflare-d1.svg',
+        engine: 'SQLite',
+        title: 'Connect Cloudflare D1 to Dora',
+        description:
+            'Connect a Cloudflare D1 database to Dora, the desktop database GUI. D1 has no connection string — Dora talks to its HTTP API directly with an API token, then lists your databases.',
+        lead: 'D1 is SQLite at the edge with no local file and no connection string. Create a scoped API token, paste it into Dora, and pick a database from your account.',
+        keywords: [
+            'cloudflare d1 gui',
+            'cloudflare d1 desktop client',
+            'd1 sqlite client',
+            'connect cloudflare d1',
+            'd1 database viewer'
+        ],
+        connectionString:
+            'Account ID:   [CLOUDFLARE_ACCOUNT_ID]\nAPI token:    [D1_API_TOKEN]   (D1 read/write)\nDatabase:     picked from your account inside Dora',
+        connectionLabel: 'Cloudflare D1 credentials',
+        intro: [
+            'Cloudflare D1 is SQLite running on Cloudflare\'s edge. There is no local database file and no libpq connection string — D1 is reached over an HTTP API. Dora ships a native HTTP query engine that speaks that API directly, so you connect with an account ID and a scoped API token instead of a URL.',
+            'Once authorized, Dora lists the D1 databases in your account and you pick one. The token is encrypted and stored only on your machine, and queries run against Cloudflare\'s API, not through Dora\'s servers.'
+        ],
+        steps: [
+            {
+                title: 'Find your account ID',
+                body: 'In the Cloudflare dashboard, open Workers & Pages. Your Account ID is shown in the right-hand sidebar. Copy it.'
+            },
+            {
+                title: 'Create a scoped API token',
+                body: 'Go to My Profile → API Tokens → Create Token. Use a custom token with the "D1" permission set to Read and Write for the account that owns your databases.'
+            },
+            {
+                title: 'Choose Cloudflare D1 in Dora',
+                body: 'In Dora, create a new connection and pick Cloudflare D1 from the provider grid. Paste your account ID and API token.'
+            },
+            {
+                title: 'Pick a database and connect',
+                body: 'Dora calls the D1 API and lists the databases in your account. Select one and connect — its tables load into the sidebar like any other database.'
+            }
+        ],
+        notes: [
+            'D1 has no connection string and no SSL toggle — all traffic goes over HTTPS to Cloudflare\'s API automatically.',
+            'The API token only needs the D1 permission. Scope it to read-only if you want a safe, browse-only connection.',
+            'Because D1 is SQLite, expect SQLite types and SQL dialect rather than Postgres or MySQL behavior.'
+        ]
+    },
     {
         slug: 'crunchy-bridge',
         provider: 'Crunchy Bridge',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/crunchy-bridge.svg',
         engine: 'PostgreSQL',
         title: 'Connect Crunchy Bridge to Dora',
         description:
@@ -688,11 +776,10 @@ export const GUIDES: TGuideConfig[] = [
             'Crunchy Bridge supports PostGIS and other Postgres extensions. Dora\'s schema browser will reflect these extra types and functions.'
         ]
     },
-    // TODO: add timescale logo at /providers/timescale.svg
     {
         slug: 'timescale',
         provider: 'Timescale Cloud',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/timescale.svg',
         engine: 'PostgreSQL',
         title: 'Connect Timescale Cloud to Dora',
         description:
@@ -735,11 +822,10 @@ export const GUIDES: TGuideConfig[] = [
             'The Timescale console also provides a built-in SQL editor, but Dora gives you a richer desktop experience with schema diagrams and query history.'
         ]
     },
-    // TODO: add azure logo at /providers/azure.svg
     {
         slug: 'azure',
         provider: 'Azure Database',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/azure.svg',
         engine: 'PostgreSQL',
         title: 'Connect Azure Database for PostgreSQL to Dora',
         description:
@@ -786,11 +872,10 @@ export const GUIDES: TGuideConfig[] = [
             'Azure also offers Azure Database for MySQL. Add a MySQL connection in Dora using the .mysql.database.azure.com endpoint for MySQL workloads.'
         ]
     },
-    // TODO: add google-cloud-sql logo at /providers/google-cloud-sql.svg
     {
         slug: 'google-cloud-sql',
         provider: 'Google Cloud SQL',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/google-cloud-sql.svg',
         engine: 'PostgreSQL',
         title: 'Connect Google Cloud SQL to Dora',
         description:
@@ -837,11 +922,10 @@ export const GUIDES: TGuideConfig[] = [
             'Cloud SQL also supports private IP access via VPC peering. For that path, configure Dora\'s SSH tunnel to jump through a bastion host inside the same VPC.'
         ]
     },
-    // TODO: add yugabyte logo at /providers/yugabyte.svg
     {
         slug: 'yugabyte',
         provider: 'Yugabyte',
-        logo: '/providers/postgresql.svg',
+        logo: '/providers/yugabyte.svg',
         engine: 'PostgreSQL',
         title: 'Connect YugabyteDB to Dora',
         description:

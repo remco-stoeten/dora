@@ -1,6 +1,8 @@
 # Spec 06: Schema + Data Diff Between Connections
 
-Status: `[ ]`
+Status: `[-]` — schema-diff engine + DDL generation shipped (schema-file ↔ live DB); connection-to-connection diff and Phase 2 data diff still open.
+
+> **Update (2026-06-20).** The diff engine and migration generation from Phase 1 shipped as part of the **ORM cockpit** (#151–#155): a confidence-aware `SchemaDiff` plus a `SchemaDiff → up/down DDL` generator (dialect-correct, destructive/review statements gated behind opt-in), surfaced as a per-table drift view and a read-only migration preview. **Caveat:** the cockpit diffs a parsed Drizzle/Prisma **schema file against the live database**, not **two live connections** as specced here — the connection-vs-connection picker and the **Phase 2 data diff** (row-level, PK-keyed) are still unbuilt. The reusable pieces live in `packages/studio/src/features/orm-cockpit/` (`diff/`, `migration/generate-sql.ts`).
 
 ## Why
 

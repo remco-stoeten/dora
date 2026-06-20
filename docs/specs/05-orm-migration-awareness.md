@@ -1,6 +1,10 @@
 # Spec 05: ORM Migration Awareness + Prisma Runner
 
-Status: `[ ]`
+Status: `[-]` — Track B shipped; Track A delivered via a different approach.
+
+> **Update (2026-06-20).**
+> - **Track B (Prisma runner): `[x]` shipped (#137).** Write and execute Prisma Client queries natively with schema-aware completions and a SQL preview, alongside the Drizzle runner.
+> - **Track A (migration awareness): superseded.** The bookkeeping-table panel described below (read `__drizzle_migrations` / `_prisma_migrations`, show applied/pending/missing, copy-CLI affordance, fs-watch) was **not** built. The drift use-case instead ships as the **ORM cockpit** (#151–#155): link a project folder → parse the Drizzle/Prisma schema → diff it against the live database (full schema introspection) → preview a generated migration. So Track A's *goal* is served, but via Spec 06's schema-diff mechanism rather than migration-bookkeeping comparison. An applied-vs-pending bookkeeping panel is still unbuilt if it's wanted later.
 
 ## Why
 

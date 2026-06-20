@@ -56,9 +56,10 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                             })}
                         </div>
 
-                        <div className="mt-8 border border-[#2b252c] bg-background/30 p-4">
+                        <div className="mt-8 border border-line bg-background/30 p-4">
                             <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                                {guide.engine} connection string
+                                {guide.connectionLabel ??
+                                    `${guide.engine} connection string`}
                             </p>
                             <code className="block overflow-x-auto whitespace-pre font-mono text-[13px] text-[#c4bcc4]">
                                 {guide.connectionString}
@@ -80,10 +81,10 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                                     return (
                                         <li
                                             key={step.title}
-                                            className="border border-[#2b252c] bg-background/30 px-4 py-4"
+                                            className="border border-line bg-background/30 px-4 py-4"
                                         >
                                             <p className="mb-1 flex items-baseline gap-2 text-sm font-medium text-foreground">
-                                                <span className="font-mono text-[#f5c0c0]">
+                                                <span className="font-mono text-accent-pink">
                                                     {index + 1}.
                                                 </span>
                                                 {step.title}
@@ -112,7 +113,7 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                                     return (
                                         <li
                                             key={note}
-                                            className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.6em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-[#f5c0c0]/60"
+                                            className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.6em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-accent-pink/60"
                                         >
                                             {note}
                                         </li>
@@ -123,19 +124,19 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
 
                         <div className="mt-10 flex flex-wrap gap-3">
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#f5c0c0]/50 px-4 text-[13px] text-[#f5c0c0] transition-colors hover:bg-[rgba(245,192,192,0.06)]"
+                                className="inline-flex min-h-10 items-center border border-accent-pink/50 px-4 text-[13px] text-accent-pink transition-colors hover:bg-[rgba(245,192,192,0.06)]"
                                 href="/downloads"
                             >
                                 Download Dora
                             </Link>
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                className="inline-flex min-h-10 items-center border border-line px-4 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                 href="/features"
                             >
                                 Browse features
                             </Link>
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                className="inline-flex min-h-10 items-center border border-line px-4 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                 href="/docs"
                             >
                                 All connection guides
@@ -146,7 +147,7 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                     {related.length > 0 ? (
                         <section
                             aria-labelledby="related-guides-heading"
-                            className="mt-14 border-t border-[#2b252c] pt-10"
+                            className="mt-14 border-t border-line pt-10"
                         >
                             <h2
                                 id="related-guides-heading"
@@ -159,7 +160,7 @@ export default function GuideDetailView({ guide }: { guide: TGuideConfig }) {
                                     return (
                                         <Link
                                             key={item.slug}
-                                            className="border border-[#2b252c] px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                            className="border border-line px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                             href={getGuidePath(item.slug)}
                                         >
                                             Connect {item.provider}

@@ -1,6 +1,8 @@
 # Spec 07: Serverless Postgres Integrations (Neon, Supabase)
 
-Status: `[ ]`
+Status: `[x]` shipped — extended well beyond the v1 scope below.
+
+> **Shipped (2026-06-20).** Account-based connect flows ("Connect a provider account": add a token/OAuth → list resources → one-click connect) now ship for **Supabase** (OAuth), **Neon** (API key, branch-aware — #142/#156), **Turso** (token or CLI-minted), **PlanetScale** (service token, branch-aware — was explicitly out-of-scope v1, #141/#149), **Vercel Postgres** (#147), **Xata** (#140/#148), and **Cloudflare D1** (#139/#150 — a genuinely new HTTP query engine, not Postgres). The integration pattern lives in `apps/desktop/src-tauri/src/integrations/` + `packages/studio/src/features/integrations/`. Still out of scope: managing databases (create/drop project, create/delete branch) and embedded provider dashboards. The scope notes below are kept for historical context.
 
 ## Why
 

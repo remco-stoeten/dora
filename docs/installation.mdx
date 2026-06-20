@@ -1,17 +1,83 @@
 ---
 title: Installation
-description: Getting started with Dora.
+description: Download and install Dora on macOS, Windows, and Linux, or build it from source.
 ---
 
 # Installation
 
-Dora is distributed as a native desktop application.
+Dora is a native desktop application built with Tauri. Download a prebuilt
+installer for your platform, install from the Arch User Repository, or build it
+from source.
 
-## Development
+The fastest path is the downloads page, which always points at the latest
+release assets:
 
-To build Dora from source, you need Rust and Node.js installed.
+<Callout type='info'>Get the latest build at [doradb.app/downloads](https://doradb.app/downloads), or browse every asset on the [GitHub releases page](https://github.com/remcostoeten/dora/releases/latest).</Callout>
 
-<Callout type='info'>Ensure you have `pnpm` installed and `cargo` (Rust toolchain).</Callout>
+## Platform matrix
+
+| Platform | Architectures | Package | How to get it |
+| --- | --- | --- | --- |
+| macOS | Apple Silicon, Intel | `.dmg` | [Downloads](https://doradb.app/downloads) or GitHub releases |
+| Windows | x64 | `.exe`, `.msi` | [Downloads](https://doradb.app/downloads) or GitHub releases |
+| Linux | x64 | `.AppImage`, `.deb`, `.rpm`, `.snap`, `.tar.gz` | [Downloads](https://doradb.app/downloads) or GitHub releases |
+| Arch Linux | x64 | AUR | `yay -S dora` |
+
+## macOS
+
+1. Download the DMG that matches your chip: **Apple Silicon** (M1 and newer) or
+   **Intel**. If you are unsure, click the Apple menu and check "About This Mac".
+2. Open the DMG and drag **Dora** into your Applications folder.
+3. Launch Dora from Applications.
+
+<Callout type='warn'>If macOS reports that Dora "cannot be opened because the developer cannot be verified", right-click the app and choose **Open**, then confirm. This only needs to be done on first launch.</Callout>
+
+## Windows
+
+1. Download the **Windows EXE** setup installer (recommended) or the **MSI**
+   package for managed deployments.
+2. Run the installer. If SmartScreen warns about an unrecognized app, choose
+   **More info** then **Run anyway**.
+3. Launch Dora from the Start menu.
+
+## Linux
+
+Pick the package that fits your distribution:
+
+| Package | Install command |
+| --- | --- |
+| AppImage | `chmod +x Dora_*.AppImage && ./Dora_*.AppImage` |
+| Debian / Ubuntu | `sudo dpkg -i dora_*.deb` |
+| Fedora / RHEL | `sudo rpm -i dora-*.rpm` |
+| Snap | `sudo snap install dora` |
+| Archive | `tar -xzf dora_*.tar.gz` and run the extracted binary |
+
+### Arch Linux (AUR)
+
+Dora is published to the AUR as [`dora`](https://aur.archlinux.org/packages/dora)
+as a prebuilt binary. Install it with any AUR helper:
+
+```bash
+yay -S dora
+# or
+paru -S dora
+```
+
+## Verify the install
+
+Launch Dora and open **Settings → About** to confirm the version matches the
+release you downloaded. On Linux you can also check the binary:
+
+```bash
+dora --version
+```
+
+## Build from source
+
+To build Dora yourself you need the Rust toolchain (`cargo`) and Node.js with
+`pnpm`.
+
+<Callout type='info'>Building from source produces an unsigned binary intended for development. For day-to-day use, prefer a prebuilt release.</Callout>
 
 1. **Clone the repository**:
 
@@ -31,7 +97,8 @@ To build Dora from source, you need Rust and Node.js installed.
     pnpm desktop:dev
     ```
 
-4. **Run these docs**:
+4. **Run these docs locally**:
+
     ```bash
     pnpm docs:dev
     ```

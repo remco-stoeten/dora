@@ -21,7 +21,7 @@ each as a top-level engine variant leads to `Database::Neon`, `Database::Supabas
 
 ```
 Tier 1  MODEL / PARADIGM   relational | document | key-value | columnar | graph | search | timeseries
-Tier 2  ENGINE / WIRE      postgres | mysql | sqlite | duckdb | libsql | (future: mongo | redis | clickhouse)
+Tier 2  ENGINE / WIRE      postgres | mysql | sqlite | duckdb | libsql | d1 | (future: mongo | redis | clickhouse)
 Tier 3  DIALECT / VENDOR   vanilla | cockroach | neon | supabase | aurora-pg ; mariadb | planetscale | tidb ; turso
 ```
 
@@ -64,8 +64,10 @@ frontend keeps only presentation (labels/icons/presets).
 
 ## Backend target shape
 
-`DatabaseType` (adapter engine id) — **already correct**, keep as-is:
-`Postgres | MySQL | SQLite | DuckDB | LibSQL`.
+`DatabaseType` (adapter engine id) — `Postgres | MySQL | SQLite | DuckDB | LibSQL`.
+**Update (2026-06-20):** Cloudflare **D1** shipped (#150) as the first genuinely new engine
+since this doc was locked — it connects over Cloudflare's HTTP query API rather than a wire
+protocol, so it lands as its own adapter engine id rather than a Postgres/SQLite dialect.
 
 `Database` (connection state) — remove the dialect peer-variants, dialect becomes a field:
 

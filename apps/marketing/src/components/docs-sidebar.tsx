@@ -41,6 +41,13 @@ const DOCS_NAV: TNavSection[] = [
             label: g.provider,
             href: getGuidePath(g.slug)
         }))
+    },
+    {
+        title: 'SQLite',
+        items: GUIDES.filter((g) => g.engine === 'SQLite').map((g) => ({
+            label: g.provider,
+            href: getGuidePath(g.slug)
+        }))
     }
 ]
 
@@ -48,18 +55,18 @@ export function DocsSidebar() {
     const pathname = usePathname()
 
     return (
-        <aside className="hidden w-72 shrink-0 border-r border-[#2b252c] bg-[#09080a]/70 lg:block">
+        <aside className="hidden w-72 shrink-0 border-r border-line bg-[#09080a]/70 lg:block">
             <div className="docs-sidebar-scroll sticky top-[4.75rem] max-h-[calc(100vh-4.75rem)] overflow-y-auto px-5 py-6">
                 <Link
                     href="/docs"
-                    className="mb-7 inline-flex h-8 items-center border border-[#2b252c] px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                    className="mb-7 inline-flex h-8 items-center border border-line px-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                 >
                     All docs
                 </Link>
                 <nav aria-label="Documentation" className="space-y-7">
                     {DOCS_NAV.map((section) => (
                         <section key={section.title}>
-                            <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#ad8eb6]">
+                            <h2 className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-accent-violet">
                                 {section.title}
                             </h2>
                             <ul className="grid gap-1">
@@ -74,8 +81,8 @@ export function DocsSidebar() {
                                                 }
                                                 className={
                                                     active
-                                                        ? 'block border-l border-[#f5c0c0] bg-[#f5c0c0]/[0.06] px-3 py-2 text-[13px] text-foreground'
-                                                        : 'block border-l border-transparent px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:bg-white/[0.02] hover:text-foreground'
+                                                        ? 'block border-l border-accent-pink bg-accent-pink/[0.06] px-3 py-2 text-[13px] text-foreground'
+                                                        : 'block border-l border-transparent px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:bg-white/[0.02] hover:text-foreground'
                                                 }
                                             >
                                                 {item.label}

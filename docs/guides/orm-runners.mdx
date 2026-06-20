@@ -1,0 +1,56 @@
+---
+title: ORM Runners
+description: Write and run type-safe Drizzle and Prisma Client queries directly inside Dora, with schema-aware autocomplete and a SQL preview before execution.
+---
+
+# ORM Runners
+
+Prefer your ORM over raw SQL? Dora has runners for both **Drizzle** and **Prisma
+Client**. Write a query in the ORM's own syntax, get schema-aware autocomplete as
+you type, preview the SQL it compiles to, and run it against the connected
+database with results in the standard table view.
+
+This is Dora's most differentiated feature — no other desktop client treats ORMs
+as a first-class way to query.
+
+## Drizzle runner
+
+Write Drizzle queries against the connected database:
+
+```ts
+db
+  .select()
+  .from(users)
+  .where(eq(users.plan, 'pro'))
+```
+
+- **Schema-aware autocomplete.** Methods, tables, and columns complete from the
+  schema, so `users.` offers the real columns.
+- **SQL preview.** See the SQL the query compiles to before you run it.
+- **Real results.** Execute and get rows in Dora's table view, same as a SQL
+  query.
+
+## Prisma runner
+
+Write Prisma Client queries the same way:
+
+```ts
+prisma.user.findMany({
+  where: { plan: 'pro' },
+})
+```
+
+The Prisma runner mirrors the Drizzle experience: completions come from your
+models, and Dora previews the SQL the Prisma query translates to before
+execution.
+
+## Runner vs Cockpit
+
+The runners and the cockpit are complementary:
+
+- **ORM Runners** (this page) — *query* the database using Drizzle or Prisma
+  syntax.
+- **[ORM Cockpit](/docs/guides/orm-cockpit)** — compare your ORM *schema* to the
+  live database and preview a migration for any drift.
+
+<Callout type='info'>Both runners show the compiled SQL before anything executes, so you always know exactly what is sent to the database.</Callout>

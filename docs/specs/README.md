@@ -17,9 +17,9 @@ One spec per initiative, written so an individual agent can pick a file up and e
 | 02 | [File-as-database (CSV/Parquet/JSON)](02-file-as-database.md) | `[x]` | 01 |
 | 03 | [MCP server](03-mcp-server.md) | `[ ]` | — |
 | 04 | [MSSQL provider](04-mssql-provider.md) | `[ ]` | — |
-| 05 | [ORM migration awareness + Prisma runner](05-orm-migration-awareness.md) | `[ ]` | — |
-| 06 | [Schema + data diff](06-schema-data-diff.md) | `[ ]` | — |
-| 07 | [Serverless Postgres integrations (Neon/Supabase)](07-serverless-postgres-integrations.md) | `[ ]` | — |
+| 05 | [ORM migration awareness + Prisma runner](05-orm-migration-awareness.md) | `[-]` | — |
+| 06 | [Schema + data diff](06-schema-data-diff.md) | `[-]` | — |
+| 07 | [Serverless Postgres integrations (Neon/Supabase)](07-serverless-postgres-integrations.md) | `[x]` | — |
 | 08 | [Result set charts](08-result-charts.md) | `[ ]` | — |
 | 09 | [Redis / Valkey browser](09-redis-valkey.md) | `[ ]` | `[!]` needs product decision |
 | 10 | [ClickHouse provider](10-clickhouse.md) | `[ ]` | — |
