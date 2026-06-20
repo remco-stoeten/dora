@@ -51,7 +51,7 @@ services:
 	}
 
 	const volumePath =
-		provider === 'mariadb'
+		provider === 'mariadb' || provider === 'mysql'
 			? '/var/lib/mysql'
 			: provider === 'cockroach'
 				? '/cockroach-data'

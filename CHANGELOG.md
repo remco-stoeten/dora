@@ -51,6 +51,8 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- spin up a local MySQL container straight from the Docker manager — MySQL joins PostgreSQL, MariaDB, and CockroachDB as a one-click provisionable engine, with version presets, auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose export
+- the bundled `docker-compose.databases.yml` now covers every server engine Dora can talk to locally — PostgreSQL, MySQL, MariaDB, CockroachDB, and libSQL/sqld — for testing against a real database in one `docker compose up`
 - ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console
 - connect a Cloudflare D1 database with an API token and pick it from your account — a native HTTP query engine, no local file required (#139, #150)
 - connect a PlanetScale database with a service token and pick a branch (#141, #149)

@@ -166,19 +166,35 @@ export async function createDatabaseContainer(
 	const containerId = `demo_${nextId++}`
 	const provider = config.provider
 	const image =
-		provider === 'mariadb' ? 'mariadb' : provider === 'cockroach' ? 'cockroachdb/cockroach' : 'postgres'
+		provider === 'mariadb'
+			? 'mariadb'
+			: provider === 'mysql'
+				? 'mysql'
+				: provider === 'cockroach'
+					? 'cockroachdb/cockroach'
+					: 'postgres'
 	const imageTag =
 		provider === 'mariadb'
 			? config.mariadbVersion
-			: provider === 'cockroach'
-				? config.cockroachVersion
-				: config.postgresVersion
+			: provider === 'mysql'
+				? config.mysqlVersion
+				: provider === 'cockroach'
+					? config.cockroachVersion
+					: config.postgresVersion
 
 	const container: DockerContainer = {
 		id: containerId,
 		name: config.name,
 		image,
-		imageTag: imageTag || (provider === 'mariadb' ? '11.4' : provider === 'cockroach' ? '25.1.1' : '16'),
+		imageTag:
+			imageTag ||
+			(provider === 'mariadb'
+				? '11.4'
+				: provider === 'mysql'
+					? '8.4'
+					: provider === 'cockroach'
+						? '25.1.1'
+						: '16'),
 		provider,
 		state: 'running',
 		health: 'healthy',
@@ -187,7 +203,12 @@ export async function createDatabaseContainer(
 		ports: [
 			{
 				hostPort: config.hostPort,
-				containerPort: provider === 'mariadb' ? 3306 : provider === 'cockroach' ? 26257 : 5432,
+				containerPort:
+					provider === 'mariadb' || provider === 'mysql'
+						? 3306
+						: provider === 'cockroach'
+							? 26257
+							: 5432,
 				protocol: 'tcp'
 			},
 			...(provider === 'cockroach'
@@ -207,7 +228,7 @@ export async function createDatabaseContainer(
 					{
 						name: config.volumeName || generateVolumeName(config.name),
 						mountPath:
-							provider === 'mariadb'
+							provider === 'mariadb' || provider === 'mysql'
 								? '/var/lib/mysql'
 								: provider === 'cockroach'
 									? '/cockroach-data'
@@ -224,13 +245,24 @@ export async function createDatabaseContainer(
 						'MARIADB_ROOT_PASSWORD=***',
 						`MARIADB_DATABASE=${config.database}`
 					]
-				: provider === 'cockroach'
-					? [`COCKROACH_USER=${config.user || 'root'}`, `COCKROACH_DATABASE=${config.database}`]
-					: [
-							`POSTGRES_USER=${config.user}`,
-							`POSTGRES_DB=${config.database}`,
-							'POSTGRES_PASSWORD=***'
+				: provider === 'mysql'
+					? [
+							...(config.user && config.user !== 'root'
+								? [`MYSQL_USER=${config.user}`, 'MYSQL_PASSWORD=***']
+								: []),
+							'MYSQL_ROOT_PASSWORD=***',
+							`MYSQL_DATABASE=${config.database}`
 						]
+					: provider === 'cockroach'
+						? [
+								`COCKROACH_USER=${config.user || 'root'}`,
+								`COCKROACH_DATABASE=${config.database}`
+							]
+						: [
+								`POSTGRES_USER=${config.user}`,
+								`POSTGRES_DB=${config.database}`,
+								'POSTGRES_PASSWORD=***'
+							]
 	}
 
 	demoContainers = [...demoContainers, container]

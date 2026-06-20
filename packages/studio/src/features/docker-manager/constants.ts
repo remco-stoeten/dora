@@ -29,6 +29,7 @@ export const DEFAULT_FILTER: ContainerFilterConfig = {
 
 export const POSTGRES_IMAGE = 'postgres'
 export const MARIADB_IMAGE = 'mariadb'
+export const MYSQL_IMAGE = 'mysql'
 export const COCKROACH_IMAGE = 'cockroachdb/cockroach'
 
 export const POSTGRES_VERSIONS = [
@@ -47,6 +48,7 @@ export const DEFAULT_POSTGRES_DATABASE = 'postgres'
 
 export const POSTGRES_CONTAINER_PORT = 5432
 export const MARIADB_CONTAINER_PORT = 3306
+export const MYSQL_CONTAINER_PORT = 3306
 export const COCKROACH_CONTAINER_PORT = 26257
 
 export const DATABASE_PROVIDERS: Array<{
@@ -65,6 +67,11 @@ export const DATABASE_PROVIDERS: Array<{
 		description: 'MySQL-compatible database'
 	},
 	{
+		value: 'mysql',
+		label: 'MySQL',
+		description: "The world's most popular open-source database"
+	},
+	{
 		value: 'cockroach',
 		label: 'CockroachDB',
 		description: 'Distributed SQL with PostgreSQL wire compatibility'
@@ -81,6 +88,17 @@ export const DEFAULT_MARIADB_VERSION = '11.4'
 export const DEFAULT_MARIADB_USER = 'root'
 export const DEFAULT_MARIADB_PASSWORD = 'rootpass'
 export const DEFAULT_MARIADB_DATABASE = 'dora'
+
+export const MYSQL_VERSIONS = [
+	{ value: '8.4', label: 'MySQL 8.4 (LTS)' },
+	{ value: '8.0', label: 'MySQL 8.0' },
+	{ value: '5.7', label: 'MySQL 5.7' }
+] as const
+
+export const DEFAULT_MYSQL_VERSION = '8.4'
+export const DEFAULT_MYSQL_USER = 'root'
+export const DEFAULT_MYSQL_PASSWORD = 'rootpass'
+export const DEFAULT_MYSQL_DATABASE = 'dora'
 
 export const COCKROACH_VERSIONS = [
 	{ value: '25.1.1', label: 'CockroachDB 25.1.1 (Latest)' },

@@ -6,10 +6,12 @@ export type SnippetLanguage = 'terminal' | 'nodejs' | 'python' | 'prisma'
 export function generateSnippet(container: DockerContainer, language: SnippetLanguage): string {
 	const connection = getContainerConnectionDetails(container)
 	const url = connection.connectionUrl
+	// MySQL and MariaDB share the same client libraries, URL scheme and Prisma provider.
+	const isMysqlFamily = connection.provider === 'mariadb' || connection.provider === 'mysql'
 
 	switch (language) {
 		case 'terminal':
-			if (connection.provider === 'mariadb') {
+			if (isMysqlFamily) {
 				return connection.password
 					? `mysql -h ${connection.host} -P ${connection.port} -u ${connection.user} -p${connection.password} ${connection.database}`
 					: `mysql -h ${connection.host} -P ${connection.port} -u ${connection.user} ${connection.database}`
@@ -22,7 +24,7 @@ export function generateSnippet(container: DockerContainer, language: SnippetLan
 			return `PGPASSWORD='${connection.password}' psql -h ${connection.host} -p ${connection.port} -U ${connection.user} -d ${connection.database}`
 
 		case 'nodejs':
-			if (connection.provider === 'mariadb') {
+			if (isMysqlFamily) {
 				return `import mysql from 'mysql2/promise';
 
 const connection = await mysql.createConnection({
@@ -47,7 +49,7 @@ await client.connect();
 console.log('Connected!');`
 
 		case 'python':
-			if (connection.provider === 'mariadb') {
+			if (isMysqlFamily) {
 				return `import mysql.connector
 
 conn = mysql.connector.connect(
@@ -69,7 +71,7 @@ print("Connected!")`
 
 		case 'prisma':
 			return `datasource db {
-  provider = "${connection.provider === 'mariadb' ? 'mysql' : 'postgresql'}"
+  provider = "${isMysqlFamily ? 'mysql' : 'postgresql'}"
   url      = "${url}"
 }`
 

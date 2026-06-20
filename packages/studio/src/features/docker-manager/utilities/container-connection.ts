@@ -34,17 +34,22 @@ export function detectConnectionType(container: DockerContainer): DatabaseType {
 export function detectDatabaseProvider(container: DockerContainer): DatabaseProvider {
 	const type = detectConnectionType(container)
 
-	// MySQL is wire-compatible with MariaDB; reuse the MariaDB code paths
-	// (port, env vars, connection URL, CLI snippets) for it.
-	if (type === 'mariadb' || type === 'mysql') return 'mariadb'
+	if (type === 'mariadb') return 'mariadb'
+	if (type === 'mysql') return 'mysql'
 	if (type === 'cockroach') return 'cockroach'
 	return 'postgres'
+}
+
+// MySQL and MariaDB are wire-compatible; they share port, env-var, URL and
+// CLI-snippet handling. Use this guard wherever that shared path applies.
+function isMysqlFamily(provider: DatabaseProvider): boolean {
+	return provider === 'mariadb' || provider === 'mysql'
 }
 
 export function getPrimaryDatabasePort(container: DockerContainer): number {
 	const provider = detectDatabaseProvider(container)
 
-	if (provider === 'mariadb') {
+	if (isMysqlFamily(provider)) {
 		return container.ports.find((port) => port.containerPort === 3306)?.hostPort ?? 3306
 	}
 
@@ -72,12 +77,16 @@ function buildUrl(
 	password: string,
 	database: string
 ): string {
-	if (provider === 'mariadb') {
-		const auth = password ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}` : encodeURIComponent(user)
+	if (isMysqlFamily(provider)) {
+		const auth = password
+			? `${encodeURIComponent(user)}:${encodeURIComponent(password)}`
+			: encodeURIComponent(user)
 		return `mysql://${auth}@${host}:${port}/${database}`
 	}
 
-	const auth = password ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}` : encodeURIComponent(user)
+	const auth = password
+		? `${encodeURIComponent(user)}:${encodeURIComponent(password)}`
+		: encodeURIComponent(user)
 
 	if (provider === 'cockroach' && !password) {
 		return `postgresql://${auth}@${host}:${port}/${database}?sslmode=disable`
@@ -86,13 +95,15 @@ function buildUrl(
 	return `postgresql://${auth}@${host}:${port}/${database}`
 }
 
-export function getContainerConnectionDetails(container: DockerContainer): ContainerConnectionDetails {
+export function getContainerConnectionDetails(
+	container: DockerContainer
+): ContainerConnectionDetails {
 	const provider = detectDatabaseProvider(container)
 	const type = detectConnectionType(container)
 	const host = 'localhost'
 	const port = getPrimaryDatabasePort(container)
 
-	if (provider === 'mariadb') {
+	if (isMysqlFamily(provider)) {
 		// Covers both MariaDB (MARIADB_*) and MySQL (MYSQL_*) images.
 		const user = readEnvValue(
 			container,

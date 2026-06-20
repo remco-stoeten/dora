@@ -3,6 +3,8 @@ import {
 	POSTGRES_CONTAINER_PORT,
 	MARIADB_IMAGE,
 	MARIADB_CONTAINER_PORT,
+	MYSQL_IMAGE,
+	MYSQL_CONTAINER_PORT,
 	COCKROACH_IMAGE,
 	COCKROACH_CONTAINER_PORT,
 	MANAGED_LABEL_KEY,
@@ -145,12 +147,49 @@ function getDatabaseImageConfig(config: DatabaseContainerConfig): DatabaseImageC
 					'-e',
 					`MARIADB_DATABASE=${config.database}`,
 					...(config.user && config.user !== 'root'
-						? ['-e', `MARIADB_USER=${config.user}`, '-e', `MARIADB_PASSWORD=${config.password}`]
+						? [
+								'-e',
+								`MARIADB_USER=${config.user}`,
+								'-e',
+								`MARIADB_PASSWORD=${config.password}`
+							]
 						: []),
 					'-p',
 					`${config.hostPort}:${MARIADB_CONTAINER_PORT}`,
 					'--health-cmd',
 					'mariadb-admin ping -uroot -p${MARIADB_ROOT_PASSWORD}',
+					'--health-interval',
+					'5s',
+					'--health-timeout',
+					'5s',
+					'--health-retries',
+					'5',
+					'--health-start-period',
+					'20s'
+				]
+			}
+		case 'mysql':
+			return {
+				image: MYSQL_IMAGE,
+				imageTag: config.mysqlVersion || '8.4',
+				displayName: 'MySQL',
+				buildArgs: [
+					'-e',
+					`MYSQL_ROOT_PASSWORD=${config.password}`,
+					'-e',
+					`MYSQL_DATABASE=${config.database}`,
+					...(config.user && config.user !== 'root'
+						? [
+								'-e',
+								`MYSQL_USER=${config.user}`,
+								'-e',
+								`MYSQL_PASSWORD=${config.password}`
+							]
+						: []),
+					'-p',
+					`${config.hostPort}:${MYSQL_CONTAINER_PORT}`,
+					'--health-cmd',
+					'mysqladmin ping -uroot -p${MYSQL_ROOT_PASSWORD}',
 					'--health-interval',
 					'5s',
 					'--health-timeout',
@@ -271,6 +310,7 @@ function buildCreateContainerArgs(
 function getDatabaseVolumePath(provider: DatabaseContainerConfig['provider']): string {
 	switch (provider) {
 		case 'mariadb':
+		case 'mysql':
 			return '/var/lib/mysql'
 		case 'cockroach':
 			return '/cockroach-data'
@@ -463,15 +503,20 @@ async function executeSeedCommand(
 ) {
 	switch (connectionConfig.provider) {
 		case 'mariadb':
-			return execCommand(containerId, [
-				'mariadb',
-				'-u',
-				connectionConfig.user,
-				connectionConfig.password ? `-p${connectionConfig.password}` : '',
-				connectionConfig.database,
-				'-e',
-				`source ${targetPath}`
-			].filter(Boolean) as string[])
+		case 'mysql':
+			// MariaDB images ship the `mariadb` client; MySQL images ship `mysql`.
+			return execCommand(
+				containerId,
+				[
+					connectionConfig.provider === 'mysql' ? 'mysql' : 'mariadb',
+					'-u',
+					connectionConfig.user,
+					connectionConfig.password ? `-p${connectionConfig.password}` : '',
+					connectionConfig.database,
+					'-e',
+					`source ${targetPath}`
+				].filter(Boolean) as string[]
+			)
 		case 'cockroach':
 			return execCommand(containerId, [
 				'cockroach',

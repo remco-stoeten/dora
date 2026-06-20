@@ -10,7 +10,7 @@ export type PortMapping = {
 	protocol: 'tcp' | 'udp'
 }
 
-export type DatabaseProvider = 'postgres' | 'mariadb' | 'cockroach'
+export type DatabaseProvider = 'postgres' | 'mariadb' | 'mysql' | 'cockroach'
 
 export type VolumeMount = {
 	name: string
@@ -62,6 +62,14 @@ export type MariaDBContainerConfig = DatabaseContainerBaseConfig & {
 	database: string
 }
 
+export type MySQLContainerConfig = DatabaseContainerBaseConfig & {
+	provider: 'mysql'
+	mysqlVersion: string
+	user: string
+	password: string
+	database: string
+}
+
 export type CockroachContainerConfig = DatabaseContainerBaseConfig & {
 	provider: 'cockroach'
 	cockroachVersion: string
@@ -73,6 +81,7 @@ export type CockroachContainerConfig = DatabaseContainerBaseConfig & {
 export type DatabaseContainerConfig =
 	| PostgresContainerConfig
 	| MariaDBContainerConfig
+	| MySQLContainerConfig
 	| CockroachContainerConfig
 
 export type SeedStrategy =

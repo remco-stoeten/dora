@@ -24,6 +24,7 @@ import {
   DATABASE_PROVIDERS,
   POSTGRES_VERSIONS,
   MARIADB_VERSIONS,
+  MYSQL_VERSIONS,
   COCKROACH_VERSIONS,
   DEFAULT_POSTGRES_VERSION,
   DEFAULT_POSTGRES_USER,
@@ -33,6 +34,10 @@ import {
   DEFAULT_MARIADB_USER,
   DEFAULT_MARIADB_PASSWORD,
   DEFAULT_MARIADB_DATABASE,
+  DEFAULT_MYSQL_VERSION,
+  DEFAULT_MYSQL_USER,
+  DEFAULT_MYSQL_PASSWORD,
+  DEFAULT_MYSQL_DATABASE,
   DEFAULT_COCKROACH_VERSION,
   DEFAULT_COCKROACH_USER,
   DEFAULT_COCKROACH_DATABASE,
@@ -61,6 +66,14 @@ function getProviderDefaults(provider: DatabaseProvider) {
         database: DEFAULT_MARIADB_DATABASE,
         port: 3306,
       };
+    case "mysql":
+      return {
+        version: DEFAULT_MYSQL_VERSION,
+        user: DEFAULT_MYSQL_USER,
+        password: DEFAULT_MYSQL_PASSWORD,
+        database: DEFAULT_MYSQL_DATABASE,
+        port: 3306,
+      };
     case "cockroach":
       return {
         version: DEFAULT_COCKROACH_VERSION,
@@ -85,6 +98,8 @@ function getVersionOptions(provider: DatabaseProvider) {
   switch (provider) {
     case "mariadb":
       return MARIADB_VERSIONS;
+    case "mysql":
+      return MYSQL_VERSIONS;
     case "cockroach":
       return COCKROACH_VERSIONS;
     case "postgres":
@@ -215,6 +230,15 @@ export function CreateContainerDialog({
             password,
             database,
           }
+        : provider === "mysql"
+        ? {
+            ...baseConfig,
+            provider,
+            mysqlVersion: version,
+            user,
+            password,
+            database,
+          }
         : provider === "cockroach"
           ? {
               ...baseConfig,
@@ -308,9 +332,11 @@ export function CreateContainerDialog({
             <Label htmlFor="version">
               {provider === "mariadb"
                 ? "MariaDB Version"
-                : provider === "cockroach"
-                  ? "CockroachDB Version"
-                  : "PostgreSQL Version"}
+                : provider === "mysql"
+                  ? "MySQL Version"
+                  : provider === "cockroach"
+                    ? "CockroachDB Version"
+                    : "PostgreSQL Version"}
             </Label>
             <Select value={version} onValueChange={setVersion}>
               <SelectTrigger id="version">
@@ -419,9 +445,11 @@ export function CreateContainerDialog({
           <p className="text-xs text-muted-foreground">
             {provider === "mariadb"
               ? "MariaDB uses the selected credentials for both the root and app user."
-              : provider === "cockroach"
-                ? "CockroachDB is started as a local single-node cluster for quick testing."
-                : "PostgreSQL uses the selected credentials for the main database role."}
+              : provider === "mysql"
+                ? "MySQL uses the selected credentials for the root and app user."
+                : provider === "cockroach"
+                  ? "CockroachDB is started as a local single-node cluster for quick testing."
+                  : "PostgreSQL uses the selected credentials for the main database role."}
           </p>
 
           <div className="flex items-center justify-between py-2">

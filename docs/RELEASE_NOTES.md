@@ -33,6 +33,11 @@ to the live database, and a batch of serverless and edge database connectors.
 - **Hardened Turso / Supabase / Neon connects with account visibility** — robust
   Turso CLI detection and in-app sign-in, plus "Connected as", a refresh button,
   paginated project lists, and clearer empty and error states for each.
+- **MySQL in the Docker manager** — spin up a local MySQL container in one click
+  alongside PostgreSQL, MariaDB, and CockroachDB, with version presets, an
+  auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose
+  export. The bundled `docker-compose.databases.yml` now also covers PostgreSQL,
+  MySQL, MariaDB, CockroachDB, and libSQL/sqld for one-command local testing.
 - Clearer, consistent AI provider error copy across Groq, OpenAI, Anthropic,
   Gemini, and Ollama (#82).
 

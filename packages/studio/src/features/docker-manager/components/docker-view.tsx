@@ -253,9 +253,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
           title: "Container Created",
           description: `${config?.provider === "mariadb"
             ? "MariaDB"
-            : config?.provider === "cockroach"
-              ? "CockroachDB"
-              : "PostgreSQL"} container is starting up...`,
+            : config?.provider === "mysql"
+              ? "MySQL"
+              : config?.provider === "cockroach"
+                ? "CockroachDB"
+                : "PostgreSQL"} container is starting up...`,
           variant: "success",
         });
       } else if (!result.success) {
@@ -668,6 +670,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
                   handleOpenCreateDialog("mariadb");
                 }}>
                   MariaDB
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={function () {
+                  handleOpenCreateDialog("mysql");
+                }}>
+                  MySQL
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={function () {
                   handleOpenCreateDialog("cockroach");
