@@ -216,6 +216,7 @@ pub fn run() {
             database::commands::turso_account,
             database::commands::neon_save_token,
             database::commands::neon_list_databases,
+            database::commands::neon_list_branches,
             database::commands::neon_account,
             database::commands::neon_create_connection_uri,
             database::commands::neon_disconnect,

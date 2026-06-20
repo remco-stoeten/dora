@@ -57,6 +57,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         db_commands::turso_account,
         db_commands::neon_save_token,
         db_commands::neon_list_databases,
+        db_commands::neon_list_branches,
         db_commands::neon_account,
         db_commands::neon_create_connection_uri,
         db_commands::neon_disconnect,

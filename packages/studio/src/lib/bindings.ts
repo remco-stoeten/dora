@@ -408,6 +408,18 @@ async neonListDatabases() : Promise<Result<NeonDatabase[], { kind: string; detai
 }
 },
 /**
+ * Lists every branch of a Neon project so the user can connect to a non-primary
+ * branch (e.g. a preview branch) instead of always landing on the default one.
+ */
+async neonListBranches(projectId: string) : Promise<Result<NeonBranch[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_list_branches", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * The Neon account the stored key belongs to, so the UI can show which account
  * is currently connected.
  */
@@ -1375,6 +1387,7 @@ export type SupabaseOrganization = { id: string; name: string }
 export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
 export type TursoOrganization = { slug: string; name?: string }
 export type NeonAccount = { email?: string; name?: string }
+export type NeonBranch = { id: string; name: string; isDefault: boolean }
 export type NeonDatabase = { projectId: string; projectName: string; branchId: string; databaseName: string; roleName: string }
 export type VercelAccount = { username?: string; email?: string; name?: string }
 /**

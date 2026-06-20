@@ -444,6 +444,18 @@ async neonListDatabases() : Promise<Result<NeonDatabase[], { kind: string; detai
 }
 },
 /**
+ * Lists every branch of a Neon project so the user can connect to a non-primary
+ * branch (e.g. a preview branch) instead of always landing on the default one.
+ */
+async neonListBranches(projectId: string) : Promise<Result<NeonBranch[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("neon_list_branches", { projectId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * The Neon account the stored key belongs to, so the UI can show which account
  * is currently connected.
  */
@@ -1385,6 +1397,12 @@ export type LiveMonitorSession = { monitorId: string; eventName: string }
  */
 export type MutationResult = { success: boolean; affected_rows: number; message: string | null }
 export type NeonAccount = { email?: string; name?: string }
+/**
+ * A selectable Neon branch within a project. Surfaced so the user can connect
+ * to a non-primary branch (e.g. a preview branch) instead of always landing on
+ * the default one. `is_default` lets the UI preselect the primary branch.
+ */
+export type NeonBranch = { id: string; name: string; isDefault: boolean }
 /**
  * A selectable Neon database, flattened across projects and their default
  * branch. The ids/names are carried so we can mint a pooled connection URI for
