@@ -167,7 +167,7 @@ function CopyButton({ text }: { text: string }) {
     return (
         <button
             onClick={handleCopy}
-            className="relative border border-[#3a3138] p-1.5 text-[#8a8a8a] transition-colors hover:border-[#e3b2b3]/45 hover:bg-[#e3b2b3]/5 hover:text-[#e3b2b3]"
+            className="relative border border-line-strong p-1.5 text-ink-500 transition-colors hover:border-accent-rose/45 hover:bg-accent-rose/5 hover:text-accent-rose"
             title="Copy command"
         >
             {copied ? (
@@ -289,7 +289,7 @@ function TabIndicator({ activeRect }: { activeRect: DOMRect | null }) {
     return (
         <div
             aria-hidden
-            className="pointer-events-none absolute left-0 top-0 border border-[#e3b2b3]/45 bg-[#e3b2b3]/5"
+            className="pointer-events-none absolute left-0 top-0 border border-accent-rose/45 bg-accent-rose/5"
             style={{
                 width: activeRect.width,
                 height: activeRect.height,
@@ -406,23 +406,23 @@ export function GitHubStats({
                         {/* Left info section: Version + Timeline — 1/3 width so
                             its divider lines up with the features grid's first
                             column border, leaving Commits ~2/3 */}
-                        <div className="w-full flex-shrink-0 border-b border-[#1a1a1a] sm:w-1/3 sm:border-b-0 sm:border-r">
+                        <div className="w-full flex-shrink-0 border-b border-surface-elevated sm:w-1/3 sm:border-b-0 sm:border-r">
                             {/* Version */}
                             <a
                                 href={versionUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block border-b border-[#1a1a1a] px-5 py-4 transition-colors hover:bg-[#0d0d0d]"
+                                className="block border-b border-surface-elevated px-5 py-4 transition-colors hover:bg-[#0d0d0d]"
                             >
                                 <div
                                     className={revealClass}
                                     style={revealStyle(0)}
                                 >
-                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-ink-500">
                                         <Tag className="w-3 h-3" />
                                         Version
                                     </div>
-                                    <div className="font-mono text-lg font-medium text-[#9a9a9a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                    <div className="font-mono text-lg font-medium text-ink-400 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                         {version}
                                     </div>
                                 </div>
@@ -436,15 +436,15 @@ export function GitHubStats({
                                 >
                                     <div className="flex items-center gap-4 text-[11px]">
                                         <div>
-                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-ink-500">
                                                 <Calendar className="w-2.5 h-2.5" />
                                                 Started
                                             </div>
-                                            <div className="text-[#7a7a7a]">
+                                            <div className="text-ink-600">
                                                 <ScrollMotionNumber value={startedAt} />
                                             </div>
                                         </div>
-                                        <div className="w-px h-8 bg-[#1a1a1a]" />
+                                        <div className="w-px h-8 bg-surface-elevated" />
                                         <a
                                             href={
                                                 latestCommitSha
@@ -453,18 +453,18 @@ export function GitHubStats({
                                             }
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="transition-colors hover:text-[#9a9a9a]"
+                                            className="transition-colors hover:text-ink-400"
                                         >
-                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                            <div className="mb-1 flex items-center gap-1.5 font-pixel font-[500] uppercase tracking-[0] text-ink-500">
                                                 <Clock className="w-2.5 h-2.5" />
                                                 Latest
                                             </div>
-                                            <div className="text-[#7a7a7a]">
+                                            <div className="text-ink-600">
                                                 <ScrollMotionNumber value={latestCommitAt} />
                                             </div>
                                         </a>
                                     </div>
-                                    <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#8a8a8a]">
+                                    <div className="mt-3 flex items-center gap-1.5 text-[10px] text-ink-500">
                                         <Star className="w-2.5 h-2.5" />
                                         <span>
                                             {stars} star
@@ -509,20 +509,20 @@ export function GitHubStats({
 
                                 {/* Content - with pointer-events-none so hover/click passes through */}
                                 <div className="relative z-20 pointer-events-none">
-                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                                    <div className="mb-1 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-ink-500">
                                         <GitCommit className="w-3 h-3" />
                                         Commits
                                     </div>
-                                    <div className="font-pixel text-2xl font-[500] tabular-nums text-[#9a9a9a]">
+                                    <div className="font-pixel text-2xl font-[500] tabular-nums text-ink-400">
                                         <ScrollMotionNumber value={totalCommits} />
                                     </div>
-                                    <div className="mt-1 hidden items-center gap-2 text-[10px] text-[#8a8a8a] sm:flex">
+                                    <div className="mt-1 hidden items-center gap-2 text-[10px] text-ink-500 sm:flex">
                                         <span>Scroll to pan</span>
                                         <span className="text-[#2a2a2a]">
                                             |
                                         </span>
                                         <span className="flex items-center gap-1">
-                                            <kbd className="rounded border border-[#2a2a2a] bg-[#1a1a1a] px-1 py-0.5 font-mono text-[8px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                            <kbd className="rounded border border-[#2a2a2a] bg-surface-elevated px-1 py-0.5 font-mono text-[8px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                                 shift
                                             </kbd>
                                             scroll to zoom
@@ -534,8 +534,8 @@ export function GitHubStats({
                     </div>
 
                     {/* Bottom row: Install section - full width */}
-                    <div className="border-t border-[#1a1a1a] px-5 py-7 sm:px-6 sm:py-8">
-                        <div className="mb-5 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-[#8a8a8a]">
+                    <div className="border-t border-surface-elevated px-5 py-7 sm:px-6 sm:py-8">
+                        <div className="mb-5 flex items-center gap-2 font-pixel text-xs font-[500] uppercase tracking-[0] text-ink-500">
                             <div
                                 className={`flex items-center gap-2 ${revealClass}`}
                                 style={revealStyle(165)}
@@ -568,10 +568,10 @@ export function GitHubStats({
                                         onClick={() =>
                                             setActiveInstall(pkg.platform)
                                         }
-                                        className={`group/tab relative z-10 flex shrink-0 items-center gap-2 border border-transparent px-3 py-2 text-xs font-medium transition-[color,border-color,transform] duration-200 ease-out hover:border-[#e3b2b3]/25 motion-safe:active:scale-[0.97] ${
+                                        className={`group/tab relative z-10 flex shrink-0 items-center gap-2 border border-transparent px-3 py-2 text-xs font-medium transition-[color,border-color,transform] duration-200 ease-out hover:border-accent-rose/25 motion-safe:active:scale-[0.97] ${
                                             activeInstall === pkg.platform
-                                                ? 'border-[#e3b2b3]/45 text-[#e3b2b3]'
-                                                : 'text-[#8a8a8a] hover:text-[#b0b0b0]'
+                                                ? 'border-accent-rose/45 text-accent-rose'
+                                                : 'text-ink-500 hover:text-[#b0b0b0]'
                                         }`}
                                         title={pkg.name}
                                     >
@@ -631,7 +631,7 @@ export function GitHubStats({
                                         href={activePackage.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group/cmd relative flex items-center gap-3 border border-[#3a3138] bg-[#0d0d0d] px-4 py-2.5 transition-[border-color,background-color,transform] duration-200 ease-out hover:border-[#e3b2b3]/45 hover:bg-[#e3b2b3]/5 motion-safe:active:scale-[0.99]"
+                                        className="group/cmd relative flex items-center gap-3 border border-line-strong bg-[#0d0d0d] px-4 py-2.5 transition-[border-color,background-color,transform] duration-200 ease-out hover:border-accent-rose/45 hover:bg-accent-rose/5 motion-safe:active:scale-[0.99]"
                                     >
                                         <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
                                         <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/cmd:opacity-100" />
@@ -641,7 +641,7 @@ export function GitHubStats({
                                             <CommandSwap>
                                                 {activePackage.command
                                                     ? <SyntaxHighlight command={activePackage.command} />
-                                                    : <span className="text-[#6a6a6a]">{`Download from ${activePackage.name}`}</span>}
+                                                    : <span className="text-ink-700">{`Download from ${activePackage.name}`}</span>}
                                             </CommandSwap>
                                         </code>
                                         {activePackage.command && (
@@ -656,7 +656,7 @@ export function GitHubStats({
                             {/* Downloads indicator */}
                             {activePackage?.downloads !== undefined &&
                                 activePackage.downloads > 0 && (
-                                    <span className="shrink-0 text-[10px] text-[#8a8a8a] whitespace-nowrap">
+                                    <span className="shrink-0 text-[10px] text-ink-500 whitespace-nowrap">
                                         {formatDownloads(
                                             activePackage.downloads
                                         )}{' '}

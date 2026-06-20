@@ -17,7 +17,7 @@ import { usePageVisible } from '@/shared/hooks/use-page-visible'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
 const FEATURE_CELL_CLASS =
-    'relative min-h-[300px] scroll-mt-28 border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]'
+    'relative min-h-[300px] scroll-mt-28 border-r border-b border-line overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]'
 const FEATURE_REVEAL_CLASS = 'flex h-full w-full'
 
 function FeatureCell({
@@ -65,12 +65,12 @@ export function FeaturesSection() {
             className="relative w-full"
         >
             <SectionFrame />
-            <div className="border-b border-r border-[#2b252c] px-6 py-12 sm:px-8">
+            <div className="border-b border-r border-line px-6 py-12 sm:px-8">
                 <ScrollReveal delay={40}>
-                    <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-[#7a7a7a]">
+                    <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-ink-600">
                         More Than a GUI.
                     </h2>
-                    <h3 className="font-[family-name:var(--font-pixel)] text-3xl font-semibold text-[#f0f0f0]">
+                    <h3 className="font-[family-name:var(--font-pixel)] text-3xl font-semibold text-ink-100">
                         The Interface Databases Deserve.
                     </h3>
                 </ScrollReveal>
@@ -103,7 +103,7 @@ export function FeaturesSection() {
 
             <div
                 id="feature-multi-connection"
-                className="relative min-h-[260px] scroll-mt-28 border-b border-r border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]"
+                className="relative min-h-[260px] scroll-mt-28 border-b border-r border-line overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]"
             >
                 <ScrollReveal className="flex h-full w-full" delay={330}>
                     <MultiConnectionCard animate={animate} />

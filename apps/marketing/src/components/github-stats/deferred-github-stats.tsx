@@ -16,10 +16,10 @@ function GitHubStatsFrame() {
         <div className="w-full bg-[#0a0a0a]">
             <AnimatedFrame className="overflow-hidden">
                 <div className="flex flex-col sm:flex-row">
-                    <div className="min-h-[150px] w-full flex-shrink-0 border-b border-[#1a1a1a] sm:min-h-[120px] sm:w-1/3 sm:border-b-0 sm:border-r" />
+                    <div className="min-h-[150px] w-full flex-shrink-0 border-b border-surface-elevated sm:min-h-[120px] sm:w-1/3 sm:border-b-0 sm:border-r" />
                     <div className="min-h-[150px] flex-1 sm:min-h-[120px]" />
                 </div>
-                <div className="min-h-[112px] border-t border-[#1a1a1a]" />
+                <div className="min-h-[112px] border-t border-surface-elevated" />
             </AnimatedFrame>
         </div>
     )

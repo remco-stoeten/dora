@@ -3,7 +3,7 @@
 import { CornerTick } from '@/components/corner-tick'
 import { useFrameDrawIn } from '@/shared/hooks/use-frame-draw-in'
 
-const LINE = 'pointer-events-none absolute z-[2] bg-[#3a3138]'
+const LINE = 'pointer-events-none absolute z-[2] bg-line-strong'
 
 /**
  * Frame for the two-tone marketing section grids. Draws the rose outer edges
@@ -12,7 +12,7 @@ const LINE = 'pointer-events-none absolute z-[2] bg-[#3a3138]'
  * forms the right/bottom edges stays static.
  *
  * Drop inside a `relative` section in place of the old
- * `border-l border-t border-[#3a3138]` + four corner ticks.
+ * `border-l border-t border-line-strong` + four corner ticks.
  */
 export function SectionFrame() {
     const { ref, lineStyle, tickStyle } = useFrameDrawIn<HTMLSpanElement>()

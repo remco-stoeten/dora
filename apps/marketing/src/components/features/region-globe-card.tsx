@@ -134,18 +134,18 @@ export function RegionGlobeCard({
                             <div
                                 className={`flex items-center gap-1.5 px-2 py-1 rounded border transition-all ${
                                     hoveredRegion === region.name
-                                        ? 'border-[#e3b2b3]/50 bg-[#161218]'
-                                        : 'border-[#2b252c] bg-[#161218]/80'
+                                        ? 'border-accent-rose/50 bg-surface'
+                                        : 'border-line bg-surface/80'
                                 }`}
                             >
                                 <span
                                     className={`w-1.5 h-1.5 rounded-full transition-colors ${
                                         hoveredRegion === region.name
-                                            ? 'bg-[#e3b2b3]'
+                                            ? 'bg-accent-rose'
                                             : 'bg-[#3a3a3a]'
                                     }`}
                                 />
-                                <span className="text-[9px] text-[#8a8a8a] font-mono">
+                                <span className="text-[9px] text-ink-500 font-mono">
                                     {region.name}
                                 </span>
                             </div>
@@ -154,10 +154,10 @@ export function RegionGlobeCard({
                 })}
             </div>
             <div className="px-5 pb-5">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Connect Anywhere
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Local, Neon, Turso, or over SSH. Connect to databases
                     wherever they run.
                 </p>

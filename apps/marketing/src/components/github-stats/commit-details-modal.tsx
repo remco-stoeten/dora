@@ -79,17 +79,17 @@ export function CommitDetailsModal({
             {/* Modal */}
             <div
                 ref={modalRef}
-                className="relative z-10 w-full max-w-lg max-h-[80vh] bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+                className="relative z-10 w-full max-w-lg max-h-[80vh] bg-[#0a0a0a] border border-surface-elevated rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-title"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a1a]">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-surface-elevated">
                     <div>
                         <h2
                             id="modal-title"
-                            className="text-[#9a9a9a] font-medium"
+                            className="text-ink-400 font-medium"
                         >
                             {data.date}
                         </h2>
@@ -102,7 +102,7 @@ export function CommitDetailsModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1.5 rounded-md text-[#4a4a4a] hover:text-[#8a8a8a] hover:bg-[#1a1a1a] transition-colors"
+                        className="p-1.5 rounded-md text-[#4a4a4a] hover:text-ink-500 hover:bg-surface-elevated transition-colors"
                         aria-label="Close modal"
                     >
                         <X className="w-4 h-4" />
@@ -117,19 +117,19 @@ export function CommitDetailsModal({
                             href={`${repoUrl}/commit/${commit.sha}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block p-3 rounded-md bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#2a2a2a] transition-colors group"
+                            className="block p-3 rounded-md bg-[#0f0f0f] border border-surface-elevated hover:border-[#2a2a2a] transition-colors group"
                         >
                             {/* Commit header */}
                             <div className="flex items-start gap-3">
                                 <div
-                                    className="mt-0.5 p-1.5 rounded bg-[#1a1a1a] group-hover:bg-[#222]"
+                                    className="mt-0.5 p-1.5 rounded bg-surface-elevated group-hover:bg-[#222]"
                                     style={{ color: accentColor }}
                                 >
                                     <GitCommit className="w-3 h-3" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[#9a9a9a] text-sm truncate flex-1">
+                                        <p className="text-ink-400 text-sm truncate flex-1">
                                             {commit.message}
                                         </p>
                                         <ExternalLink className="w-3 h-3 text-[#3a3a3a] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
@@ -162,7 +162,7 @@ export function CommitDetailsModal({
                             {/* Stats (if available) */}
                             {(commit.additions !== undefined ||
                                 commit.files) && (
-                                <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-[#1a1a1a]">
+                                <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-surface-elevated">
                                     {commit.additions !== undefined && (
                                         <span className="flex items-center gap-1 text-[10px] text-green-500/70">
                                             <Plus className="w-2.5 h-2.5" />
@@ -193,7 +193,7 @@ export function CommitDetailsModal({
                                     {commit.files.map((file) => (
                                         <div
                                             key={file}
-                                            className="text-[10px] font-mono text-[#3a3a3a] truncate pl-2 border-l border-[#1a1a1a]"
+                                            className="text-[10px] font-mono text-[#3a3a3a] truncate pl-2 border-l border-surface-elevated"
                                         >
                                             {file}
                                         </div>

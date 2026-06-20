@@ -125,14 +125,14 @@ function NavLink({
 function NavItem({ label, href, chevron }: TNavItem) {
     return (
         <NavLink
-            className="group inline-flex items-center gap-1 rounded-[1px] px-[13px] py-[9px] text-[14px] leading-none text-white/90 transition-colors hover:text-[#f5c0c0]"
+            className="group inline-flex items-center gap-1 rounded-[1px] px-[13px] py-[9px] text-[14px] leading-none text-white/90 transition-colors hover:text-accent-pink"
             href={href}
         >
             {label}
             {chevron ? (
                 <ChevronDown
                     aria-hidden
-                    className="h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-[#f5c0c0]"
+                    className="h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-accent-pink"
                 />
             ) : null}
         </NavLink>
@@ -192,8 +192,8 @@ function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
             }}
         >
             <NavLink
-                className={`group inline-flex items-center gap-1 rounded-[1px] px-[13px] py-[9px] text-[14px] leading-none transition-colors hover:text-[#f5c0c0] ${
-                    open ? 'text-[#f5c0c0]' : 'text-white/90'
+                className={`group inline-flex items-center gap-1 rounded-[1px] px-[13px] py-[9px] text-[14px] leading-none transition-colors hover:text-accent-pink ${
+                    open ? 'text-accent-pink' : 'text-white/90'
                 }`}
                 href={item.href}
                 onClick={() => setOpen(false)}
@@ -201,8 +201,8 @@ function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
                 {item.label}
                 <ChevronDown
                     aria-hidden
-                    className={`h-3.5 w-3.5 transition-[transform,color] duration-200 group-hover:text-[#f5c0c0] ${
-                        open ? 'text-[#f5c0c0]' : 'text-white/40'
+                    className={`h-3.5 w-3.5 transition-[transform,color] duration-200 group-hover:text-accent-pink ${
+                        open ? 'text-accent-pink' : 'text-white/40'
                     }`}
                     style={{
                         transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
@@ -216,7 +216,7 @@ function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
                 style={{ pointerEvents: open ? 'auto' : 'none' }}
             >
                 <div
-                    className="relative w-[340px] overflow-hidden border border-[#2b252c] bg-[#100d12]/90 p-1.5 shadow-[0_24px_70px_-24px_rgba(0,0,0,0.85)] backdrop-blur-xl"
+                    className="relative w-[340px] overflow-hidden border border-line bg-surface-deep/90 p-1.5 shadow-[0_24px_70px_-24px_rgba(0,0,0,0.85)] backdrop-blur-xl"
                     style={{
                         transformOrigin: 'top center',
                         opacity: open ? 1 : 0,
@@ -242,7 +242,7 @@ function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
                                 onClick={() => setOpen(false)}
                             >
                                 <span
-                                    className="mt-px flex size-8 shrink-0 items-center justify-center border border-[#2b252c] bg-[#161218] text-[#e3b2b3] transition-colors group-hover/item:border-[#f5c0c0]/40 group-hover/item:text-[#f5c0c0]"
+                                    className="mt-px flex size-8 shrink-0 items-center justify-center border border-line bg-surface text-accent-rose transition-colors group-hover/item:border-accent-pink/40 group-hover/item:text-accent-pink"
                                     style={{
                                         opacity: open ? 1 : 0,
                                         transform: open
@@ -271,11 +271,11 @@ function NavDropdown({ item, reduced }: { item: TNavItem; reduced: boolean }) {
                                             : '0ms'
                                     }}
                                 >
-                                    <span className="flex items-center gap-1.5 text-[13px] leading-none text-white/90 transition-colors group-hover/item:text-[#f5c0c0]">
+                                    <span className="flex items-center gap-1.5 text-[13px] leading-none text-white/90 transition-colors group-hover/item:text-accent-pink">
                                         {link.label}
                                         <ArrowRight
                                             aria-hidden
-                                            className="h-3 w-3 shrink-0 text-[#f5c0c0] opacity-0 transition-[opacity,transform] duration-200 group-hover/item:translate-x-0.5 group-hover/item:opacity-100"
+                                            className="h-3 w-3 shrink-0 text-accent-pink opacity-0 transition-[opacity,transform] duration-200 group-hover/item:translate-x-0.5 group-hover/item:opacity-100"
                                         />
                                     </span>
                                     <span className="text-[11px] leading-snug text-white/40">
@@ -295,7 +295,7 @@ function Logo() {
     return (
         <Link
             aria-label="Dora home"
-            className="select-none px-2 [font-family:system-ui,sans-serif] text-[20px] font-semibold tracking-[0.08em] text-[#f5c0c0] [text-shadow:0_0_14px_rgba(245,192,192,0.45)]"
+            className="select-none px-2 [font-family:system-ui,sans-serif] text-[20px] font-semibold tracking-[0.08em] text-accent-pink [text-shadow:0_0_14px_rgba(245,192,192,0.45)]"
             href="/"
         >
             DORA
@@ -309,7 +309,7 @@ function ViewAppButton({ className = '' }: { className?: string }) {
         'pointer-events-none absolute size-[17px] rounded-full border border-[rgba(245,192,192,0.3)] transition-colors group-hover:border-[rgba(245,192,192,0.6)]'
     return (
         <Link
-            className={`group relative inline-flex h-[38px] items-center justify-center overflow-visible border border-[#f5c0c0] bg-background px-4 text-[14px] leading-none text-[#f5c0c0] transition-colors hover:bg-[rgba(245,192,192,0.06)] ${className}`}
+            className={`group relative inline-flex h-[38px] items-center justify-center overflow-visible border border-accent-pink bg-background px-4 text-[14px] leading-none text-accent-pink transition-colors hover:bg-[rgba(245,192,192,0.06)] ${className}`}
             href={APP_PATH}
         >
             <span
@@ -347,17 +347,17 @@ function MobileMenuRow({
     const Icon = item.icon
     return (
         <NavLink
-            className="group flex items-center gap-4 border-b border-[#2b252c] py-5 text-left"
+            className="group flex items-center gap-4 border-b border-line py-5 text-left"
             href={item.href}
             onClick={onNavigate}
         >
-            <Icon className="h-5 w-5 shrink-0 text-[#e3b2b3]" />
-            <span className="flex-1 text-[17px] text-white/90 transition-colors group-hover:text-[#f5c0c0]">
+            <Icon className="h-5 w-5 shrink-0 text-accent-rose" />
+            <span className="flex-1 text-[17px] text-white/90 transition-colors group-hover:text-accent-pink">
                 {item.label}
             </span>
             <ChevronRight
                 aria-hidden
-                className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-[#f5c0c0]"
+                className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-accent-pink"
             />
         </NavLink>
     )
@@ -367,7 +367,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-[60] flex flex-col bg-background animate-in fade-in-0 duration-200 md:hidden">
             {/* Top frame: logo + circular close button, with rose corner brackets */}
-            <div className="relative m-3 flex items-center justify-between border border-[#3a3138] px-4 py-5">
+            <div className="relative m-3 flex items-center justify-between border border-line-strong px-4 py-5">
                 <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="-right-px -top-px translate-x-1/2 -translate-y-1/2" />
                 <CornerTick className="-bottom-px -left-px -translate-x-1/2 translate-y-1/2" />
@@ -375,7 +375,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
                 <Logo />
                 <button
                     aria-label="Close menu"
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-[#3a3138] text-white/80 transition-colors hover:border-[#f5c0c0] hover:text-[#f5c0c0]"
+                    className="inline-flex size-10 items-center justify-center rounded-full border border-line-strong text-white/80 transition-colors hover:border-accent-pink hover:text-accent-pink"
                     onClick={onClose}
                     type="button"
                 >
@@ -437,12 +437,12 @@ export function DoraHeader() {
             {/* Sidebar border lines that align with the marketing-container edges */}
             <span
                 aria-hidden
-                className="pointer-events-none absolute bottom-0 top-0 w-px bg-[#3a3138]"
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-line-strong"
                 style={{ left: 'max(16px, calc(50% - 550px))' }}
             />
             <span
                 aria-hidden
-                className="pointer-events-none absolute bottom-0 top-0 w-px bg-[#3a3138]"
+                className="pointer-events-none absolute bottom-0 top-0 w-px bg-line-strong"
                 style={{ right: 'max(16px, calc(50% - 550px))' }}
             />
             <div
@@ -479,15 +479,15 @@ export function DoraHeader() {
                     {/* Frame borders */}
                     <span
                         aria-hidden
-                        className="pointer-events-none absolute left-0 top-0 h-px w-full bg-[#3a3138]"
+                        className="pointer-events-none absolute left-0 top-0 h-px w-full bg-line-strong"
                     />
                     <span
                         aria-hidden
-                        className="pointer-events-none absolute left-0 top-0 h-full w-px bg-[#3a3138]"
+                        className="pointer-events-none absolute left-0 top-0 h-full w-px bg-line-strong"
                     />
                     <span
                         aria-hidden
-                        className="pointer-events-none absolute right-0 top-0 h-full w-px bg-[#3a3138]"
+                        className="pointer-events-none absolute right-0 top-0 h-full w-px bg-line-strong"
                     />
 
                     <CornerTick className="-left-px -top-px -translate-x-1/2 -translate-y-1/2" />
@@ -501,7 +501,7 @@ export function DoraHeader() {
                         <button
                             aria-expanded={menuOpen}
                             aria-label="Open menu"
-                            className="inline-flex size-9 items-center justify-center text-white/90 transition-colors hover:text-[#f5c0c0]"
+                            className="inline-flex size-9 items-center justify-center text-white/90 transition-colors hover:text-accent-pink"
                             onClick={() => setMenuOpen(true)}
                             type="button"
                         >

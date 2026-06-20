@@ -37,7 +37,7 @@ export function DocMediaAsset({
 
     return (
         <figure
-            className={`overflow-hidden border border-[#2b252c] bg-background/30 ${className}`}
+            className={`overflow-hidden border border-line bg-background/30 ${className}`}
         >
             {showStatic ? (
                 <img
@@ -59,7 +59,7 @@ export function DocMediaAsset({
                 />
             )}
             {caption ? (
-                <figcaption className="border-t border-[#2b252c] px-4 py-2 font-mono text-[11px] text-muted-foreground">
+                <figcaption className="border-t border-line px-4 py-2 font-mono text-[11px] text-muted-foreground">
                     {caption}
                 </figcaption>
             ) : null}

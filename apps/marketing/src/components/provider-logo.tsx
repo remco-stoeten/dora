@@ -25,8 +25,8 @@ export function ProviderLogoMark({
     return (
         <div
             className={[
-                'relative flex size-11 items-center justify-center border bg-[#0d0a0f]/90 transition-colors duration-300 sm:size-12',
-                active ? 'border-[#f5c0c0]/35 bg-[#100d12]' : 'border-[#2b252c]',
+                'relative flex size-11 items-center justify-center border bg-surface-deeper/90 transition-colors duration-300 sm:size-12',
+                active ? 'border-accent-pink/35 bg-surface-deep' : 'border-line',
             ].join(' ')}
         >
             <CornerTick className={`-left-px -top-px -translate-x-1/2 -translate-y-1/2 ${tickOpacity}`} />

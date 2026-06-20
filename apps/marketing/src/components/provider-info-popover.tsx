@@ -161,7 +161,7 @@ export function ProviderInfoPopover({ info, anchor, open }: TProps) {
         ) : null}
 
         {/* crisp card */}
-        <div className="relative overflow-hidden rounded-[12px] border border-[#2b252c] bg-[#13101a]/95 px-3.5 py-3 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-sm">
+        <div className="relative overflow-hidden rounded-[12px] border border-line bg-[#13101a]/95 px-3.5 py-3 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-sm">
           {/* soft pink wash up top */}
           <div
             aria-hidden
@@ -183,7 +183,7 @@ export function ProviderInfoPopover({ info, anchor, open }: TProps) {
               {shown.tag}
             </span>
           </div>
-          <p className="relative mt-1.5 text-[11.5px] leading-relaxed text-[#9a9a9a]">
+          <p className="relative mt-1.5 text-[11.5px] leading-relaxed text-ink-400">
             {shown.blurb}
           </p>
         </div>

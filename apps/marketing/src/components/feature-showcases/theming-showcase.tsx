@@ -38,7 +38,7 @@ export function ThemingShowcase() {
                                         className={[
                                             'flex flex-col gap-1.5 rounded-lg border p-3 text-left transition-colors',
                                             i === 0
-                                                ? 'border-[#f5c0c0]/40 bg-[rgba(245,192,192,0.06)]'
+                                                ? 'border-accent-pink/40 bg-[rgba(245,192,192,0.06)]'
                                                 : 'border-border bg-card hover:border-border/80',
                                         ].join(' ')}
                                     >
@@ -92,7 +92,7 @@ export function ThemingShowcase() {
                                         className={[
                                             'rounded-lg border p-3 text-left text-[12px] transition-colors',
                                             i === 1
-                                                ? 'border-[#f5c0c0]/40 bg-[rgba(245,192,192,0.06)] text-foreground'
+                                                ? 'border-accent-pink/40 bg-[rgba(245,192,192,0.06)] text-foreground'
                                                 : 'border-border bg-card text-muted-foreground',
                                         ].join(' ')}
                                     >

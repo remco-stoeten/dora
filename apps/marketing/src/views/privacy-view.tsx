@@ -18,7 +18,7 @@ export default function PrivacyView() {
                     return (
                         <li
                             key={topic}
-                            className="relative pl-4 text-[15px] leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.62em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-[#3a3138]"
+                            className="relative pl-4 text-[15px] leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.62em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-line-strong"
                         >
                             {topic}
                         </li>

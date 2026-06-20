@@ -183,7 +183,7 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
                 <span
                     aria-hidden
                     key={`${particle.left}-${particle.top}`}
-                    className="pointer-events-none absolute rounded-full bg-[#f5c0c0]"
+                    className="pointer-events-none absolute rounded-full bg-accent-pink"
                     style={{
                         left: particle.left,
                         top: particle.top,
@@ -466,12 +466,12 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
             {/* active relationship readout */}
             <div className="relative px-5">
                 <div className="flex h-4 items-center gap-2 overflow-hidden font-mono text-[10px] leading-none [font-family:var(--font-geist-mono),ui-monospace,monospace]">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#e3b2b3]" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-rose" />
                     <span className="truncate whitespace-nowrap">
                         <span style={{ color: '#ad8eb6' }}>
                             {relSrc.id}.{relSrcCol.name}
                         </span>
-                        <span className="px-1.5 text-[#6a6a6a]">─&lt;</span>
+                        <span className="px-1.5 text-ink-700">─&lt;</span>
                         <span style={{ color: '#e3b2b3' }}>
                             {relDst.id}.{relDstCol.name}
                         </span>
@@ -480,10 +480,10 @@ export function SchemaDiagramCard({ animate }: { animate: boolean }) {
             </div>
 
             <div className="relative px-5 pb-5 pt-3">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Schema Visualization
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     ERD diagram. Live relationships. Query-driven discovery.
                     Instant insight.
                 </p>

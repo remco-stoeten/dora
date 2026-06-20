@@ -145,7 +145,7 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
       <CardAura active={running} />
       <div className="relative px-4 pb-4 pt-5">
         {/* file dropzone */}
-        <div className="flex flex-col gap-1.5 border border-dashed border-[#3a3138] bg-[#0d0a0f]/70 px-2.5 py-2.5">
+        <div className="flex flex-col gap-1.5 border border-dashed border-line-strong bg-surface-deeper/70 px-2.5 py-2.5">
           {FILES.map((file, i) => {
             const shown = shownFiles > i;
             return (
@@ -168,15 +168,15 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
                 >
                   {file.kind}
                 </span>
-                <span className="text-[#cfcfcf]">{file.name}</span>
-                <span className="ml-auto text-[#6a6a6a]">{file.rows} rows</span>
+                <span className="text-ink-300">{file.name}</span>
+                <span className="ml-auto text-ink-700">{file.rows} rows</span>
               </div>
             );
           })}
         </div>
 
         {/* query */}
-        <div className="relative mt-2 border border-[#2b252c] bg-[#0d0a0f]/80 px-3 py-2.5">
+        <div className="relative mt-2 border border-line bg-surface-deeper/80 px-3 py-2.5">
           {isRun ? (
             <span
               aria-hidden
@@ -206,14 +206,14 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
               boxShadow: `0 0 8px ${statusColor}99`,
             }}
           />
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-[#7a7a7a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+          <span className="font-mono text-[9.5px] uppercase tracking-[0.12em] text-ink-600 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
             {statusLabel}
           </span>
         </div>
 
         {/* results */}
-        <div className="mt-1.5 overflow-hidden border border-[#2b252c] bg-[#100d12]/70">
-          <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-1 border-b border-[#2b252c] px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-[#6a6a6a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+        <div className="mt-1.5 overflow-hidden border border-line bg-surface-deep/70">
+          <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-1 border-b border-line px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-ink-700 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
             <span>region</span>
             <span className="text-right">revenue</span>
           </div>
@@ -230,8 +230,8 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
                     "opacity 320ms ease, transform 360ms cubic-bezier(0.34,1.56,0.64,1)",
                 }}
               >
-                <span className="truncate text-[#cfcfcf]">{row.region}</span>
-                <span className="text-right text-[#e3b2b3]">{row.revenue}</span>
+                <span className="truncate text-ink-300">{row.region}</span>
+                <span className="text-right text-accent-rose">{row.revenue}</span>
               </div>
             );
           })}
@@ -239,10 +239,10 @@ export function FileQueryCard({ animate }: { animate: boolean }) {
       </div>
 
       <div className="relative px-5 pb-10 pt-3">
-        <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+        <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
           Query files like tables
         </h3>
-        <p className="text-xs leading-relaxed text-[#8a8a8a]">
+        <p className="text-xs leading-relaxed text-ink-500">
           Drop a CSV, Parquet, or JSON file and Dora opens it as a table. Run
           SQL, even JOIN across files, powered by an embedded DuckDB engine.
         </p>

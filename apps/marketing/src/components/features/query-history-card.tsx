@@ -178,24 +178,24 @@ export function QueryHistoryCard({ animate }: { animate: boolean }) {
             {/* readout */}
             <div className="px-5">
                 <div className="grid h-4 overflow-hidden grid-cols-[auto_minmax(0,1fr)_2.25rem_1.75rem] items-center gap-2 font-mono text-[10px] leading-none [font-family:var(--font-geist-mono),ui-monospace,monospace]">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#e3b2b3]" />
-                    <span className="block min-w-0 truncate whitespace-nowrap text-[#cfcfcf]">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-rose" />
+                    <span className="block min-w-0 truncate whitespace-nowrap text-ink-300">
                         {q.sql}
                     </span>
-                    <span className="block text-right text-[#e3b2b3]/80 tabular-nums">
+                    <span className="block text-right text-accent-rose/80 tabular-nums">
                         {q.ms}ms
                     </span>
-                    <span className="block text-right text-[#8a8a8a]">
+                    <span className="block text-right text-ink-500">
                         {q.ago}
                     </span>
                 </div>
             </div>
 
             <div className="px-5 pb-5 pt-3">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Query History
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Every query saved. Search, replay, analyze.
                 </p>
             </div>

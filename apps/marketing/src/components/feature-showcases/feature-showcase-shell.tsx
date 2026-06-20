@@ -12,7 +12,7 @@ import type { TFeatureSlug } from '@/core/config/features'
 import { useFrameDrawIn } from '@/shared/hooks/use-frame-draw-in'
 import { usePrefersReducedMotion } from '@/shared/hooks/use-prefers-reduced-motion'
 
-const FRAME_LINE = 'pointer-events-none absolute z-[2] bg-[#3a3138]'
+const FRAME_LINE = 'pointer-events-none absolute z-[2] bg-line-strong'
 
 type TFeatureShowcaseShellProps = {
     slug: TFeatureSlug

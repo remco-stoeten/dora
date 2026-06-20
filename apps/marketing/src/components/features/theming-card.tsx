@@ -17,7 +17,7 @@ export function ThemingCard({ animate }: { animate: boolean }) {
 
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
-                    <p className="text-[10px] uppercase tracking-widest text-[#6a6a6a]">
+                    <p className="text-[10px] uppercase tracking-widest text-ink-700">
                         Base theme
                     </p>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -27,8 +27,8 @@ export function ThemingCard({ animate }: { animate: boolean }) {
                                 className={[
                                     'flex flex-col gap-1 rounded-md border p-2 text-[10px]',
                                     i === 0
-                                        ? 'border-[#f5c0c0]/30 bg-[rgba(245,192,192,0.05)] text-[#c4bcc4]'
-                                        : 'border-[#2b252c] text-[#6a6a6a]',
+                                        ? 'border-accent-pink/30 bg-[rgba(245,192,192,0.05)] text-[#c4bcc4]'
+                                        : 'border-line text-ink-700',
                                 ].join(' ')}
                             >
                                 <div
@@ -44,7 +44,7 @@ export function ThemingCard({ animate }: { animate: boolean }) {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <p className="text-[10px] uppercase tracking-widest text-[#6a6a6a]">
+                    <p className="text-[10px] uppercase tracking-widest text-ink-700">
                         Accent
                     </p>
                     <div className="flex gap-1.5 flex-wrap">
@@ -63,11 +63,11 @@ export function ThemingCard({ animate }: { animate: boolean }) {
                 </div>
             </div>
 
-            <div className="mt-auto rounded-lg border border-[#2b252c] bg-[#100d12] p-3">
+            <div className="mt-auto rounded-lg border border-line bg-surface-deep p-3">
                 <div className="flex flex-col gap-1.5">
                     <div className="h-1.5 w-2/3 rounded-sm" style={{ backgroundColor: ACCENT, opacity: 0.7 }} />
-                    <div className="h-1 w-full rounded-sm bg-[#2b252c]" />
-                    <div className="h-1 w-5/6 rounded-sm bg-[#2b252c]" />
+                    <div className="h-1 w-full rounded-sm bg-line" />
+                    <div className="h-1 w-5/6 rounded-sm bg-line" />
                     <div
                         className="mt-0.5 h-4 w-full rounded"
                         style={{ backgroundColor: ACCENT, opacity: 0.12 }}

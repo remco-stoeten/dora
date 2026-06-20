@@ -124,7 +124,7 @@ export function NativePerformanceCard({
                 <span
                     aria-hidden
                     key={`${particle.left}-${particle.top}`}
-                    className="pointer-events-none absolute rounded-full bg-[#f5c0c0]"
+                    className="pointer-events-none absolute rounded-full bg-accent-pink"
                     style={{
                         left: particle.left,
                         top: particle.top,
@@ -143,10 +143,10 @@ export function NativePerformanceCard({
                 <canvas ref={canvasRef} className="w-32 h-32" />
             </div>
             <div className="relative px-5 pb-5">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     SSH Tunneling
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Reach private databases behind firewalls through encrypted
                     SSH tunnels, no VPN required.
                 </p>

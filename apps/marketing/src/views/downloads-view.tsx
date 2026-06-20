@@ -12,7 +12,7 @@ import {
 } from '@/core/github/release-downloads'
 
 const DOWNLOAD_LINK_CLASS =
-    'inline-flex min-h-9 items-center justify-center border border-[#3a3138] px-3.5 text-[13px] text-foreground transition-colors hover:border-[#ad8eb6]/50 hover:bg-[rgba(173,142,182,0.06)]'
+    'inline-flex min-h-9 items-center justify-center border border-line-strong px-3.5 text-[13px] text-foreground transition-colors hover:border-accent-violet/50 hover:bg-[rgba(173,142,182,0.06)]'
 
 function renderDownload(
     download: TDownload,
@@ -47,7 +47,7 @@ function renderDownloads(group: TGroup, assets: TAsset[], releaseUrl: string) {
 function renderGroup(group: TGroup, assets: TAsset[], releaseUrl: string) {
     return (
         <article
-            className="flex min-h-[160px] flex-col border border-[#2b252c] bg-background/40 p-5"
+            className="flex min-h-[160px] flex-col border border-line bg-background/40 p-5"
             key={group.title}
         >
             <h2 className="font-pixel text-lg font-medium text-foreground">

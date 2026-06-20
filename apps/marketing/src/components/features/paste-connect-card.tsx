@@ -217,8 +217,8 @@ export function PasteConnectCard({ animate }: { animate: boolean }) {
         <div ref={ref} className="h-full flex flex-col">
             <div className="flex-1 flex flex-col justify-center gap-3 px-5 pt-5">
                 {/* paste bar */}
-                <div className="flex items-start gap-2 rounded-[3px] border border-[#2b252c] bg-[#100d12]/80 px-2.5 py-2">
-                    <span className="mt-px shrink-0 text-[#6a6a6a]">
+                <div className="flex items-start gap-2 rounded-[3px] border border-line bg-surface-deep/80 px-2.5 py-2">
+                    <span className="mt-px shrink-0 text-ink-700">
                         <ClipboardIcon />
                     </span>
                     <code className="min-w-0 flex-1 font-mono text-[10.5px] leading-[1.5] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
@@ -275,7 +275,7 @@ export function PasteConnectCard({ animate }: { animate: boolean }) {
                                 }}
                             />
                         )}
-                        <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.08em] text-[#9a9a9a]">
+                        <span className="whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.08em] text-ink-400">
                             {current.provider}
                         </span>
                     </span>
@@ -305,7 +305,7 @@ export function PasteConnectCard({ animate }: { animate: boolean }) {
                                         : 'none'
                                 }}
                             >
-                                <div className="font-mono text-[8.5px] uppercase tracking-[0.08em] text-[#6a6a6a]">
+                                <div className="font-mono text-[8.5px] uppercase tracking-[0.08em] text-ink-700">
                                     {field.label}
                                 </div>
                                 <div className="relative mt-0.5 h-3.5">
@@ -335,10 +335,10 @@ export function PasteConnectCard({ animate }: { animate: boolean }) {
             </div>
 
             <div className="px-5 pb-5 pt-3">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Paste to Connect
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Drop in any connection string — Dora parses every field
                     automatically.
                 </p>

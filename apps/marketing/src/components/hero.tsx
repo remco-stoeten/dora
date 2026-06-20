@@ -162,7 +162,7 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                 rel="noreferrer"
                 className="group relative flex items-center gap-4 border border-[rgba(173,142,182,0.45)] px-6 py-5 transition-colors duration-200 hover:border-[rgba(173,142,182,0.75)] hover:bg-[rgba(173,142,182,0.05)]"
             >
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-sm bg-[rgba(173,142,182,0.1)] text-[#ad8eb6] transition-colors group-hover:bg-[rgba(173,142,182,0.16)]">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-sm bg-[rgba(173,142,182,0.1)] text-accent-violet transition-colors group-hover:bg-[rgba(173,142,182,0.16)]">
                     <OsIcon platform={iconPlatform} className="h-6 w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -179,7 +179,7 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                         )}
                     </div>
                 </div>
-                <Download className="h-5 w-5 shrink-0 text-[#ad8eb6]/50 transition-all duration-300 group-hover:translate-y-0.5 group-hover:text-[#ad8eb6]" />
+                <Download className="h-5 w-5 shrink-0 text-accent-violet/50 transition-all duration-300 group-hover:translate-y-0.5 group-hover:text-accent-violet" />
             </a>
 
             <div className="flex flex-col gap-3">
@@ -193,9 +193,9 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                                 key={g.os}
                                 type="button"
                                 onClick={() => setActiveOs(g.os)}
-                                className={`group/tab relative flex items-center gap-1.5 border border-[#2b252c] px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-300 ${
+                                className={`group/tab relative flex items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-300 ${
                                     isActive
-                                        ? 'text-[#ad8eb6]'
+                                        ? 'text-accent-violet'
                                         : 'text-muted-foreground/45 hover:text-muted-foreground/80'
                                 }`}
                             >
@@ -218,7 +218,7 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                                 <span className="relative z-10">{g.os}</span>
                                 {isDetected && (
                                     <span
-                                        className="relative z-10 ml-0.5 h-1.5 w-1.5 rounded-full bg-[#f5c0c0] [box-shadow:0_0_8px_rgba(245,192,192,0.7)]"
+                                        className="relative z-10 ml-0.5 h-1.5 w-1.5 rounded-full bg-accent-pink [box-shadow:0_0_8px_rgba(245,192,192,0.7)]"
                                         title="Detected on your system"
                                     />
                                 )}
@@ -242,9 +242,9 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                                     href={assetUrl(assets, d, releaseUrl)}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className={`font-mono text-[12px] transition-colors hover:text-[#ad8eb6] ${
+                                    className={`font-mono text-[12px] transition-colors hover:text-accent-violet ${
                                         isPrimary
-                                            ? 'text-[#ad8eb6]/70'
+                                            ? 'text-accent-violet/70'
                                             : 'text-muted-foreground/50'
                                     }`}
                                 >
@@ -255,7 +255,7 @@ function HeroDownload({ release }: { release: TLatest | null }) {
                     })}
                     <a
                         href="/downloads"
-                        className="ml-auto font-mono text-[11px] text-muted-foreground/40 transition-colors hover:text-[#ad8eb6]"
+                        className="ml-auto font-mono text-[11px] text-muted-foreground/40 transition-colors hover:text-accent-violet"
                     >
                         All downloads →
                     </a>
@@ -271,7 +271,7 @@ function HeroText({ release }: { release: TLatest | null }) {
             <h1 className="max-w-[560px] font-pixel text-[clamp(2.2rem,4.6vw,3.6rem)] font-[500] leading-[1.05] tracking-[0] text-foreground">
                 The database
                 <br />
-                <span className="text-[#f5c0c0] [text-shadow:0_0_18px_rgba(245,192,192,0.45)]">
+                <span className="text-accent-pink [text-shadow:0_0_18px_rgba(245,192,192,0.45)]">
                     explorah.
                 </span>
             </h1>

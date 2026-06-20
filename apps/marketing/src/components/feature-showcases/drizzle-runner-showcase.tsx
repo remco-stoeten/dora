@@ -40,7 +40,7 @@ function highlightDrizzleLine(line: string) {
     if (line.trimStart().startsWith('await db')) {
         return (
             <>
-                <span className="text-[#e3b2b3]">await </span>
+                <span className="text-accent-rose">await </span>
                 <span className="text-foreground/90">db</span>
             </>
         )
@@ -52,7 +52,7 @@ function highlightDrizzleLine(line: string) {
         return (
             <>
                 <span>{match[1]}</span>
-                <span className="text-[#e3b2b3]">{match[2]}</span>
+                <span className="text-accent-rose">{match[2]}</span>
                 <span className="text-foreground/85">{line.slice(match[0].length)}</span>
             </>
         )
@@ -103,7 +103,7 @@ export function DrizzleRunnerShowcase() {
                                 <Braces className="h-3 w-3" />
                                 JSON
                             </span>
-                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-[#ad8eb6]">
+                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-accent-violet">
                                 <Sparkles className="h-3 w-3" />
                                 Autocomplete active
                             </span>

@@ -113,7 +113,7 @@ export default async function Footer() {
                 </div>
 
                 <ScrollReveal delay={50} rootMargin="0px">
-                    <div className="flex flex-col gap-1 border-t border-[#3a3138]/40 pt-4 text-xs leading-relaxed text-muted-foreground/70 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="flex flex-col gap-1 border-t border-line-strong/40 pt-4 text-xs leading-relaxed text-muted-foreground/70 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         <span>&copy; {year} Dora. All rights reserved.</span>
                         {latestCommitLine ? (
                             latestCommitUrl ? (

@@ -121,7 +121,7 @@ export function MultiConnectionCard({ animate }: { animate: boolean }) {
                 className="flex flex-1 flex-col justify-center gap-2 px-5 pt-5"
             >
                 {/* connection tab bar */}
-                <div className="flex items-center gap-1 overflow-visible rounded-[3px] border border-[#2b252c] bg-[#100d12]/80 p-1">
+                <div className="flex items-center gap-1 overflow-visible rounded-[3px] border border-line bg-surface-deep/80 p-1">
                     {CONNECTIONS.map((conn, i) => {
                         const isActive = i === activeIndex
                         const isPinned = i === pinned
@@ -168,7 +168,7 @@ export function MultiConnectionCard({ animate }: { animate: boolean }) {
                                     {conn.name}
                                 </span>
                                 <span
-                                    className="shrink-0 transition-colors duration-300 group-hover/conn:text-[#c9a3b5]"
+                                    className="shrink-0 transition-colors duration-300 group-hover/conn:text-accent-mauve"
                                     style={{
                                         color: isActive ? '#9a8a90' : '#3a3138'
                                     }}
@@ -179,7 +179,7 @@ export function MultiConnectionCard({ animate }: { animate: boolean }) {
                                 {/* status tooltip, revealed on hover/focus */}
                                 <span
                                     role="tooltip"
-                                    className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 flex -translate-x-1/2 translate-y-1 items-center gap-1.5 whitespace-nowrap rounded-[3px] border border-[#2b252c] bg-[#15111a] px-2 py-1 opacity-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.6)] transition-all duration-200 group-hover/conn:translate-y-0 group-hover/conn:opacity-100 group-focus-visible/conn:translate-y-0 group-focus-visible/conn:opacity-100"
+                                    className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 flex -translate-x-1/2 translate-y-1 items-center gap-1.5 whitespace-nowrap rounded-[3px] border border-line bg-[#15111a] px-2 py-1 opacity-0 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.6)] transition-all duration-200 group-hover/conn:translate-y-0 group-hover/conn:opacity-100 group-focus-visible/conn:translate-y-0 group-focus-visible/conn:opacity-100"
                                 >
                                     <span
                                         className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -223,11 +223,11 @@ export function MultiConnectionCard({ animate }: { animate: boolean }) {
                 </div>
 
                 {/* keyboard hint */}
-                <div className="mt-1 flex items-center gap-1.5 text-[#6a6a6a]">
-                    <kbd className="rounded-[2px] border border-[#2b252c] bg-[#100d12] px-1 py-px font-mono text-[9px] text-[#9a9a9a]">
+                <div className="mt-1 flex items-center gap-1.5 text-ink-700">
+                    <kbd className="rounded-[2px] border border-line bg-surface-deep px-1 py-px font-mono text-[9px] text-ink-400">
                         Ctrl+Shift+[
                     </kbd>
-                    <kbd className="rounded-[2px] border border-[#2b252c] bg-[#100d12] px-1 py-px font-mono text-[9px] text-[#9a9a9a]">
+                    <kbd className="rounded-[2px] border border-line bg-surface-deep px-1 py-px font-mono text-[9px] text-ink-400">
                         ]
                     </kbd>
                     <span className="font-mono text-[9px] text-[#5a5258]">
@@ -237,10 +237,10 @@ export function MultiConnectionCard({ animate }: { animate: boolean }) {
             </div>
 
             <div className="px-5 pb-5 pt-3">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Many connections, one window
                 </h3>
-                <p className="text-xs leading-relaxed text-[#8a8a8a]">
+                <p className="text-xs leading-relaxed text-ink-500">
                     Keep several databases open at once, each with its own
                     isolated tabs, filters, and scroll position.
                 </p>

@@ -73,13 +73,13 @@ export default function GoCliRunnerView() {
                                 return (
                                     <div
                                         key={item.name}
-                                        className="border border-[#2b252c] bg-background/30 px-4 py-4"
+                                        className="border border-line bg-background/30 px-4 py-4"
                                     >
                                         <div className="flex flex-wrap items-baseline justify-between gap-3">
                                             <h3 className="text-sm font-medium text-foreground">
                                                 {item.name}
                                             </h3>
-                                            <code className="font-mono text-[11px] text-[#f5c0c0]">
+                                            <code className="font-mono text-[11px] text-accent-pink">
                                                 {item.command}
                                             </code>
                                         </div>
@@ -104,7 +104,7 @@ export default function GoCliRunnerView() {
                                 return (
                                     <li
                                         key={note}
-                                        className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.65em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-[#f5c0c0]/60"
+                                        className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.65em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-accent-pink/60"
                                     >
                                         {note}
                                     </li>
@@ -188,13 +188,13 @@ export default function GoCliRunnerView() {
 
                 <div className="flex flex-wrap gap-3">
                     <Link
-                        className="inline-flex min-h-10 items-center border border-[#f5c0c0]/50 px-4 text-[13px] text-[#f5c0c0] transition-colors hover:bg-[rgba(245,192,192,0.06)]"
+                        className="inline-flex min-h-10 items-center border border-accent-pink/50 px-4 text-[13px] text-accent-pink transition-colors hover:bg-[rgba(245,192,192,0.06)]"
                         href="/docs"
                     >
                         Back to docs
                     </Link>
                     <Link
-                        className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                        className="inline-flex min-h-10 items-center border border-line px-4 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                         href="/features/drizzle-runner"
                     >
                         Browse features

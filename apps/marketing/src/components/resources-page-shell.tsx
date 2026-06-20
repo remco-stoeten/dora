@@ -19,8 +19,8 @@ export function ResourcesPageShell({
         <section className="relative">
             <SectionFrame />
 
-            <header className="border-b border-r border-[#2b252c] px-6 py-12 sm:px-8">
-                <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#ad8eb6]">
+            <header className="border-b border-r border-line px-6 py-12 sm:px-8">
+                <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-accent-violet">
                     {eyebrow}
                 </p>
                 <h1 className="font-pixel text-balance text-[clamp(2rem,5vw,3rem)] font-medium leading-[1.05] tracking-normal text-foreground">
@@ -31,7 +31,7 @@ export function ResourcesPageShell({
                 </p>
             </header>
 
-            <div className="border-r border-[#2b252c] px-6 py-10 sm:px-8">
+            <div className="border-r border-line px-6 py-10 sm:px-8">
                 {children}
             </div>
         </section>

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { CornerTick } from '@/components/corner-tick'
 import { useFrameDrawIn } from '@/shared/hooks/use-frame-draw-in'
 
-const LINE_BASE = 'pointer-events-none absolute z-[2] bg-[#3a3138]'
+const LINE_BASE = 'pointer-events-none absolute z-[2] bg-line-strong'
 
 /**
  * Frames its children with the standard rose corner ticks, but draws the four

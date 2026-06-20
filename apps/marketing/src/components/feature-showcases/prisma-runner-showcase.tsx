@@ -44,9 +44,9 @@ function highlightPrismaLine(line: string) {
                     <span>{match[1]}</span>
                     <span className="text-foreground/90">{match[2]}</span>
                     <span className="text-foreground/60">.</span>
-                    <span className="text-[#ad8eb6]">{match[3]}</span>
+                    <span className="text-accent-violet">{match[3]}</span>
                     <span className="text-foreground/60">.</span>
-                    <span className="text-[#e3b2b3]">{match[4]}</span>
+                    <span className="text-accent-rose">{match[4]}</span>
                     <span className="text-foreground/85">{line.slice(match[0].length - 1)}</span>
                 </>
             )
@@ -109,7 +109,7 @@ export function PrismaRunnerShowcase() {
                                 <Braces className="h-3 w-3" />
                                 Prisma
                             </span>
-                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-[#ad8eb6]">
+                            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-accent-violet">
                                 <Sparkles className="h-3 w-3" />
                                 Translated to SQL
                             </span>

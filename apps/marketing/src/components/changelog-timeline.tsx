@@ -49,7 +49,7 @@ function renderItem(item: string, issuesUrl: string | null): ReactNode {
                 href={`${issuesUrl}/${issueNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono text-[#f5c0c0] underline decoration-[#f5c0c0]/30 underline-offset-2 transition-colors hover:decoration-[#f5c0c0]"
+                className="font-mono text-accent-pink underline decoration-accent-pink/30 underline-offset-2 transition-colors hover:decoration-accent-pink"
             >
                 {token}
             </a>
@@ -96,27 +96,27 @@ function ChangelogReleaseCard({
     return (
         <article
             id={`v${release.version}`}
-            className="scroll-mt-28 border border-[#2b252c] bg-background/40"
+            className="scroll-mt-28 border border-line bg-background/40"
         >
-            <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[#2b252c] px-5 py-5 sm:px-6">
+            <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-5 sm:px-6">
                 <div className="flex flex-wrap items-center gap-3">
                     <h2 className="font-pixel text-2xl font-medium leading-none text-foreground sm:text-3xl">
                         v{release.version}
                     </h2>
                     {isLatest ? (
-                        <span className="inline-flex items-center rounded-[2px] border border-[#f5c0c0]/40 bg-[rgba(245,192,192,0.08)] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#f5c0c0]">
+                        <span className="inline-flex items-center rounded-[2px] border border-accent-pink/40 bg-[rgba(245,192,192,0.08)] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-accent-pink">
                             Latest
                         </span>
                     ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <time dateTime={release.date}>{formatDate(release.date)}</time>
-                    <span className="h-3.5 w-px bg-[#2b252c]" aria-hidden />
+                    <span className="h-3.5 w-px bg-line" aria-hidden />
                     <a
                         href={release.tagUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-foreground/80 transition-colors hover:text-[#f5c0c0]"
+                        className="inline-flex items-center gap-1.5 text-foreground/80 transition-colors hover:text-accent-pink"
                     >
                         View on GitHub
                         <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
@@ -143,7 +143,7 @@ function ChangelogReleaseCard({
                                         return (
                                             <li
                                                 key={item}
-                                                className="relative pl-3 text-[14px] leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.62em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-[#3a3138]"
+                                                className="relative pl-3 text-[14px] leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.62em] before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-line-strong"
                                             >
                                                 {renderItem(item, issuesUrl)}
                                             </li>
@@ -174,14 +174,14 @@ export function ChangelogTimeline({
         <div className="mx-auto max-w-4xl">
             <nav
                 aria-label="Release versions"
-                className="mb-8 flex flex-wrap gap-2 border-b border-[#2b252c] pb-6"
+                className="mb-8 flex flex-wrap gap-2 border-b border-line pb-6"
             >
                 {jumpVersions.map(function (release) {
                     return (
                         <a
                             key={release.version}
                             href={`#v${release.version}`}
-                            className="inline-flex items-center rounded-[2px] border border-[#2b252c] px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:bg-[rgba(173,142,182,0.06)] hover:text-foreground"
+                            className="inline-flex items-center rounded-[2px] border border-line px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-line-strong hover:bg-[rgba(173,142,182,0.06)] hover:text-foreground"
                         >
                             v{release.version}
                         </a>

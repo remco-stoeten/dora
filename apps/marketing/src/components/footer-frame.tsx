@@ -23,17 +23,17 @@ export function FooterFrame() {
             />
             <span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-0 h-px w-full origin-center bg-[#3a3138]"
+                className="pointer-events-none absolute left-0 top-0 h-px w-full origin-center bg-line-strong"
                 style={lineStyle('x')}
             />
             <span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-0 h-full w-px bg-gradient-to-b from-[#3a3138] to-transparent"
+                className="pointer-events-none absolute left-0 top-0 h-full w-px bg-gradient-to-b from-line-strong to-transparent"
                 style={sideStyle}
             />
             <span
                 aria-hidden
-                className="pointer-events-none absolute right-0 top-0 h-full w-px bg-gradient-to-b from-[#3a3138] to-transparent"
+                className="pointer-events-none absolute right-0 top-0 h-full w-px bg-gradient-to-b from-line-strong to-transparent"
                 style={sideStyle}
             />
             <CornerTick

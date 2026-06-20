@@ -332,7 +332,7 @@ export function DatabaseConnectionCard({
 
             {/* typing connection string */}
             <div className="px-5 pb-1">
-                <div className="relative flex w-full items-center gap-2 overflow-hidden border border-[#2b252c] bg-[#100d12]/80 px-3 py-2 font-mono text-[11px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                <div className="relative flex w-full items-center gap-2 overflow-hidden border border-line bg-surface-deep/80 px-3 py-2 font-mono text-[11px] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                     <span
                         className="h-1.5 w-1.5 shrink-0 rounded-full transition-colors duration-300"
                         style={{
@@ -344,8 +344,8 @@ export function DatabaseConnectionCard({
                         <span style={{ color: current.color }}>
                             {schemeShown}
                         </span>
-                        <span className="text-[#6a6a6a]">{sepShown}</span>
-                        <span className="text-[#9a9a9a]">{restShown}</span>
+                        <span className="text-ink-700">{sepShown}</span>
+                        <span className="text-ink-400">{restShown}</span>
                         {isTyping && running ? (
                             <span
                                 className="ml-px inline-block h-3 w-px animate-pulse align-middle"
@@ -385,10 +385,10 @@ export function DatabaseConnectionCard({
             </div>
 
             <div className="px-5 pb-5">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Multi-Database
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     PostgreSQL, SQLite, libSQL, MySQL. Connect anywhere — local,
                     hosted, tunneled, SSH.
                 </p>

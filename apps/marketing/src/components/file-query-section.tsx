@@ -12,11 +12,11 @@ import { usePageVisible } from "@/shared/hooks/use-page-visible";
 import { usePrefersReducedMotion } from "@/shared/hooks/use-prefers-reduced-motion";
 
 const CELL_CLASS =
-  "relative min-h-[340px] scroll-mt-28 border-r border-b border-[#2b252c] overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]";
+  "relative min-h-[340px] scroll-mt-28 border-r border-b border-line overflow-hidden transition-colors duration-[450ms] ease-out hover:bg-[rgba(245,192,192,0.06)]";
 
 function Ext({ children }: { children: string }) {
   return (
-    <code className="rounded-[3px] border border-[#2b252c] bg-[#0d0a0f] px-1 py-px font-mono text-[11px] text-[#cdb4bd] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+    <code className="rounded-[3px] border border-line bg-surface-deeper px-1 py-px font-mono text-[11px] text-[#cdb4bd] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
       {children}
     </code>
   );
@@ -67,12 +67,12 @@ export function FileQuerySection() {
     <section ref={sectionRef} className="relative w-full">
       <SectionFrame />
 
-      <div className="border-b border-r border-[#2b252c] px-6 py-12 sm:px-8">
+      <div className="border-b border-r border-line px-6 py-12 sm:px-8">
         <ScrollReveal delay={40}>
-          <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-[#7a7a7a]">
+          <h2 className="mb-1 font-[family-name:var(--font-pixel)] text-2xl font-light italic text-ink-600">
             That <FormatSwapper /> doesn&apos;t need a database first.
           </h2>
-          <h3 className="text-balance font-[family-name:var(--font-pixel)] text-3xl font-semibold text-[#f0f0f0]">
+          <h3 className="text-balance font-[family-name:var(--font-pixel)] text-3xl font-semibold text-ink-100">
             Drop a file. Query it like a table.
           </h3>
         </ScrollReveal>
@@ -97,7 +97,7 @@ export function FileQuerySection() {
                     <p className="font-[family-name:var(--font-pixel)] text-[13px] font-medium text-[#e8e0e8]">
                       {point.head}
                     </p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-[#8a8a8a]">
+                    <p className="mt-0.5 text-xs leading-relaxed text-ink-500">
                       {point.body}
                     </p>
                   </div>
@@ -114,7 +114,7 @@ export function FileQuerySection() {
                   <p className="font-[family-name:var(--font-pixel)] text-[13px] font-medium text-[#e8e0e8]">
                     Keep it as DuckDB
                   </p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-[#8a8a8a]">
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-500">
                     Files open as in-memory views. When one&apos;s worth
                     keeping, save the session to a real, editable{" "}
                     <Ext>.duckdb</Ext> file on disk.

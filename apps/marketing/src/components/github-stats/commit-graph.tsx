@@ -541,7 +541,7 @@ export function CommitGraph({
 
             {/* Scroll position indicator when zoomed */}
             {zoom > 1 && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1a1a1a] pointer-events-none z-20">
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-surface-elevated pointer-events-none z-20">
                     <div
                         className="h-full transition-all duration-150"
                         style={{

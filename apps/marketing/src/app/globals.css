@@ -109,6 +109,30 @@
   --color-ring: var(--ring);
   --color-frame: var(--frame-line);
   --color-frame-strong: var(--frame-line-strong);
+
+  /* Marketing palette — the warm-dark accent system used across the home page.
+   * Each token is the exact hex it replaces (1:1), so it's pure indirection.
+   * Accents: brand hues. line/-strong: hairline borders. surface/-deep/-deeper
+   * /-elevated: the near-black panel ramp. ink-100..700: the text gray ramp,
+   * light to dark. One-off decorative/syntax colors stay as arbitrary values. */
+  --color-accent-pink: #f5c0c0;
+  --color-accent-rose: #e3b2b3;
+  --color-accent-violet: #ad8eb6;
+  --color-accent-mauve: #c9a3b5;
+  --color-accent-teal: #5eead4;
+  --color-line: #2b252c;
+  --color-line-strong: #3a3138;
+  --color-surface: #161218;
+  --color-surface-deep: #100d12;
+  --color-surface-deeper: #0d0a0f;
+  --color-surface-elevated: #1a1a1a;
+  --color-ink-100: #f0f0f0;
+  --color-ink-200: #e0e0e0;
+  --color-ink-300: #cfcfcf;
+  --color-ink-400: #9a9a9a;
+  --color-ink-500: #8a8a8a;
+  --color-ink-600: #7a7a7a;
+  --color-ink-700: #6a6a6a;
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -144,7 +168,7 @@
 
 .docs-sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #3a3138 transparent;
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 
 .docs-sidebar-scroll::-webkit-scrollbar {
@@ -156,7 +180,7 @@
 }
 
 .docs-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #3a3138;
+  background: var(--color-line-strong);
   border: 2px solid #09080a;
 }
 
@@ -184,7 +208,7 @@
   --color-fd-muted-foreground: color-mix(
     in srgb,
     var(--muted-foreground) 88%,
-    #e3b2b3 12%
+    var(--color-accent-rose) 12%
   );
   --color-fd-popover: #100d12;
   --color-fd-popover-foreground: var(--foreground);
@@ -216,7 +240,7 @@
 }
 
 .dora-docs #nd-sidebar {
-  border-color: #2b252c;
+  border-color: var(--color-line);
   background:
     linear-gradient(180deg, rgba(16, 13, 18, 0.92), rgba(9, 8, 10, 0.96)),
     var(--background);
@@ -226,7 +250,7 @@
 .dora-docs #nd-sidebar [class*="text-[0.9375rem]"] {
   font-family: var(--font-geist-pixel-square), var(--font-geist-mono),
     ui-monospace, monospace;
-  color: #f5c0c0;
+  color: var(--color-accent-pink);
   text-shadow: 0 0 14px rgba(245, 192, 192, 0.28);
 }
 
@@ -252,36 +276,36 @@
 }
 
 .dora-docs #nd-sidebar [data-active="true"] {
-  border-left: 1px solid #f5c0c0;
+  border-left: 1px solid var(--color-accent-pink);
   background: rgba(245, 192, 192, 0.065);
   color: var(--foreground);
 }
 
 .dora-docs #nd-sidebar [data-active="true"]::before {
-  background: #f5c0c0;
+  background: var(--color-accent-pink);
   box-shadow: 0 0 12px rgba(245, 192, 192, 0.45);
 }
 
 .dora-docs #nd-sidebar a:hover,
 .dora-docs #nd-sidebar button:hover {
   background: rgba(245, 192, 192, 0.045);
-  color: #f5c0c0;
+  color: var(--color-accent-pink);
 }
 
 .dora-docs #nd-sidebar [cmdk-input],
 .dora-docs #nd-sidebar [data-search-trigger],
 .dora-docs [data-search-trigger],
 .dora-docs button[aria-label*="Search"] {
-  border: 1px solid #2b252c;
+  border: 1px solid var(--color-line);
   border-radius: 2px;
   background: rgba(13, 10, 15, 0.82);
   color: var(--muted-foreground);
 }
 
 .dora-docs [data-sidebar-panel] {
-  border-color: #2b252c;
+  border-color: var(--color-line);
   border-radius: 2px;
-  background: #100d12;
+  background: var(--color-surface-deep);
 }
 
 .dora-docs #nd-page {
@@ -296,7 +320,7 @@
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--muted-foreground) 78%, #e3b2b3 22%);
+  color: color-mix(in srgb, var(--muted-foreground) 78%, var(--color-accent-rose) 22%);
 }
 
 .dora-docs #nd-page > h1 {
@@ -308,22 +332,22 @@
 }
 
 .dora-docs-body {
-  --tw-prose-body: color-mix(in srgb, var(--foreground) 78%, #8a8a8a 22%);
+  --tw-prose-body: color-mix(in srgb, var(--foreground) 78%, var(--color-ink-500) 22%);
   --tw-prose-headings: var(--foreground);
   --tw-prose-lead: var(--muted-foreground);
-  --tw-prose-links: #f5c0c0;
+  --tw-prose-links: var(--color-accent-pink);
   --tw-prose-bold: var(--foreground);
   --tw-prose-counters: #6a5f66;
-  --tw-prose-bullets: #f5c0c0;
-  --tw-prose-hr: #2b252c;
+  --tw-prose-bullets: var(--color-accent-pink);
+  --tw-prose-hr: var(--color-line);
   --tw-prose-quotes: var(--foreground);
   --tw-prose-quote-borders: rgba(245, 192, 192, 0.42);
   --tw-prose-captions: var(--muted-foreground);
-  --tw-prose-code: #e3b2b3;
+  --tw-prose-code: var(--color-accent-rose);
   --tw-prose-pre-code: #ddd4dc;
-  --tw-prose-pre-bg: #0d0a0f;
-  --tw-prose-th-borders: #3a3138;
-  --tw-prose-td-borders: #2b252c;
+  --tw-prose-pre-bg: var(--color-surface-deeper);
+  --tw-prose-th-borders: var(--color-line-strong);
+  --tw-prose-td-borders: var(--color-line);
   max-width: none;
   font-size: 15px;
   line-height: 1.75;
@@ -342,7 +366,7 @@
 .dora-docs-body h2 {
   margin-top: 2.75rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #2b252c;
+  border-top: 1px solid var(--color-line);
   font-size: 1.35rem;
 }
 
@@ -364,38 +388,38 @@
 }
 
 .dora-docs-body :not(pre) > code {
-  border: 1px solid #2b252c;
+  border: 1px solid var(--color-line);
   border-radius: 2px;
-  background: #0d0a0f;
+  background: var(--color-surface-deeper);
   padding: 0.12rem 0.32rem;
-  color: #e3b2b3;
+  color: var(--color-accent-rose);
   font-weight: 500;
 }
 
 .dora-docs-body pre,
 .dora-docs-body figure[data-rehype-pretty-code-figure] pre {
-  border: 1px solid #2b252c;
+  border: 1px solid var(--color-line);
   border-radius: 2px;
   background:
     linear-gradient(180deg, rgba(245, 192, 192, 0.035), transparent 42px),
-    #0d0a0f;
+    var(--color-surface-deeper);
   box-shadow: inset 0 1px 0 rgba(245, 192, 192, 0.045);
 }
 
 .dora-docs-body table {
   overflow: hidden;
-  border: 1px solid #2b252c;
+  border: 1px solid var(--color-line);
   border-radius: 2px;
   background: rgba(13, 10, 15, 0.55);
 }
 
 .dora-docs-body thead {
-  border-bottom-color: #3a3138;
+  border-bottom-color: var(--color-line-strong);
   background: rgba(245, 192, 192, 0.045);
 }
 
 .dora-docs-body th {
-  color: #e3b2b3;
+  color: var(--color-accent-rose);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
@@ -408,14 +432,14 @@
 }
 
 .dora-docs-body hr {
-  border-color: #2b252c;
+  border-color: var(--color-line);
 }
 
 .dora-docs [data-toc-popover-trigger],
 .dora-docs [data-toc-popover-content],
 .dora-docs aside[class*="toc"],
 .dora-docs [data-toc] {
-  border-color: #2b252c;
+  border-color: var(--color-line);
   background-color: rgba(13, 10, 15, 0.88);
 }
 
@@ -427,17 +451,17 @@
 
 .dora-docs [data-toc] a:hover,
 .dora-docs aside[class*="toc"] a:hover {
-  color: #f5c0c0;
+  color: var(--color-accent-pink);
 }
 
 .dora-docs [data-toc] a[data-active="true"],
 .dora-docs aside[class*="toc"] a[data-active="true"] {
-  color: #f5c0c0;
+  color: var(--color-accent-pink);
 }
 
 .dora-docs [data-radix-dialog-content],
 .dora-docs [data-sidebar-drawer] {
-  border-color: #2b252c;
+  border-color: var(--color-line);
   background: #09080a;
 }
 
@@ -493,7 +517,7 @@
   position: relative;
   height: 100%;
   overflow: hidden;
-  border: 1px solid #3a3138;
+  border: 1px solid var(--color-line-strong);
   border-radius: 0;
   background:
     radial-gradient(

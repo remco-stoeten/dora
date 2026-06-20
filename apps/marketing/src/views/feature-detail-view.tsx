@@ -76,7 +76,7 @@ export default function FeatureDetailView({
                                     return (
                                         <li
                                             key={highlight}
-                                            className="border border-[#2b252c] bg-background/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground"
+                                            className="border border-line bg-background/30 px-4 py-3 text-sm leading-relaxed text-muted-foreground"
                                         >
                                             {highlight}
                                         </li>
@@ -87,19 +87,19 @@ export default function FeatureDetailView({
 
                         <div className="mt-10 flex flex-wrap gap-3">
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#f5c0c0]/50 px-4 text-[13px] text-[#f5c0c0] transition-colors hover:bg-[rgba(245,192,192,0.06)]"
+                                className="inline-flex min-h-10 items-center border border-accent-pink/50 px-4 text-[13px] text-accent-pink transition-colors hover:bg-[rgba(245,192,192,0.06)]"
                                 href="/downloads"
                             >
                                 Download Dora
                             </Link>
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                className="inline-flex min-h-10 items-center border border-line px-4 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                 href="/app"
                             >
                                 Open web demo
                             </Link>
                             <Link
-                                className="inline-flex min-h-10 items-center border border-[#2b252c] px-4 text-[13px] text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                className="inline-flex min-h-10 items-center border border-line px-4 text-[13px] text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                 href={`/#${feature.homepageAnchor}`}
                             >
                                 View on homepage
@@ -109,7 +109,7 @@ export default function FeatureDetailView({
 
                     <section
                         aria-labelledby="related-features-heading"
-                        className="mt-14 border-t border-[#2b252c] pt-10"
+                        className="mt-14 border-t border-line pt-10"
                     >
                         <h2
                             id="related-features-heading"
@@ -122,7 +122,7 @@ export default function FeatureDetailView({
                                 return (
                                     <Link
                                         key={item.slug}
-                                        className="border border-[#2b252c] px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-[#3a3138] hover:text-foreground"
+                                        className="border border-line px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground"
                                         href={getFeaturePath(item.slug)}
                                     >
                                         {item.menuLabel}

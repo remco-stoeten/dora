@@ -52,18 +52,18 @@ function SqlTokens({ text }: { text: string }) {
             {parts.map((part, i) => {
                 if (/^'.*'?$/.test(part.trim()) && part.includes("'"))
                     return (
-                        <span key={i} className="text-[#c9a3b5]">
+                        <span key={i} className="text-accent-mauve">
                             {part}
                         </span>
                     )
                 if (KEYWORDS.has(part.toLowerCase()))
                     return (
-                        <span key={i} className="text-[#e3b2b3]">
+                        <span key={i} className="text-accent-rose">
                             {part}
                         </span>
                     )
                 return (
-                    <span key={i} className="text-[#9a9a9a]">
+                    <span key={i} className="text-ink-400">
                         {part}
                     </span>
                 )
@@ -180,7 +180,7 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
                     {[0, 1, 2].map((d) => (
                         <span
                             key={d}
-                            className="h-1 w-1 rounded-full bg-[#c9a3b5]"
+                            className="h-1 w-1 rounded-full bg-accent-mauve"
                             style={{
                                 animation: `particleFloat 0.9s ease-in-out ${d * 140}ms infinite alternate`
                             }}
@@ -193,7 +193,7 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
             <pre className="whitespace-pre-wrap break-words font-mono text-[10.5px] leading-[1.5] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                 <SqlTokens text={pair.sql.slice(0, sqlLen)} />
                 {genTyping && active ? (
-                    <span className="ml-px inline-block h-3 w-px animate-pulse bg-[#e3b2b3] align-middle" />
+                    <span className="ml-px inline-block h-3 w-px animate-pulse bg-accent-rose align-middle" />
                 ) : null}
             </pre>
         )
@@ -206,12 +206,12 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
             <>
                 {/* AI assistant label */}
                 <div className="mb-2 flex items-center gap-1.5">
-                    <span className="flex items-center gap-1 rounded-full border border-[#ad8eb6]/30 bg-[#ad8eb6]/10 py-[1px] pl-1 pr-1.5">
+                    <span className="flex items-center gap-1 rounded-full border border-accent-violet/30 bg-accent-violet/10 py-[1px] pl-1 pr-1.5">
                         <Sparkle
                             className="h-2.5 w-2.5"
                             spin={active && thinking}
                         />
-                        <span className="font-mono text-[8px] font-medium uppercase tracking-[0.16em] text-[#c9a3b5] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                        <span className="font-mono text-[8px] font-medium uppercase tracking-[0.16em] text-accent-mauve [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                             Dora AI
                         </span>
                     </span>
@@ -236,11 +236,11 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
 
             <div className="relative px-4 pt-5 pb-4">
                 {/* prompt row — the user's question */}
-                <div className="flex items-center gap-2 border border-[#2b252c] bg-[#100d12]/80 px-3 py-2">
-                    <span className="shrink-0 font-mono text-[12px] leading-none text-[#ad8eb6]/70 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                <div className="flex items-center gap-2 border border-line bg-surface-deep/80 px-3 py-2">
+                    <span className="shrink-0 font-mono text-[12px] leading-none text-accent-violet/70 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                         ›
                     </span>
-                    <span className="min-w-0 truncate font-mono text-[11px] text-[#cfcfcf] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                    <span className="min-w-0 truncate font-mono text-[11px] text-ink-300 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                         {askLen === 0 && active ? (
                             <span className="text-[#5a5560]">
                                 ask your database…
@@ -249,22 +249,22 @@ export function AIAssistantCard({ animate }: { animate: boolean }) {
                             pair.ask.slice(0, askLen)
                         )}
                         {askTyping && active ? (
-                            <span className="ml-px inline-block h-3 w-px animate-pulse bg-[#ad8eb6] align-middle" />
+                            <span className="ml-px inline-block h-3 w-px animate-pulse bg-accent-violet align-middle" />
                         ) : null}
                     </span>
                 </div>
 
                 {/* AI-generated answer */}
-                <div className="mt-2.5 min-h-[112px] border border-[#ad8eb6]/15 bg-[#0d0a0f]/80 px-3 py-2.5">
+                <div className="mt-2.5 min-h-[112px] border border-accent-violet/15 bg-surface-deeper/80 px-3 py-2.5">
                     {renderAnswer()}
                 </div>
             </div>
 
             <div className="relative px-5 pt-3 pb-10">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Ask in English
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Describe what you need. The AI writes the SQL, streams it
                     live, ready to run.
                 </p>

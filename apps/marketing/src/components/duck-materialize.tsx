@@ -81,7 +81,7 @@ export function DuckMaterialize() {
         {SOURCES.map((s, i) => (
           <span
             key={s}
-            className="rounded-[3px] border border-dashed border-[#3a3138] bg-[#0d0a0f]/70 px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.06em] text-[#8a8a8a] [font-family:var(--font-geist-mono),ui-monospace,monospace]"
+            className="rounded-[3px] border border-dashed border-line-strong bg-surface-deeper/70 px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.06em] text-ink-500 [font-family:var(--font-geist-mono),ui-monospace,monospace]"
             style={{
               opacity: saved ? 0.3 : 1,
               filter: saved ? "blur(1.4px)" : "blur(0)",
@@ -96,7 +96,7 @@ export function DuckMaterialize() {
       </span>
 
       {/* flow track — a comet that runs toward the database while saving */}
-      <span className="relative h-px w-6 shrink-0 self-center overflow-visible bg-[#2b252c]">
+      <span className="relative h-px w-6 shrink-0 self-center overflow-visible bg-line">
         <span
           aria-hidden
           className="absolute top-1/2 h-1 w-1 -translate-y-1/2 rounded-full"
@@ -138,7 +138,7 @@ export function DuckMaterialize() {
       </span>
 
       {/* caption — flips from ephemeral to durable */}
-      <span className="relative ml-0.5 hidden h-3 flex-1 self-center font-mono text-[8.5px] uppercase tracking-[0.1em] text-[#6a6a6a] sm:block [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+      <span className="relative ml-0.5 hidden h-3 flex-1 self-center font-mono text-[8.5px] uppercase tracking-[0.1em] text-ink-700 sm:block [font-family:var(--font-geist-mono),ui-monospace,monospace]">
         <span
           className="absolute inset-0 flex items-center"
           style={{

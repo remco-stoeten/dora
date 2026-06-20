@@ -17,7 +17,7 @@ export default function DocsView() {
                     </h2>
                     <Link
                         href="/docs/go-cli-runner"
-                        className="block border border-[#2b252c] bg-background/30 px-4 py-4 transition-colors hover:border-[#3a3138]"
+                        className="block border border-line bg-background/30 px-4 py-4 transition-colors hover:border-line-strong"
                     >
                         <span className="block text-sm font-medium text-foreground">
                             Dora manager executor
@@ -38,7 +38,7 @@ export default function DocsView() {
                             <Link
                                 key={guide.slug}
                                 href={getGuidePath(guide.slug)}
-                                className="group flex items-center gap-3 border border-[#2b252c] bg-background/30 px-4 py-4 transition-colors hover:border-[#3a3138]"
+                                className="group flex items-center gap-3 border border-line bg-background/30 px-4 py-4 transition-colors hover:border-line-strong"
                             >
                                 <img
                                     src={guide.logo}

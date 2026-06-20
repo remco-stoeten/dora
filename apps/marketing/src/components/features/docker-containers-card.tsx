@@ -118,10 +118,10 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                         >
                             {/* image name */}
                             <div className="flex w-full min-w-0 items-baseline gap-px">
-                                <span className="truncate font-mono text-[9px] text-[#cfcfcf] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                <span className="truncate font-mono text-[9px] text-ink-300 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                     {c.name}
                                 </span>
-                                <span className="shrink-0 font-mono text-[8px] text-[#6a6a6a] [font-family:var(--font-geist-mono),ui-monospace,monospace]">
+                                <span className="shrink-0 font-mono text-[8px] text-ink-700 [font-family:var(--font-geist-mono),ui-monospace,monospace]">
                                     :{c.tag}
                                 </span>
                             </div>
@@ -136,7 +136,7 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                                 />
                                 {starting && running ? (
                                     <span
-                                        className="absolute h-4 w-4 rounded-full border border-[#ad8eb6]/60 border-t-[#f0c9d2]"
+                                        className="absolute h-4 w-4 rounded-full border border-accent-violet/60 border-t-[#f0c9d2]"
                                         style={{
                                             animation:
                                                 'dockerBootSpin 720ms linear infinite, dockerBootPulse 1180ms cubic-bezier(0.23, 1, 0.32, 1) infinite'
@@ -171,10 +171,10 @@ export function DockerContainersCard({ animate }: { animate: boolean }) {
                 })}
             </div>
             <div className="px-5 pb-5">
-                <h3 className="mb-1 font-pixel text-sm font-[500] text-[#e0e0e0]">
+                <h3 className="mb-1 font-pixel text-sm font-[500] text-ink-200">
                     Docker Containers
                 </h3>
-                <p className="text-xs text-[#8a8a8a] leading-relaxed">
+                <p className="text-xs text-ink-500 leading-relaxed">
                     Start, stop, restart. Live process management.
                     Auto-reconnect on failure.
                 </p>
