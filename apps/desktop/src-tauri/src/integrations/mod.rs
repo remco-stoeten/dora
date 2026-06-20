@@ -1,4 +1,6 @@
 pub mod neon;
+pub mod planetscale;
 pub mod supabase;
 pub mod turso;
 pub mod xata;
+pub mod vercel;

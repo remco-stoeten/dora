@@ -5,7 +5,9 @@ import {
 	Supabase as SupabaseIcon,
 	Turso as TursoIcon,
 	Neon as NeonIcon,
-	Xata as XataIcon
+	Xata as XataIcon,
+	Planetscale as PlanetscaleIcon,
+	Vercel as VercelIcon
 } from '@studio/components/provider.icons'
 import { DatabaseType } from '../../types'
 import { DatabaseIcon, DATABASE_META } from '../database-icons'
@@ -30,7 +32,15 @@ function SelectedProviderIcon({ accent, children }: { accent: string; children: 
  * they resolve to a plain engine connection — selecting one swaps the form for
  * that provider's connect flow rather than changing `formData.type`.
  */
-export type ProviderKey = DatabaseType | 'supabase' | 'turso' | 'neon' | 'xata' | 'files'
+export type ProviderKey =
+	| DatabaseType
+	| 'supabase'
+	| 'turso'
+	| 'neon'
+	| 'xata'
+	| 'planetscale'
+	| 'vercel'
+	| 'files'
 
 type Props = {
 	selectedType: ProviderKey
@@ -43,6 +53,10 @@ type Props = {
 	showNeon?: boolean
 	/** Show the Xata connect tile (new connections only). */
 	showXata?: boolean
+	/** Show the PlanetScale connect tile (new connections only). */
+	showPlanetscale?: boolean
+	/** Show the Vercel Postgres connect tile (new connections only). */
+	showVercel?: boolean
 	/** Show the Files tile (opens flat files as a read-only DuckDB connection). */
 	showFiles?: boolean
 	compact?: boolean
@@ -106,6 +120,14 @@ const TYPE_THEME: Record<ProviderKey, Theme> = {
 		accent: 'hsl(265 84% 64%)',
 		wash: 'color-mix(in srgb, hsl(265 84% 64%) 10%, hsl(var(--card)))'
 	},
+	planetscale: {
+		accent: 'hsl(0 0% 88%)',
+		wash: 'color-mix(in srgb, hsl(0 0% 88%) 9%, hsl(var(--card)))'
+	},
+	vercel: {
+		accent: 'hsl(0 0% 80%)',
+		wash: 'color-mix(in srgb, hsl(0 0% 80%) 10%, hsl(var(--card)))'
+	},
 	files: {
 		accent: 'hsl(38 80% 55%)',
 		wash: 'color-mix(in srgb, hsl(38 80% 55%) 10%, hsl(var(--card)))'
@@ -147,6 +169,20 @@ const XATA_TILE: Tile = {
 	icon: <XataIcon className='h-[18px] w-[18px]' />
 }
 
+const PLANETSCALE_TILE: Tile = {
+	key: 'planetscale',
+	name: 'PlanetScale',
+	description: 'Add a token, pick a branch',
+	icon: <PlanetscaleIcon className='h-[18px] w-[18px]' />
+}
+
+const VERCEL_TILE: Tile = {
+	key: 'vercel',
+	name: 'Vercel Postgres',
+	description: 'Add a token, pick a store',
+	icon: <VercelIcon className='h-[18px] w-[18px]' />
+}
+
 const FILES_TILE: Tile = {
 	key: 'files',
 	name: 'Files',
@@ -161,6 +197,8 @@ export function DatabaseTypeSelector({
 	showTurso,
 	showNeon,
 	showXata,
+	showPlanetscale,
+	showVercel,
 	showFiles,
 	compact,
 	disabled
@@ -179,6 +217,8 @@ export function DatabaseTypeSelector({
 	if (showTurso) tiles.push(TURSO_TILE)
 	if (showNeon) tiles.push(NEON_TILE)
 	if (showXata) tiles.push(XATA_TILE)
+	if (showPlanetscale) tiles.push(PLANETSCALE_TILE)
+	if (showVercel) tiles.push(VERCEL_TILE)
 	if (showFiles) tiles.push(FILES_TILE)
 	const orderedTiles = compact
 		? [...tiles].sort(function (a, b) {
