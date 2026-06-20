@@ -137,6 +137,7 @@ impl StatementManager {
                         .map_err(|e| anyhow::anyhow!("{}", e))
                 },
                 DatabaseClient::MySQL { .. } => mysql::parser::parse_statements,
+                DatabaseClient::D1 { .. } => sqlite::parser::parse_statements,
             };
 
         let statements = parse_statements(query)?;
@@ -308,6 +309,14 @@ impl StatementManager {
                 let handle = spawn(async move {
                     let result = mysql::execute::execute_query(&pool, stmt, &sender).await;
                     log_query_exec_outcome("MySQL", result);
+                });
+                self.execution_handles.insert(id, handle);
+            }
+            DatabaseClient::D1 { http } => {
+                let handle = spawn(async move {
+                    let adapter = crate::database::d1::D1Adapter::new(http);
+                    let result = adapter.run_statement(stmt, &sender).await;
+                    log_query_exec_outcome("Cloudflare D1", result);
                 });
                 self.execution_handles.insert(id, handle);
             }

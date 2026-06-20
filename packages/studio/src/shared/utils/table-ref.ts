@@ -3,7 +3,15 @@ type TableRefLike = {
 	schema?: string | null
 }
 
-export type TableDialect = 'postgres' | 'cockroach' | 'mysql' | 'mariadb' | 'sqlite' | 'duckdb' | 'libsql'
+export type TableDialect =
+	| 'postgres'
+	| 'cockroach'
+	| 'mysql'
+	| 'mariadb'
+	| 'sqlite'
+	| 'duckdb'
+	| 'libsql'
+	| 'd1'
 
 export type TableRefParts = {
 	schemaName: string | null

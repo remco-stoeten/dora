@@ -68,6 +68,13 @@ impl<'a> MetadataService<'a> {
             Database::LibSQL {
                 connection: None, ..
             } => return Err(Error::Any(anyhow!("LibSQL connection not active"))),
+            Database::D1 {
+                connection: Some(http),
+                ..
+            } => crate::database::d1::schema::get_database_schema(http).await?,
+            Database::D1 {
+                connection: None, ..
+            } => return Err(Error::Any(anyhow!("Cloudflare D1 connection not active"))),
             // TODO(dialect-parity, #88): MariaDB shares the MySQL introspection
             // path. MariaDB-specific types (UUID, INET4/INET6) and some
             // information_schema differences need a dialect branch; the
@@ -152,6 +159,13 @@ impl<'a> MetadataService<'a> {
             Database::LibSQL {
                 connection: None, ..
             } => Err(Error::Any(anyhow!("LibSQL connection not active"))),
+            Database::D1 {
+                url,
+                connection: Some(http),
+            } => metadata::get_d1_metadata(http, url).await,
+            Database::D1 {
+                connection: None, ..
+            } => Err(Error::Any(anyhow!("Cloudflare D1 connection not active"))),
             Database::MySQL {
                 connection_string,
                 pool: Some(pool),

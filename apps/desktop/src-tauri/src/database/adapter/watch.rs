@@ -13,7 +13,9 @@ use base64::Engine;
 use mysql_async::{prelude::Queryable, Row as MySqlRow, Value as MySqlValue};
 use rusqlite::types::ValueRef;
 
-use super::read::{DuckDbAdapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter};
+use super::read::{
+    D1Adapter, DuckDbAdapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter,
+};
 use crate::{database::postgres::row_writer::RowWriter as PostgresRowWriter, Error};
 
 #[async_trait]
@@ -78,6 +80,16 @@ impl WatchAdapter for SqliteAdapter {
         })
         .await
         .map_err(|err| Error::Internal(format!("SQLite watch task failed: {err}")))?
+    }
+}
+
+#[async_trait]
+impl WatchAdapter for D1Adapter {
+    async fn poll_table_hash(&self, _table: &str, _schema: Option<&str>) -> Result<u64, Error> {
+        // D1's `source_caps().supports_listen_notify` is false, so the live
+        // monitor never starts a watch for it. This exists only to satisfy the
+        // `watch_adapter_from_client` factory's exhaustive match.
+        Err(Error::NotImplemented("table watch for Cloudflare D1"))
     }
 }
 
@@ -194,6 +206,9 @@ pub fn watch_adapter_from_client(
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))
+        }
+        crate::database::types::DatabaseClient::D1 { http } => {
+            Box::new(D1Adapter::new(http.clone()))
         }
     }
 }

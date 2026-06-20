@@ -1,3 +1,4 @@
+pub mod cloudflare;
 pub mod neon;
 pub mod planetscale;
 pub mod supabase;

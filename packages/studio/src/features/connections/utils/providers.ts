@@ -94,6 +94,14 @@ export const PROVIDER_CONFIGS: Record<DatabaseType, ProviderConfig> = {
 		defaultDatabase: '',
 		protocols: ['libsql'],
 		supportsSSL: false
+	},
+	d1: {
+		name: 'Cloudflare D1',
+		defaultPort: 0,
+		defaultUser: '',
+		defaultDatabase: '',
+		protocols: ['d1'],
+		supportsSSL: false
 	}
 }
 

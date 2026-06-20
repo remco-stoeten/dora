@@ -67,6 +67,10 @@ impl ConnectionRepository for AppState {
             Database::LibSQL { .. } => {
                 crate::database::libsql::parser::parse_statements(query).map_err(Into::into)
             }
+            Database::D1 { .. } => {
+                // D1 is the SQLite dialect.
+                crate::database::sqlite::parser::parse_statements(query).map_err(Into::into)
+            }
         }
     }
 }

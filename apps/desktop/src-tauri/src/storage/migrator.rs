@@ -19,6 +19,7 @@ impl Migrator {
                 include_str!("../../migrations/008.sql"),
                 include_str!("../../migrations/009.sql"),
                 include_str!("../../migrations/010.sql"),
+                include_str!("../../migrations/011.sql"),
             ],
         }
     }

@@ -11,6 +11,7 @@ pub(super) const DB_TYPE_MYSQL: i32 = 4;
 pub(super) const DB_TYPE_COCKROACH: i32 = 5;
 pub(super) const DB_TYPE_MARIADB: i32 = 6;
 pub(super) const DB_TYPE_DUCKDB: i32 = 7;
+pub(super) const DB_TYPE_D1: i32 = 8;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredPostgresConnection {
@@ -115,6 +116,9 @@ pub(super) fn serialize_connection_data(database_type: &DatabaseInfo) -> Result<
             })
             .context("Failed to serialize MariaDB connection data")?,
         )),
+        // D1 stores only its `d1://account/database` URL; the API token lives in
+        // the encrypted Cloudflare integration setting, not on the connection.
+        DatabaseInfo::D1 { url } => Ok((DB_TYPE_D1, url.clone())),
     }
 }
 
@@ -129,6 +133,7 @@ fn db_type_name_from_id(db_type_id: i32) -> Option<&'static str> {
         DB_TYPE_COCKROACH => Some("cockroach"),
         DB_TYPE_MARIADB => Some("mariadb"),
         DB_TYPE_DUCKDB => Some("duckdb"),
+        DB_TYPE_D1 => Some("d1"),
         _ => None,
     }
 }
@@ -165,6 +170,9 @@ pub(super) fn deserialize_database_info(
         }
         "sqlite" => DatabaseInfo::SQLite {
             db_path: connection_data,
+        },
+        "d1" => DatabaseInfo::D1 {
+            url: connection_data,
         },
         "duckdb" => {
             if let Ok(stored) = serde_json::from_str::<StoredDuckdbConnection>(&connection_data) {

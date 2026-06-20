@@ -16,6 +16,7 @@ export type DbPreset =
 	| 'duckdb'
 	| 'libsql'
 	| 'turso'
+	| 'd1'
 	| 'railway'
 	| 'fly'
 	| 'aiven'

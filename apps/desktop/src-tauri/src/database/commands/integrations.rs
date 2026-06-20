@@ -2,6 +2,7 @@ use tauri::State;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::{
+    integrations::cloudflare::{self, CloudflareAccount, CloudflareD1Database},
     integrations::neon::{self, NeonAccount, NeonBranch, NeonDatabase},
     integrations::supabase::{self, SupabaseOrganization, SupabaseProject},
     integrations::planetscale::{
@@ -261,6 +262,60 @@ pub fn neon_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
 #[specta::specta]
 pub fn neon_is_connected(state: State<'_, AppState>) -> bool {
     neon::is_connected(&state.storage)
+}
+
+// ---------------------------------------------------------------------------
+// Cloudflare D1
+// ---------------------------------------------------------------------------
+
+/// Validates and stores a Cloudflare API token (encrypted on-device).
+#[tauri::command]
+#[specta::specta]
+pub async fn cloudflare_save_token(
+    token: String,
+    state: State<'_, AppState>,
+) -> Result<(), Error> {
+    cloudflare::save_token(&state.storage, token).await
+}
+
+/// The Cloudflare accounts the stored token can see — the first pick step (D1 is
+/// account-scoped) and the source of the "Connected as …" label.
+#[tauri::command]
+#[specta::specta]
+pub async fn cloudflare_list_accounts(
+    state: State<'_, AppState>,
+) -> Result<Vec<CloudflareAccount>, Error> {
+    cloudflare::list_accounts(&state.storage).await
+}
+
+/// The D1 databases in one Cloudflare account.
+#[tauri::command]
+#[specta::specta]
+pub async fn cloudflare_list_databases(
+    account_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<CloudflareD1Database>, Error> {
+    cloudflare::list_databases(&state.storage, &account_id).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn cloudflare_account(
+    state: State<'_, AppState>,
+) -> Result<Vec<CloudflareAccount>, Error> {
+    cloudflare::current_account(&state.storage).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn cloudflare_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
+    cloudflare::disconnect(&state.storage)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn cloudflare_is_connected(state: State<'_, AppState>) -> bool {
+    cloudflare::is_connected(&state.storage)
 }
 
 // ---------------------------------------------------------------------------

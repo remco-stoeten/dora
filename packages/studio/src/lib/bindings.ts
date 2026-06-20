@@ -450,6 +450,56 @@ async neonDisconnect() : Promise<Result<null, { kind: string; detail: string }>>
 async neonIsConnected() : Promise<boolean> {
     return await TAURI_INVOKE("neon_is_connected");
 },
+async cloudflareSaveToken(token: string) : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_save_token", { token }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The Cloudflare accounts the stored token can see — the first pick step (D1 is
+ * account-scoped) and the source of the "Connected as …" label.
+ */
+async cloudflareListAccounts() : Promise<Result<CloudflareAccount[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_list_accounts") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The D1 databases in one Cloudflare account.
+ */
+async cloudflareListDatabases(accountId: string) : Promise<Result<CloudflareD1Database[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_list_databases", { accountId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareAccount() : Promise<Result<CloudflareAccount[], { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_account") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareDisconnect() : Promise<Result<null, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("cloudflare_disconnect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cloudflareIsConnected() : Promise<boolean> {
+    return await TAURI_INVOKE("cloudflare_is_connected");
+},
 /**
  * Validates and stores a Xata API key (encrypted on-device).
  */
@@ -1505,6 +1555,8 @@ export type SupabaseProject = { id: string; name: string; region: string; status
 export type SupabaseOrganization = { id: string; name: string }
 export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
 export type TursoOrganization = { slug: string; name?: string }
+export type CloudflareAccount = { id: string; name?: string }
+export type CloudflareD1Database = { accountId: string; uuid: string; name: string }
 export type NeonAccount = { email?: string; name?: string }
 export type NeonBranch = { id: string; name: string; isDefault: boolean }
 export type NeonDatabase = { projectId: string; projectName: string; branchId: string; databaseName: string; roleName: string }

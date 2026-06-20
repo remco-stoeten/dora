@@ -650,6 +650,12 @@ async fn fetch_table_snapshot(
             fetch_libsql_snapshot(connection, table_name).await
         }
         DatabaseClient::MySQL { pool, .. } => fetch_mysql_snapshot(pool, table_name).await,
+        // D1 has no live monitoring: `source_caps().supports_listen_notify` is
+        // false, so `start_live_monitor` returns before reaching this snapshot
+        // path. The arm exists only to keep the match exhaustive.
+        DatabaseClient::D1 { .. } => {
+            Err(Error::NotImplemented("live monitoring for Cloudflare D1"))
+        }
     }
 }
 

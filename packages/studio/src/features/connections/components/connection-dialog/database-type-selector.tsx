@@ -10,7 +10,7 @@ import {
 	Vercel as VercelIcon
 } from '@studio/components/provider.icons'
 import { DatabaseType } from '../../types'
-import { DatabaseIcon, DATABASE_META } from '../database-icons'
+import { DatabaseIcon, DATABASE_META, CloudflareD1Icon } from '../database-icons'
 
 function SelectedProviderIcon({ accent, children }: { accent: string; children: ReactNode }) {
 	return (
@@ -37,6 +37,7 @@ export type ProviderKey =
 	| 'supabase'
 	| 'turso'
 	| 'neon'
+	| 'cloudflare'
 	| 'xata'
 	| 'planetscale'
 	| 'vercel'
@@ -51,6 +52,8 @@ type Props = {
 	showTurso?: boolean
 	/** Show the Neon connect tile (new connections only). */
 	showNeon?: boolean
+	/** Show the Cloudflare D1 connect tile (new connections only). */
+	showCloudflare?: boolean
 	/** Show the Xata connect tile (new connections only). */
 	showXata?: boolean
 	/** Show the PlanetScale connect tile (new connections only). */
@@ -103,6 +106,14 @@ const TYPE_THEME: Record<ProviderKey, Theme> = {
 	libsql: {
 		accent: 'hsl(169 62% 45%)',
 		wash: 'color-mix(in srgb, hsl(169 62% 45%) 9%, hsl(var(--card)))'
+	},
+	d1: {
+		accent: 'hsl(28 90% 55%)',
+		wash: 'color-mix(in srgb, hsl(28 90% 55%) 9%, hsl(var(--card)))'
+	},
+	cloudflare: {
+		accent: 'hsl(28 90% 55%)',
+		wash: 'color-mix(in srgb, hsl(28 90% 55%) 10%, hsl(var(--card)))'
 	},
 	supabase: {
 		accent: 'hsl(153 60% 45%)',
@@ -162,6 +173,13 @@ const NEON_TILE: Tile = {
 	icon: <NeonIcon className='h-[18px] w-[18px]' />
 }
 
+const CLOUDFLARE_TILE: Tile = {
+	key: 'cloudflare',
+	name: 'Cloudflare D1',
+	description: 'Add a token, pick a database',
+	icon: <CloudflareD1Icon className='h-[18px] w-[18px]' />
+}
+
 const XATA_TILE: Tile = {
 	key: 'xata',
 	name: 'Xata',
@@ -196,6 +214,7 @@ export function DatabaseTypeSelector({
 	showSupabase,
 	showTurso,
 	showNeon,
+	showCloudflare,
 	showXata,
 	showPlanetscale,
 	showVercel,
@@ -216,6 +235,7 @@ export function DatabaseTypeSelector({
 	if (showSupabase) tiles.push(SUPABASE_TILE)
 	if (showTurso) tiles.push(TURSO_TILE)
 	if (showNeon) tiles.push(NEON_TILE)
+	if (showCloudflare) tiles.push(CLOUDFLARE_TILE)
 	if (showXata) tiles.push(XATA_TILE)
 	if (showPlanetscale) tiles.push(PLANETSCALE_TILE)
 	if (showVercel) tiles.push(VERCEL_TILE)
