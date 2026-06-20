@@ -4,6 +4,9 @@ use tauri_plugin_opener::OpenerExt;
 use crate::{
     integrations::neon::{self, NeonAccount, NeonBranch, NeonDatabase},
     integrations::supabase::{self, SupabaseOrganization, SupabaseProject},
+    integrations::planetscale::{
+        self, PlanetscaleBranch, PlanetscaleDatabase, PlanetscaleOrganization, PlanetscalePassword,
+    },
     integrations::turso::{self, TursoDatabase, TursoOrganization},
     integrations::vercel::{self, VercelAccount, VercelStore},
     AppState, Error,
@@ -257,6 +260,75 @@ pub fn neon_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
 #[specta::specta]
 pub fn neon_is_connected(state: State<'_, AppState>) -> bool {
     neon::is_connected(&state.storage)
+}
+
+// ---------------------------------------------------------------------------
+// PlanetScale
+// ---------------------------------------------------------------------------
+
+/// Validates and stores a PlanetScale service token (encrypted on-device).
+#[tauri::command]
+#[specta::specta]
+pub async fn planetscale_save_token(
+    token: String,
+    state: State<'_, AppState>,
+) -> Result<(), Error> {
+    planetscale::save_token(&state.storage, token).await
+}
+
+/// The PlanetScale organizations the stored token can access, so the UI can show
+/// which account is currently connected.
+#[tauri::command]
+#[specta::specta]
+pub async fn planetscale_account(
+    state: State<'_, AppState>,
+) -> Result<Vec<PlanetscaleOrganization>, Error> {
+    planetscale::current_account(&state.storage).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn planetscale_list_databases(
+    organization: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<PlanetscaleDatabase>, Error> {
+    planetscale::list_databases(&state.storage, &organization).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn planetscale_list_branches(
+    organization: String,
+    database: String,
+    default_branch: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<PlanetscaleBranch>, Error> {
+    planetscale::list_branches(&state.storage, &organization, &database, &default_branch).await
+}
+
+/// Mints a fresh MySQL password on a branch (PlanetScale returns the plaintext
+/// only at creation), so the connection needs no hand-copied secret.
+#[tauri::command]
+#[specta::specta]
+pub async fn planetscale_create_password(
+    organization: String,
+    database: String,
+    branch: String,
+    state: State<'_, AppState>,
+) -> Result<PlanetscalePassword, Error> {
+    planetscale::create_password(&state.storage, &organization, &database, &branch).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn planetscale_disconnect(state: State<'_, AppState>) -> Result<(), Error> {
+    planetscale::disconnect(&state.storage)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn planetscale_is_connected(state: State<'_, AppState>) -> bool {
+    planetscale::is_connected(&state.storage)
 }
 
 // ---------------------------------------------------------------------------

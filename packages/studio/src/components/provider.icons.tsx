@@ -220,6 +220,27 @@ export function Neon(p: TProps) {
 	)
 }
 
+export function Planetscale(p: TProps) {
+	const b = baseSvg(p, 'PlanetScale')
+	return (
+		<svg
+			height={b.h}
+			width={b.w}
+			role={b.role}
+			viewBox='0 0 24 24'
+			xmlns='http://www.w3.org/2000/svg'
+			className={b.cls}
+			style={b.sty}
+			focusable={b.focusable}
+			fill='currentColor'
+			{...b.rest}
+		>
+			<title>{b.ttl}</title>
+			<path d='M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.43 7.63 11.18L13.62.81A11.964 11.964 0 0 0 12 0Zm3.474.828L8.382 23.51A12.002 12.002 0 0 0 24 12c0-5.514-3.72-10.16-8.526-11.172ZM12 6.857A5.143 5.143 0 0 0 6.857 12a5.12 5.12 0 0 0 1.357 3.476l4.6-8.6A5.16 5.16 0 0 0 12 6.857Z' />
+		</svg>
+	)
+}
+
 export function Vercel(p: TProps) {
 	const b = baseSvg(p, 'Vercel')
 	return (

@@ -5,6 +5,7 @@ import {
 	Supabase as SupabaseIcon,
 	Turso as TursoIcon,
 	Neon as NeonIcon,
+	Planetscale as PlanetscaleIcon,
 	Vercel as VercelIcon
 } from '@studio/components/provider.icons'
 import { DatabaseType } from '../../types'
@@ -30,7 +31,14 @@ function SelectedProviderIcon({ accent, children }: { accent: string; children: 
  * they resolve to a plain engine connection — selecting one swaps the form for
  * that provider's connect flow rather than changing `formData.type`.
  */
-export type ProviderKey = DatabaseType | 'supabase' | 'turso' | 'neon' | 'vercel' | 'files'
+export type ProviderKey =
+	| DatabaseType
+	| 'supabase'
+	| 'turso'
+	| 'neon'
+	| 'planetscale'
+	| 'vercel'
+	| 'files'
 
 type Props = {
 	selectedType: ProviderKey
@@ -41,6 +49,8 @@ type Props = {
 	showTurso?: boolean
 	/** Show the Neon connect tile (new connections only). */
 	showNeon?: boolean
+	/** Show the PlanetScale connect tile (new connections only). */
+	showPlanetscale?: boolean
 	/** Show the Vercel Postgres connect tile (new connections only). */
 	showVercel?: boolean
 	/** Show the Files tile (opens flat files as a read-only DuckDB connection). */
@@ -102,6 +112,10 @@ const TYPE_THEME: Record<ProviderKey, Theme> = {
 		accent: 'hsl(149 74% 52%)',
 		wash: 'color-mix(in srgb, hsl(149 74% 52%) 10%, hsl(var(--card)))'
 	},
+	planetscale: {
+		accent: 'hsl(0 0% 88%)',
+		wash: 'color-mix(in srgb, hsl(0 0% 88%) 9%, hsl(var(--card)))'
+	},
 	vercel: {
 		accent: 'hsl(0 0% 80%)',
 		wash: 'color-mix(in srgb, hsl(0 0% 80%) 10%, hsl(var(--card)))'
@@ -140,12 +154,20 @@ const NEON_TILE: Tile = {
 	icon: <NeonIcon className='h-[18px] w-[18px]' />
 }
 
+const PLANETSCALE_TILE: Tile = {
+	key: 'planetscale',
+	name: 'PlanetScale',
+	description: 'Add a token, pick a branch',
+	icon: <PlanetscaleIcon className='h-[18px] w-[18px]' />
+}
+
 const VERCEL_TILE: Tile = {
 	key: 'vercel',
 	name: 'Vercel Postgres',
 	description: 'Add a token, pick a store',
 	icon: <VercelIcon className='h-[18px] w-[18px]' />
 }
+
 
 const FILES_TILE: Tile = {
 	key: 'files',
@@ -160,6 +182,7 @@ export function DatabaseTypeSelector({
 	showSupabase,
 	showTurso,
 	showNeon,
+	showPlanetscale,
 	showVercel,
 	showFiles,
 	compact,
@@ -178,6 +201,7 @@ export function DatabaseTypeSelector({
 	if (showSupabase) tiles.push(SUPABASE_TILE)
 	if (showTurso) tiles.push(TURSO_TILE)
 	if (showNeon) tiles.push(NEON_TILE)
+	if (showPlanetscale) tiles.push(PLANETSCALE_TILE)
 	if (showVercel) tiles.push(VERCEL_TILE)
 	if (showFiles) tiles.push(FILES_TILE)
 	const orderedTiles = compact
