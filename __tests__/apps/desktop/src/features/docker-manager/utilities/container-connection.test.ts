@@ -55,8 +55,14 @@ describe('detectConnectionType', () => {
 })
 
 describe('detectDatabaseProvider', () => {
-	it('maps mysql images onto the mariadb (mysql-wire) provider', () => {
-		expect(detectDatabaseProvider(makeContainer({ image: 'mysql', imageTag: '8' }))).toBe('mariadb')
+	it('maps mysql images onto the mysql provider', () => {
+		expect(detectDatabaseProvider(makeContainer({ image: 'mysql', imageTag: '8' }))).toBe('mysql')
+	})
+
+	it('maps mariadb images onto the mariadb provider', () => {
+		expect(detectDatabaseProvider(makeContainer({ image: 'mariadb', imageTag: '10.7' }))).toBe(
+			'mariadb'
+		)
 	})
 })
 
