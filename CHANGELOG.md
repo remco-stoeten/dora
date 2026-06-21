@@ -3,49 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## [v0.29.0] - 2026-06-15
-
-### Bug Fixes
-
-- fix(backend): replace high-risk unwrap/panic with error propagation
-
-- fix(studio): resolve strictNullChecks violations
-
-
-
-### CI/CD
-
-- ci: lower asset count floor to 9 after dropping Intel-macOS build
-
-- ci: bump bun pin to 1.3.14 and add tsc --noEmit typecheck gate
-
-
-
-### Chores
-
-- chore(ts): enable strictNullChecks for studio and desktop
-
-
-
-### Features
-
-- feat(marketing): add 15 hosted-provider connection guides for SEO
-
-- feat(connections): Fly.io proxy hint in connection dialog
-
-- feat(connections): first-class presets for 10 hosted providers
-
-- feat(prisma-runner): Prisma ORM Runner — write & execute Prisma client queries natively (#137)
-
-- feat(connections): hosted/serverless provider support + Supabase integration (#128)
-
-- feat(connections): one-click Supabase OAuth + reliable pooler host
-
-- feat(marketing): feature-showcase polish + Prisma runner showcase
-
-- feat(studio): connection dialog, docker view & Supabase flow refinements
-
-- feat(database-studio): drop column support
+## [Unreleased]
 
 ## [v0.30.0] - 2026-06-20
 
@@ -89,6 +47,50 @@ Issues completed since v0.29.0:
 - PlanetScale connector #141
 - Branch-aware connects for PlanetScale and Neon #142
 - Documentation — docs site at doradb.app/docs #130, installation & distribution matrix #131, provider & dialect reference #132, serverless & hosted provider showcase #133, full feature showcase #134
+
+## [v0.29.0] - 2026-06-15
+
+### Bug Fixes
+
+- fix(backend): replace high-risk unwrap/panic with error propagation
+
+- fix(studio): resolve strictNullChecks violations
+
+
+
+### CI/CD
+
+- ci: lower asset count floor to 9 after dropping Intel-macOS build
+
+- ci: bump bun pin to 1.3.14 and add tsc --noEmit typecheck gate
+
+
+
+### Chores
+
+- chore(ts): enable strictNullChecks for studio and desktop
+
+
+
+### Features
+
+- feat(marketing): add 15 hosted-provider connection guides for SEO
+
+- feat(connections): Fly.io proxy hint in connection dialog
+
+- feat(connections): first-class presets for 10 hosted providers
+
+- feat(prisma-runner): Prisma ORM Runner — write & execute Prisma client queries natively (#137)
+
+- feat(connections): hosted/serverless provider support + Supabase integration (#128)
+
+- feat(connections): one-click Supabase OAuth + reliable pooler host
+
+- feat(marketing): feature-showcase polish + Prisma runner showcase
+
+- feat(studio): connection dialog, docker view & Supabase flow refinements
+
+- feat(database-studio): drop column support
 
 ## [v0.28.0] - 2026-06-14
 
