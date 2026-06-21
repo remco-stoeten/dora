@@ -5,6 +5,7 @@ node_modules
 
 # Testing
 coverage
+.cache/coverage
 
 # Next.js
 .next
@@ -31,6 +32,12 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Local agent/tool state
+.agents/
+.cache/
+.claude/
+.tauri-logs/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
@@ -54,6 +61,7 @@ test2.db
 target/
 
 # Snapcraft
+/snap
 parts/
 stage/
 prime/
@@ -62,3 +70,8 @@ prime/
 tools/dora-runner/dora-runner
 /dora-runner
 dora-manager-executor
+
+# Local working notes / drafts (not for release)
+red.txt
+prompt-design.md
+docs/plans/

@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           rm -f ./*.snap
-          sudo /snap/bin/snapcraft pack --destructive-mode
+          bash scripts/snapcraft.sh --sudo --destructive-mode
 
           SNAP_PATH="$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.snap' | head -n 1)"
           if [[ -z "$SNAP_PATH" ]]; then

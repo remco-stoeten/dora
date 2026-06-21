@@ -129,15 +129,15 @@ var releasePackagingScripts = []scriptDef{
 	},
 	{
 		label:       "Build Snap",
-		description: "snapcraft pack --use-lxd",
-		command:     "snapcraft",
-		args:        []string{"pack", "--use-lxd"},
+		description: "bash scripts/snapcraft.sh --use-lxd",
+		command:     "bash",
+		args:        []string{"scripts/snapcraft.sh", "--use-lxd"},
 	},
 	{
 		label:       "Build Snap (destructive)",
-		description: "snapcraft pack --destructive-mode (requires sudo)",
+		description: "bash scripts/snapcraft.sh --sudo --destructive-mode",
 		command:     "bash",
-		args:        []string{"-c", "sudo /snap/bin/snapcraft pack --destructive-mode"},
+		args:        []string{"scripts/snapcraft.sh", "--sudo", "--destructive-mode"},
 	},
 	{
 		label:       "Update Snapcraft Secret",

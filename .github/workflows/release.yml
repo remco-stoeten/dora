@@ -67,7 +67,7 @@ jobs:
           const requiredFiles = [
             'packaging/aur/PKGBUILD',
             'packaging/linux/dora.desktop',
-            'snap/snapcraft.yaml',
+            'packaging/snap/snapcraft.yaml',
             'packaging/flatpak/io.github.remcostoeten.dora.yml',
             'tools/scripts/generate-apt-repo.ts',
             'tools/scripts/generate-homebrew-cask.ts',
