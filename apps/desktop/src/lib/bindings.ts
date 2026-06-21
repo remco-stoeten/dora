@@ -1673,20 +1673,6 @@ export type TruncateResult = { success: boolean; affected_rows: number; tables_t
  */
 export type TursoDatabase = { name: string; hostname: string; organizationSlug: string; group: string; primaryRegion: string }
 export type TursoOrganization = { slug: string; name?: string }
-export type XataAccount = { email?: string; fullname?: string }
-/**
- * A selectable Xata database, flattened across the user's workspaces. The
- * workspace id (PG user) and region (PG host) are carried so we can assemble a
- * Postgres connection string for it later without re-discovering anything. The
- * branch defaults to `main` at connect time.
- */
-export type XataDatabase = { workspaceId: string; workspaceName: string; databaseName: string; region: string; 
-/**
- * Whether Xata reports this database as reachable over the Postgres
- * protocol. Databases without it can't be connected as a Postgres source,
- * so the connect-flow can flag them.
- */
-postgresEnabled: boolean }
 export type VercelAccount = { username?: string; email?: string; name?: string }
 /**
  * A selectable Vercel Postgres "store" (one per project that has a Postgres
@@ -1704,6 +1690,20 @@ envKey?: string | null;
  * The decrypted connection string, when the API returned a readable value.
  */
 connectionString?: string | null }
+export type XataAccount = { email?: string; fullname?: string }
+/**
+ * A selectable Xata database, flattened across the user's workspaces. The
+ * workspace id (PG user) and region (PG host) are carried so we can assemble a
+ * Postgres connection string for it later without re-discovering anything. The
+ * branch defaults to `main` at connect time.
+ */
+export type XataDatabase = { workspaceId: string; workspaceName: string; databaseName: string; region: string; 
+/**
+ * Whether Xata reports this database as reachable over the Postgres
+ * protocol. Databases without it can't be connected as a Postgres source,
+ * so the connect-flow can flag them.
+ */
+postgresEnabled: boolean }
 
 /** tauri-specta globals **/
 

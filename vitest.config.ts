@@ -33,6 +33,7 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],
+			reportsDirectory: './.cache/coverage',
 			exclude: ['node_modules/**', 'tests/**', '**/*.config.{ts,js}', '**/types/**']
 		}
 	},

@@ -909,6 +909,7 @@ function IndexInner() {
       onCloseConnectionsToLeft={handleCloseConnectionsToLeft}
       onCloseConnectionsToRight={handleCloseConnectionsToRight}
       onAddConnection={handleOpenNewConnection}
+      rightSlot={<WindowControls />}
     />
   ) : null;
 
@@ -1011,7 +1012,9 @@ function IndexInner() {
                         onCloseTabsToLeft={closeTabsToLeft}
                         onCloseTabsToRight={closeTabsToRight}
                         onTabReorder={reorderTab}
-                        rightSlot={<WindowControls />}
+                        rightSlot={
+                          showConnectionTabBar ? undefined : <WindowControls />
+                        }
                       />
                       <ErrorBoundary feature="Database Studio">
                         <DatabaseStudio
@@ -1082,7 +1085,7 @@ function IndexInner() {
                       />
                     </ErrorBoundary>
                   ) : activeNavId === "orm-cockpit" ? (
-                    <ErrorBoundary feature="ORM Cockpit">
+                    <ErrorBoundary feature="Schema Diff">
                       <OrmCockpitPanel
                         activeConnectionId={activeConnectionId}
                         windowControls={<WindowControls />}

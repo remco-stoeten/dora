@@ -6,8 +6,7 @@ import {
   ChevronDown,
   ArrowDown,
   ArrowUp,
-  Activity,
-  HeartPulse,
+  RefreshCw,
   X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -125,7 +124,12 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     isLoading: isCheckingDocker,
     refetch: refetchDockerAvailability,
   } = useDockerAvailability();
-  const { data: allContainers = [], isLoading: isLoadingContainers } = useContainers({
+  const {
+    data: allContainers = [],
+    isLoading: isLoadingContainers,
+    isFetching: isFetchingContainers,
+    refetch: refetchContainers,
+  } = useContainers({
     showExternal: true,
     enabled: dockerStatus?.available ?? false,
   });
@@ -492,169 +496,55 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="border-b border-border/70 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div
-          className="flex items-start justify-between gap-4 px-5 py-4"
-          data-tauri-drag-region="true"
-        >
-          <div className="flex min-w-0 flex-1 items-start gap-4">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-              <Container className="h-5 w-5 text-emerald-500" />
-            </div>
-            <div className="min-w-0 space-y-3">
-              <div className="min-w-0">
-                <h1 className="text-base font-semibold tracking-tight">Docker Containers</h1>
-                <p className="max-w-xl text-xs text-muted-foreground">
-                  Local database containers with one-click controls.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <StatPill
-                  label="Visible"
-                  value={containerSummary.total}
-                  icon={<Container className="h-3.5 w-3.5" aria-hidden="true" />}
-                />
-                <StatPill
-                  label="Running"
-                  value={containerSummary.running}
-                  icon={<Activity className="h-3.5 w-3.5" aria-hidden="true" />}
-                />
-                <StatPill
-                  label="Healthy"
-                  value={containerSummary.healthy}
-                  icon={<HeartPulse className="h-3.5 w-3.5" aria-hidden="true" />}
-                />
-              </div>
-            </div>
-          </div>
-          {windowControls ? (
-            <div className="shrink-0 pt-0.5" data-tauri-drag-region="false">
-              {windowControls}
-            </div>
-          ) : null}
+      <header
+        className="flex h-10 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-2"
+        data-tauri-drag-region="true"
+      >
+        <div className="flex min-w-0 items-center gap-2 px-2">
+          <Container className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+          <span className="font-semibold text-sidebar-foreground">Docker</span>
+          <span className="truncate text-xs text-muted-foreground tabular-nums">
+            {containerSummary.total} {containerSummary.total === 1 ? "container" : "containers"}
+            {" · "}
+            {containerSummary.running} running
+            {" · "}
+            {containerSummary.healthy} healthy
+          </span>
         </div>
-      </header>
 
-      <div className="border-b border-border/70 bg-background/80 px-5 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <div className="relative min-w-[260px] flex-1 max-w-md">
-              <Label htmlFor="container-search" className="sr-only">
-                Search containers
-              </Label>
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="container-search"
-                ref={searchInputRef}
-                placeholder="Search containers..."
-                name="container_search"
-                autoComplete="off"
-                value={searchQuery}
-                onChange={function (e) {
-                  setSearchQuery(e.target.value);
-                }}
-                className="pl-9 pr-12"
-              />
-              <kbd className="pointer-events-none absolute right-2 top-1/2 inline-flex h-5 select-none items-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground -translate-y-1/2">
-                /
-              </kbd>
-            </div>
+        <div className="flex items-center gap-1" data-tauri-drag-region="false">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={function () {
+              void refetchContainers();
+            }}
+            disabled={isFetchingContainers}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isFetchingContainers && "animate-spin")} />
+            Refresh
+          </Button>
 
-            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-2">
-              <Switch id="show-external" checked={showExternal} onCheckedChange={setShowExternal} />
-              <Label htmlFor="show-external" className="whitespace-nowrap text-sm">
-                Show all
-                {!showExternal && externalCount > 0 && (
-                  <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-medium text-muted-foreground tabular-nums">
-                    +{externalCount}
-                  </span>
-                )}
-              </Label>
-            </div>
-
-            <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/70 p-1">
-              {STATUS_FILTER_OPTIONS.map(function (option) {
-                const isActive = option.value === statusFilter;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={function () {
-                      setStatusFilter(option.value);
-                    }}
-                    className={cn(
-                      "inline-flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors",
-                      "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-2 py-1.5">
-              <Select
-                value={sortBy}
-                onValueChange={function (value) {
-                  setSortBy(value as SortField);
-                }}
-              >
-                <SelectTrigger aria-label="Sort containers" className="h-7 w-[130px] border-0 bg-transparent text-xs shadow-none">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="created">Created</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                onClick={function () {
-                  setSortDirection(function (current) {
-                    return current === "asc" ? "desc" : "asc";
-                  });
-                }}
-                aria-label={
-                  sortDirection === "asc"
-                    ? "Sorting ascending. Activate to sort descending"
-                    : "Sorting descending. Activate to sort ascending"
-                }
-              >
-                {sortDirection === "asc" ? (
-                  <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <Button
               size="sm"
-              className="gap-1.5"
+              className="h-7 gap-1.5 rounded-r-none text-xs"
               onClick={function () {
                 handleOpenCreateDialog("postgres");
               }}
             >
-              <Plus className="h-4 w-4" />
-              New Container
+              <Plus className="h-3.5 w-3.5" />
+              New
             </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="gap-1.5">
-                  Templates
+                <Button
+                  type="button"
+                  size="sm"
+                  aria-label="Container templates"
+                  className="h-7 rounded-l-none border-l border-primary-foreground/20 px-1.5"
+                >
                   <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
@@ -684,6 +574,110 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {windowControls}
+        </div>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-background/80 px-3 py-2">
+        <div className="relative min-w-[200px] flex-1 max-w-sm">
+          <Label htmlFor="container-search" className="sr-only">
+            Search containers
+          </Label>
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="container-search"
+            ref={searchInputRef}
+            placeholder="Search containers..."
+            name="container_search"
+            autoComplete="off"
+            value={searchQuery}
+            onChange={function (e) {
+              setSearchQuery(e.target.value);
+            }}
+            className="h-8 pl-8 pr-10 text-xs"
+          />
+          <kbd className="pointer-events-none absolute right-2 top-1/2 inline-flex h-5 select-none items-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground -translate-y-1/2">
+            /
+          </kbd>
+        </div>
+
+        <div className="flex items-center gap-0.5 rounded-md border border-border/70 bg-background/70 p-0.5">
+          {STATUS_FILTER_OPTIONS.map(function (option) {
+            const isActive = option.value === statusFilter;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isActive}
+                onClick={function () {
+                  setStatusFilter(option.value);
+                }}
+                className={cn(
+                  "inline-flex h-7 items-center rounded px-2.5 text-xs font-medium transition-colors",
+                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-1 rounded-md border border-border/70 bg-background/70 pl-1">
+          <Select
+            value={sortBy}
+            onValueChange={function (value) {
+              setSortBy(value as SortField);
+            }}
+          >
+            <SelectTrigger aria-label="Sort containers" className="h-7 w-[110px] border-0 bg-transparent text-xs shadow-none">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="created">Created</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            onClick={function () {
+              setSortDirection(function (current) {
+                return current === "asc" ? "desc" : "asc";
+              });
+            }}
+            aria-label={
+              sortDirection === "asc"
+                ? "Sorting ascending. Activate to sort descending"
+                : "Sorting descending. Activate to sort ascending"
+            }
+          >
+            {sortDirection === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 pl-1">
+          <Switch id="show-external" checked={showExternal} onCheckedChange={setShowExternal} />
+          <Label htmlFor="show-external" className="whitespace-nowrap text-xs text-muted-foreground">
+            Show all
+            {!showExternal && externalCount > 0 && (
+              <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-medium text-muted-foreground tabular-nums">
+                +{externalCount}
+              </span>
+            )}
+          </Label>
         </div>
       </div>
 
@@ -812,16 +806,6 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         onConfirm={handleConfirmRemoveContainer}
         isRemoving={removeContainer.isPending}
       />
-    </div>
-  );
-}
-
-function StatPill({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
-  return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2.5 py-1 text-xs">
-      <span className="text-muted-foreground">{icon}</span>
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold tabular-nums text-foreground">{value}</span>
     </div>
   );
 }
