@@ -11,12 +11,17 @@
 //! the DuckDB-only operations (counts, file-source registration, import,
 //! session materialisation, and the two ad-hoc raw queries).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 
 use crate::{
     database::{
+        adapter::{
+            read::{DatabaseAdapter, DuckDbAdapter},
+            watch::WatchAdapter,
+            write::WriteAdapter,
+        },
         duckdb::{
             file_source::DataFileSourceEntry, import_files::ImportFilesIntoDuckDbResult,
             save_session::SaveDataFileSessionResult,
@@ -178,4 +183,243 @@ pub trait DuckDbConn: Send + Sync {
         destination_path: String,
         overwrite: bool,
     ) -> Result<SaveDataFileSessionResult, Error>;
+}
+
+/// In-process `DuckDbConn`: the engine runs in this process, linked via the
+/// `duckdb` crate. Read/write/watch operations delegate to the existing
+/// `DuckDbAdapter` (no logic duplicated); the DuckDB-only operations call the
+/// existing free functions. Phase 2 adds an `IpcDuckDbConn` sibling that drives
+/// the helper process instead, at which point this impl and the `duckdb`
+/// dependency move into the helper crate.
+pub struct InProcessDuckDbConn {
+    connection: Arc<Mutex<duckdb::Connection>>,
+    /// True for file-source (CSV/Parquet/JSON view) connections, which refuse
+    /// mutations.
+    read_only: bool,
+}
+
+impl InProcessDuckDbConn {
+    pub fn new(connection: duckdb::Connection, read_only: bool) -> Self {
+        Self {
+            connection: Arc::new(Mutex::new(connection)),
+            read_only,
+        }
+    }
+
+    fn adapter(&self) -> DuckDbAdapter {
+        DuckDbAdapter::new_with_read_only(self.connection.clone(), self.read_only)
+    }
+
+    fn lock(&self) -> Result<std::sync::MutexGuard<'_, duckdb::Connection>, Error> {
+        self.connection
+            .lock()
+            .map_err(|_| Error::Internal("DuckDB connection mutex poisoned".into()))
+    }
+}
+
+#[async_trait]
+impl DuckDbConn for InProcessDuckDbConn {
+    async fn execute_query(
+        &self,
+        stmt: ParsedStatement,
+        sender: &ExecSender,
+    ) -> Result<(), Error> {
+        self.adapter().execute_query(stmt, sender).await
+    }
+
+    async fn get_schema(&self) -> Result<DatabaseSchema, Error> {
+        self.adapter().get_schema().await
+    }
+
+    fn is_connected(&self) -> bool {
+        self.connection.lock().is_ok()
+    }
+
+    async fn query_raw(
+        &self,
+        sql: String,
+    ) -> Result<(Vec<String>, Vec<Vec<serde_json::Value>>), Error> {
+        let conn = self.lock()?;
+        let mut stmt = conn.prepare(&sql)?;
+        let mut rows = stmt.query([])?;
+        let columns: Vec<String> = rows.as_ref().map(|s| s.column_names()).unwrap_or_default();
+        let mut data = Vec::new();
+        while let Some(row) = rows.next()? {
+            let values: Vec<serde_json::Value> = (0..columns.len())
+                .map(|i| {
+                    row.get_ref(i)
+                        .map(crate::database::duckdb::row_writer::value_ref_to_json)
+                        .unwrap_or(serde_json::Value::Null)
+                })
+                .collect();
+            data.push(values);
+        }
+        Ok((columns, data))
+    }
+
+    async fn execute_raw(&self, sql: String) -> Result<usize, Error> {
+        let conn = self.lock()?;
+        conn.execute(&sql, []).map_err(Into::into)
+    }
+
+    async fn insert_row(
+        &self,
+        table: String,
+        schema: Option<String>,
+        row_data: serde_json::Map<String, serde_json::Value>,
+    ) -> Result<MutationResult, Error> {
+        self.adapter().insert_row(table, schema, row_data).await
+    }
+
+    async fn update_cell(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+        column: String,
+        new_value: serde_json::Value,
+    ) -> Result<MutationResult, Error> {
+        self.adapter()
+            .update_cell(table, schema, pk_column, pk_value, column, new_value)
+            .await
+    }
+
+    async fn delete_rows(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_values: Vec<serde_json::Value>,
+    ) -> Result<MutationResult, Error> {
+        self.adapter()
+            .delete_rows(table, schema, pk_column, pk_values)
+            .await
+    }
+
+    async fn duplicate_row(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+    ) -> Result<MutationResult, Error> {
+        self.adapter()
+            .duplicate_row(table, schema, pk_column, pk_value)
+            .await
+    }
+
+    async fn truncate_table(
+        &self,
+        table: String,
+        schema: Option<String>,
+        cascade: Option<bool>,
+    ) -> Result<TruncateResult, Error> {
+        self.adapter().truncate_table(table, schema, cascade).await
+    }
+
+    async fn truncate_database(
+        &self,
+        schema: Option<String>,
+        confirm: bool,
+    ) -> Result<TruncateResult, Error> {
+        self.adapter().truncate_database(schema, confirm).await
+    }
+
+    async fn soft_delete_rows(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_values: Vec<serde_json::Value>,
+        soft_delete_column: Option<String>,
+    ) -> Result<SoftDeleteResult, Error> {
+        self.adapter()
+            .soft_delete_rows(table, schema, pk_column, pk_values, soft_delete_column)
+            .await
+    }
+
+    async fn undo_soft_delete(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_values: Vec<serde_json::Value>,
+        soft_delete_column: String,
+    ) -> Result<MutationResult, Error> {
+        self.adapter()
+            .undo_soft_delete(table, schema, pk_column, pk_values, soft_delete_column)
+            .await
+    }
+
+    async fn dump_database(&self, output_path: String) -> Result<DumpResult, Error> {
+        self.adapter().dump_database(output_path).await
+    }
+
+    async fn execute_batch(&self, statements: Vec<String>) -> Result<MutationResult, Error> {
+        self.adapter().execute_batch(statements).await
+    }
+
+    async fn get_blob_bytes(
+        &self,
+        table: String,
+        schema: Option<String>,
+        pk_column: String,
+        pk_value: serde_json::Value,
+        column: String,
+    ) -> Result<Vec<u8>, Error> {
+        self.adapter()
+            .get_blob_bytes(table, schema, pk_column, pk_value, column)
+            .await
+    }
+
+    async fn poll_table_hash(
+        &self,
+        table: String,
+        schema: Option<String>,
+    ) -> Result<u64, Error> {
+        self.adapter()
+            .poll_table_hash(&table, schema.as_deref())
+            .await
+    }
+
+    async fn get_counts(&self) -> Result<(u32, u64), Error> {
+        let conn = self.lock()?;
+        crate::database::metadata::get_duckdb_counts(&conn)
+    }
+
+    async fn register_sources(
+        &self,
+        sources: Vec<String>,
+    ) -> Result<Vec<DataFileSourceEntry>, Error> {
+        let conn = self.lock()?;
+        Ok(crate::database::duckdb::file_source::register_sources(
+            &conn, &sources,
+        ))
+    }
+
+    async fn import_files(
+        &self,
+        file_paths: Vec<String>,
+    ) -> Result<ImportFilesIntoDuckDbResult, Error> {
+        let conn = self.lock()?;
+        crate::database::duckdb::import_files::import_files_into_duckdb(&conn, &file_paths)
+            .map_err(|e| Error::Any(anyhow::anyhow!(e)))
+    }
+
+    async fn materialize_data_file_session(
+        &self,
+        entries: Vec<DataFileSourceEntry>,
+        destination_path: String,
+        overwrite: bool,
+    ) -> Result<SaveDataFileSessionResult, Error> {
+        let conn = self.lock()?;
+        crate::database::duckdb::save_session::materialize_data_file_session(
+            &conn,
+            &entries,
+            &destination_path,
+            overwrite,
+        )
+        .map_err(|e| Error::Any(anyhow::anyhow!(e)))
+    }
 }
