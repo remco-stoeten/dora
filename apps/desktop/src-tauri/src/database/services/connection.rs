@@ -664,18 +664,17 @@ impl<'a> ConnectionService<'a> {
                 connection: duckdb_conn,
             } => {
                 // File-source connections live entirely in memory; a real
-                // `.duckdb` file connection opens the file directly.
-                let open_result = if file_sources.is_empty() {
-                    duckdb::Connection::open(&db_path)
-                } else {
-                    duckdb::Connection::open_in_memory()
-                };
+                // `.duckdb` file connection opens the file directly. Either path
+                // (in-process or helper) is selected inside `build_duckdb_backend`.
+                let built = crate::database::duckdb_backend::build_duckdb_backend(
+                    db_path,
+                    file_sources,
+                )
+                .await;
 
-                match open_result {
-                    Ok(conn) => {
-                        let mut registration = Vec::new();
+                match built {
+                    Ok((conn_handle, registration)) => {
                         if !file_sources.is_empty() {
-                            registration = file_source::register_sources(&conn, file_sources);
                             for entry in &registration {
                                 match entry.status {
                                     DataFileSourceStatus::Missing => log::warn!(
@@ -702,13 +701,7 @@ impl<'a> ConnectionService<'a> {
                         }
 
                         *file_source_entries = registration.clone();
-                        *duckdb_conn = Some(Arc::new(
-                            crate::database::duckdb_backend::InProcessDuckDbConn::new(
-                                conn,
-                                !file_sources.is_empty(),
-                            ),
-                        )
-                            as Arc<dyn crate::database::duckdb_backend::DuckDbConn>);
+                        *duckdb_conn = Some(conn_handle);
                         connection.connected = true;
 
                         if let Err(e) = self.storage.update_last_connected(&connection_id) {

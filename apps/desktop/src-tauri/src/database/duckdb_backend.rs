@@ -431,3 +431,42 @@ impl DuckDbConn for InProcessDuckDbConn {
         .map_err(Error::InvalidInput)
     }
 }
+
+/// Open a DuckDB connection in this process and register any data-file sources.
+/// Shared by the in-process backend path (`build_duckdb_backend`) and the
+/// helper process's `Open` handler so both produce identical state.
+pub fn open_in_process(
+    db_path: &str,
+    file_sources: &[String],
+) -> Result<(BoxedDuckDbConn, Vec<DataFileSourceEntry>), Error> {
+    let conn = if file_sources.is_empty() {
+        duckdb::Connection::open(db_path)
+    } else {
+        duckdb::Connection::open_in_memory()
+    }
+    .map_err(|e| Error::ConnectionFailed(e.to_string()))?;
+
+    let registration = if file_sources.is_empty() {
+        Vec::new()
+    } else {
+        crate::database::duckdb::file_source::register_sources(&conn, file_sources)
+    };
+
+    let handle: BoxedDuckDbConn =
+        Arc::new(InProcessDuckDbConn::new(conn, !file_sources.is_empty()));
+    Ok((handle, registration))
+}
+
+/// Build a DuckDB connection handle, routing through the helper process when
+/// `DORA_DUCKDB_IPC` is set and otherwise opening in-process. Returns the
+/// handle plus the registered data-file-source entries.
+pub async fn build_duckdb_backend(
+    db_path: &str,
+    file_sources: &[String],
+) -> Result<(BoxedDuckDbConn, Vec<DataFileSourceEntry>), Error> {
+    if crate::database::duckdb_ipc::ipc_enabled() {
+        crate::database::duckdb_ipc::client::open(db_path.to_string(), file_sources.to_vec()).await
+    } else {
+        open_in_process(db_path, file_sources)
+    }
+}

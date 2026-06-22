@@ -27,7 +27,7 @@ pub enum ExportFormat {
 }
 
 /// Result of a mutation operation
-#[derive(Debug, Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct MutationResult {
     pub success: bool,
     pub affected_rows: usize,
