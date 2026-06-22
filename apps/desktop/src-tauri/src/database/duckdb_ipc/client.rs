@@ -83,8 +83,14 @@ impl HelperProcess {
             loop {
                 match read_frame::<_, ResponseFrame>(&mut reader).await {
                     Ok(Some(frame)) => {
+                        // `Done` is terminal: forward it, then drop the pending
+                        // entry so the map doesn't grow one slot per request.
+                        let terminal = matches!(frame.msg, ResponseMsg::Done(_));
                         if let Some(tx) = reader_proc.pending.get(&frame.id) {
                             let _ = tx.send(frame.msg);
+                        }
+                        if terminal {
+                            reader_proc.pending.remove(&frame.id);
                         }
                     }
                     Ok(None) => break,
@@ -228,9 +234,15 @@ impl Drop for IpcDuckDbConn {
         if !self.proc.is_alive() {
             return;
         }
+        // Best-effort close. `tokio::spawn` panics outside a runtime (e.g. drop
+        // during shutdown), so only schedule it when one is active — a leaked
+        // helper-side connection is harmless and reclaimed when the helper exits.
+        let Ok(handle) = tokio::runtime::Handle::try_current() else {
+            return;
+        };
         let proc = self.proc.clone();
         let conn_id = self.conn_id;
-        tokio::spawn(async move {
+        handle.spawn(async move {
             let _ = proc.send(Request::Close { conn_id }).await;
         });
     }
