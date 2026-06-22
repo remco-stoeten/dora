@@ -1,5 +1,6 @@
 import { Button } from '@studio/shared/ui/button'
-import { Database, Loader2, PlugZap, Plus, Settings, Table2 } from 'lucide-react'
+import { Database, PlugZap, Plus, Settings, Table2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 
 type NoConnectionProps = {
 	onAddConnection?: () => void
@@ -39,7 +40,7 @@ type ConnectionLoadingProps = {
 export function DatabaseStudioConnectionLoading({ connectionName }: ConnectionLoadingProps) {
 	return (
 		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
-			<Loader2 className='h-8 w-8 animate-spin text-muted-foreground/70 mb-4' />
+			<Spinner className='h-8 w-8 text-muted-foreground/70 mb-4' />
 			<h2 className='text-lg font-semibold text-foreground mb-1 tracking-tight'>
 				Connecting…
 			</h2>

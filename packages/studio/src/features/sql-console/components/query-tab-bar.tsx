@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, X, Loader2, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useQueryTabs } from '../stores/tab-store'
 import { cn } from '@studio/shared/utils/cn'
 import {
@@ -133,7 +134,7 @@ export function QueryTabBar() {
 
 									{/* Executing spinner */}
 									{tab.isExecuting && (
-										<Loader2 className='h-3 w-3 shrink-0 animate-spin text-emerald-400' />
+										<Spinner className='h-3 w-3 shrink-0 text-emerald-400' />
 									)}
 
 									{/* Dirty dot */}

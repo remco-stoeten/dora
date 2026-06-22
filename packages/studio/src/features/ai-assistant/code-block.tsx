@@ -2,12 +2,12 @@ import {
 	Check,
 	Copy,
 	FileInput,
-	Loader2,
 	Maximize2,
 	Minimize2,
 	Play,
 	ShieldCheck
 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useMemo, useState } from 'react'
 import { getEnv } from '@studio/core/env'
 import { notifySchemaChanged } from '@studio/core/schema-refresh'
@@ -277,7 +277,7 @@ export function CodeBlock({
 							title='Run SQL'
 						>
 							{runState.kind === 'running' && runState.mode === 'run' ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<Play className='mr-1 h-3 w-3' />
 							)}
@@ -294,7 +294,7 @@ export function CodeBlock({
 							title='Dry run with EXPLAIN'
 						>
 							{runState.kind === 'running' && runState.mode === 'dry-run' ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<ShieldCheck className='mr-1 h-3 w-3' />
 							)}

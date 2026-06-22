@@ -11,8 +11,7 @@ import {
 	RefreshCw,
 	Sparkles,
 	Copy,
-	Upload,
-	Gauge
+	Upload
 } from 'lucide-react'
 import { useState, useEffect, type ComponentProps } from 'react'
 import { Button } from '@studio/shared/ui/button'
@@ -84,7 +83,6 @@ type Props = {
 	onSeed?: () => void
 	onCopySchema?: () => void
 	onCopyDrizzleSchema?: () => void
-	onSuggestIndexes?: () => void
 	liveMonitorConfig?: LiveMonitorConfig
 	onLiveMonitorConfigChange?: (config: LiveMonitorConfig) => void
 	isLiveMonitorPolling?: boolean
@@ -116,7 +114,6 @@ export function StudioToolbar({
 	onSeed,
 	onCopySchema,
 	onCopyDrizzleSchema,
-	onSuggestIndexes,
 	liveMonitorConfig,
 	onLiveMonitorConfigChange,
 	isLiveMonitorPolling,
@@ -275,18 +272,6 @@ export function StudioToolbar({
 							tooltip='Seed Data — generate mock data using AI'
 						>
 							<Sparkles className='h-3.5 w-3.5 text-blue-400' />
-						</TooltipButton>
-					)}
-
-					{onSuggestIndexes && (
-						<TooltipButton
-							variant='ghost'
-							size='icon'
-							className='h-7 w-7'
-							onClick={onSuggestIndexes}
-							tooltip='Suggest indexes for this table using AI'
-						>
-							<Gauge className='h-3.5 w-3.5 text-blue-400' />
 						</TooltipButton>
 					)}
 

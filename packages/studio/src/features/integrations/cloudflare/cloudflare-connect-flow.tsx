@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, Copy, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import { ArrowLeft, Check, Copy, ExternalLink, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { open } from '@tauri-apps/plugin-shell'
 import type { CloudflareAccount, CloudflareD1Database } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
@@ -336,7 +337,7 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 							className='shrink-0 gap-2'
 						>
 							{isAuthorizing ? (
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 							) : (
 								<PlugZap className='h-3.5 w-3.5' />
 							)}
@@ -369,7 +370,7 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 					<div className='max-h-[min(18rem,36vh)] space-y-2 overflow-y-auto pr-1'>
 						{accountsLoading ? (
 							<div className='flex items-center gap-2 py-3 text-sm text-muted-foreground'>
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 								Loading accounts
 							</div>
 						) : null}
@@ -450,7 +451,7 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 					<div className='max-h-[min(18rem,36vh)] space-y-2 overflow-y-auto pr-1'>
 						{isLoading ? (
 							<div className='flex items-center gap-2 py-3 text-sm text-muted-foreground'>
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 								Loading databases
 							</div>
 						) : null}

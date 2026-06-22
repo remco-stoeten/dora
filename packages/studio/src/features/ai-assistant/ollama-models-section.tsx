@@ -1,5 +1,6 @@
 import { Channel } from '@tauri-apps/api/core'
-import { Check, Download, ExternalLink, Loader2, Trash2 } from 'lucide-react'
+import { Check, Download, ExternalLink, Trash2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import {
@@ -452,7 +453,7 @@ export function OllamaModelsSection() {
 							void startManagedOllama()
 						}}
 					>
-						{starting ? <Loader2 className='mr-1 h-3 w-3 animate-spin' /> : null}
+						{starting ? <Spinner className='mr-1 h-3 w-3' /> : null}
 						Start Ollama
 					</Button>
 				</div>
@@ -479,7 +480,7 @@ export function OllamaModelsSection() {
 						}}
 						disabled={savingEndpoint}
 					>
-						{savingEndpoint ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Save'}
+						{savingEndpoint ? <Spinner className='h-3 w-3' /> : 'Save'}
 					</Button>
 				</div>
 			</label>
@@ -577,7 +578,7 @@ export function OllamaModelsSection() {
 
 			{loading ? (
 				<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-					<Loader2 className='h-3 w-3 animate-spin' />
+					<Spinner className='h-3 w-3' />
 					Loading models…
 				</div>
 			) : (

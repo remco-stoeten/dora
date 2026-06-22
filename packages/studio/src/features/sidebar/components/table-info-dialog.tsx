@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState, useEffect } from 'react'
 import { useAdapter } from '@studio/core/data-provider'
 import { useIsTauri } from '@studio/core/data-provider/context'
@@ -188,7 +188,7 @@ export function TableInfoDialog({
 					<div className='py-2 pr-4'>
 					{isLoading && (
 						<div className='flex items-center justify-center py-8'>
-							<Loader2 className='h-6 w-6 animate-spin text-muted-foreground' />
+							<Spinner className='h-6 w-6 text-muted-foreground' />
 						</div>
 					)}
 

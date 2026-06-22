@@ -1,4 +1,5 @@
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useEffect, useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
@@ -76,7 +77,7 @@ export function DropColumnDialog({
 						disabled={isLoading || !isConfirmed}
 						form='drop-column-form'
 					>
-						{isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+						{isLoading && <Spinner className='mr-2 h-4 w-4' />}
 						Drop Column
 					</Button>
 				</>

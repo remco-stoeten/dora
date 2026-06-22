@@ -10,7 +10,6 @@
 import { useEffect, useState } from 'react'
 import {
 	FolderGit2,
-	Loader2,
 	RefreshCw,
 	Database,
 	ChevronDown,
@@ -21,6 +20,7 @@ import {
 	Eye,
 	EyeOff,
 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '@studio/shared/ui/button'
 import { EmptyState } from '@studio/shared/ui/empty-state'
@@ -208,7 +208,7 @@ export function OrmCockpitPanel({
 		if (busy && !cockpit.diff) {
 			return (
 				<div className='flex h-full flex-col items-center justify-center gap-3 text-muted-foreground'>
-					<Loader2 className='h-6 w-6 animate-spin' />
+					<Spinner className='h-6 w-6' />
 					<span className='text-sm'>
 						{cockpit.phase === 'linking'
 							? 'Detecting project…'

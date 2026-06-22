@@ -1,5 +1,6 @@
 import { notify } from '@remcostoeten/notifier'
-import { Check, Copy, Download, KeyRound, Loader2, X } from 'lucide-react'
+import { Check, Copy, Download, KeyRound, X } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useEffect, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import {
@@ -132,7 +133,7 @@ export function CredentialStorageNotice({ className }: { className?: string }) {
 					title={plan.command}
 				>
 					{installing ? (
-						<Loader2 className='h-3.5 w-3.5 animate-spin' />
+						<Spinner className='h-3.5 w-3.5' />
 					) : plan.can_auto_install ? (
 						<Download className='h-3.5 w-3.5' />
 					) : hasCopied ? (

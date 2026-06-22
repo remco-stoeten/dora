@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search, Terminal } from "lucide-react";
+import { Check, Copy, ExternalLink, LogOut, PlugZap, RefreshCw, Search, Terminal } from "lucide-react";
+import { Spinner } from "@studio/shared/ui/spinner";
 import { open } from "@tauri-apps/plugin-shell";
 import type { TursoDatabase, TursoOrganization } from "@studio/lib/bindings";
 import { Button } from "@studio/shared/ui/button";
@@ -363,7 +364,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
                     className="w-full gap-2"
                   >
                     {isMinting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner className="h-3.5 w-3.5" />
                     ) : (
                       <Terminal className="h-3.5 w-3.5" />
                     )}
@@ -382,7 +383,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
                     className="w-full gap-2"
                   >
                     {isLoggingIn ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner className="h-3.5 w-3.5" />
                     ) : (
                       <Terminal className="h-3.5 w-3.5" />
                     )}
@@ -433,7 +434,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
                   className="w-full gap-2 border-border/70"
                 >
                   {isInstallingCli ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Spinner className="h-3.5 w-3.5" />
                   ) : (
                     <Terminal className="h-3.5 w-3.5" />
                   )}
@@ -475,7 +476,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
                     className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
                   >
                     {isReprobingCli ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Spinner className="h-3 w-3" />
                     ) : (
                       <RefreshCw className="h-3 w-3" />
                     )}
@@ -532,7 +533,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
               className="shrink-0 gap-2"
             >
               {isAuthorizing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Spinner className="h-3.5 w-3.5" />
               ) : (
                 <PlugZap className="h-3.5 w-3.5" />
               )}
@@ -560,7 +561,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
           <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
             {isLoading ? (
               <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Spinner className="h-3.5 w-3.5" />
                 Loading databases
               </div>
             ) : null}
@@ -609,7 +610,7 @@ function TursoConnectFlowInner({ onComplete }: Props) {
               className="self-start gap-2"
             >
               {isBuilding ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Spinner className="h-3.5 w-3.5" />
               ) : (
                 <PlugZap className="h-3.5 w-3.5" />
               )}

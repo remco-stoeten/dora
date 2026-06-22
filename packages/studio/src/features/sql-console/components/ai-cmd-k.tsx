@@ -1,5 +1,6 @@
 import { Channel } from '@tauri-apps/api/core'
-import { Loader2, Sparkles, X } from 'lucide-react'
+import { Sparkles, X } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { commands } from '@studio/lib/bindings'
 import type { AiStreamEvent } from '@studio/lib/bindings'
@@ -264,7 +265,7 @@ export function AiCmdK({ open, onClose, onApplySql, activeConnectionId, isTauri 
 					</span>
 					<div className='ml-auto flex items-center gap-1'>
 						{isGenerating && (
-							<Loader2 className='h-3.5 w-3.5 animate-spin text-muted-foreground' />
+							<Spinner className='h-3.5 w-3.5 text-muted-foreground' />
 						)}
 						<Button
 							variant='ghost'

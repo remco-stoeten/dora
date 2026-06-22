@@ -1,4 +1,5 @@
-import { Check, Loader2, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react'
+import { Check, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { buildMockProviderModels } from '@studio/features/ai-assistant/mock-ai'
@@ -474,7 +475,7 @@ export function AiKeysSection() {
 							}
 						>
 							{settingsTest.testing ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<Zap className='mr-1 h-3 w-3' />
 							)}
@@ -506,7 +507,7 @@ export function AiKeysSection() {
 
 				{loading && (
 					<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-						<Loader2 className='h-3 w-3 animate-spin' /> Loading…
+						<Spinner className='h-3 w-3' /> Loading…
 					</div>
 				)}
 
@@ -568,7 +569,7 @@ export function AiKeysSection() {
 								title='Test key with the model and prompt above'
 							>
 								{test?.testing ? (
-									<Loader2 className='h-3 w-3 animate-spin' />
+									<Spinner className='h-3 w-3' />
 								) : (
 									<Zap className='h-3 w-3' />
 								)}
@@ -637,7 +638,7 @@ export function AiKeysSection() {
 								}}
 								disabled={testNew.testing || !apiKey.trim() || !resolvedTestModel}
 							>
-								{testNew.testing ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Test'}
+								{testNew.testing ? <Spinner className='h-3 w-3' /> : 'Test'}
 							</Button>
 							<Button
 								variant='default'

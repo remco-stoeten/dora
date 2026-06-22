@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Copy, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import { Check, Copy, ExternalLink, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { open } from '@tauri-apps/plugin-shell'
 import type { XataAccount, XataDatabase } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
@@ -335,7 +336,7 @@ function XataConnectFlowInner({ onComplete }: Props) {
 							className='shrink-0 gap-2'
 						>
 							{isAuthorizing ? (
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 							) : (
 								<PlugZap className='h-3.5 w-3.5' />
 							)}
@@ -378,7 +379,7 @@ function XataConnectFlowInner({ onComplete }: Props) {
 					<div className='max-h-[min(18rem,36vh)] space-y-2 overflow-y-auto pr-1'>
 						{isLoading ? (
 							<div className='flex items-center gap-2 py-3 text-sm text-muted-foreground'>
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 								Loading databases
 							</div>
 						) : null}
@@ -446,7 +447,7 @@ function XataConnectFlowInner({ onComplete }: Props) {
 								className='gap-2'
 							>
 								{isBuilding ? (
-									<Loader2 className='h-3.5 w-3.5 animate-spin' />
+									<Spinner className='h-3.5 w-3.5' />
 								) : (
 									<PlugZap className='h-3.5 w-3.5' />
 								)}
