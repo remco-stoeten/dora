@@ -272,7 +272,7 @@ impl<'a> MutationService<'a> {
         let (columns, rows) = match db_type {
             "postgres" => fetch_postgres_data(&client, &query).await?,
             "sqlite" => fetch_sqlite_data(&client, &query)?,
-            "duckdb" => fetch_duckdb_data(&client, &query)?,
+            "duckdb" => fetch_duckdb_data(&client, &query).await?,
             "libsql" => fetch_libsql_data(&client, &query).await?,
             "mysql" => fetch_mysql_data(&client, &query).await?,
             "d1" => fetch_d1_data(&client, &query).await?,
@@ -647,32 +647,12 @@ fn fetch_sqlite_data(
     }
 }
 
-fn fetch_duckdb_data(
+async fn fetch_duckdb_data(
     client: &DatabaseClient,
     query: &str,
 ) -> Result<(Vec<String>, Vec<Vec<serde_json::Value>>), Error> {
     if let DatabaseClient::DuckDB { connection, .. } = client {
-        let conn = connection
-            .lock()
-            .map_err(|_| crate::Error::Internal("Mutex poisoned".into()))?;
-        let mut stmt = conn.prepare(query)?;
-        let mut rows = stmt.query([])?;
-
-        let columns: Vec<String> = rows.as_ref().map(|s| s.column_names()).unwrap_or_default();
-
-        let mut data = Vec::new();
-        while let Some(row) = rows.next()? {
-            let values: Vec<serde_json::Value> = (0..columns.len())
-                .map(|i| {
-                    row.get_ref(i)
-                        .map(crate::database::duckdb::row_writer::value_ref_to_json)
-                        .unwrap_or(serde_json::Value::Null)
-                })
-                .collect();
-            data.push(values);
-        }
-
-        Ok((columns, data))
+        connection.query_raw(query.to_string()).await
     } else {
         Err(Error::Any(anyhow!("Expected DuckDB client")))
     }

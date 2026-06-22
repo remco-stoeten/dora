@@ -202,7 +202,9 @@ pub fn watch_adapter_from_client(
             Box::new(SqliteAdapter::new(connection.clone()))
         }
         crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
-            Box::new(DuckDbAdapter::new(connection.clone()))
+            Box::new(crate::database::adapter::DuckDbConnAdapter::new(
+                connection.clone(),
+            ))
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))

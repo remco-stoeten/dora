@@ -10,7 +10,7 @@ use crate::{
     database::{
         duckdb::{
             file_source::{self, DataFileSourceEntry, DataFileSourceStatus},
-            import_files::{self, ImportFilesIntoDuckDbResult},
+            import_files::ImportFilesIntoDuckDbResult,
             save_session::{self, SaveDataFileSessionResult},
         },
         postgres::{connect::connect, connection_string::clean_postgres_connection_string},
@@ -702,7 +702,13 @@ impl<'a> ConnectionService<'a> {
                         }
 
                         *file_source_entries = registration.clone();
-                        *duckdb_conn = Some(Arc::new(Mutex::new(conn)));
+                        *duckdb_conn = Some(Arc::new(
+                            crate::database::duckdb_backend::InProcessDuckDbConn::new(
+                                conn,
+                                !file_sources.is_empty(),
+                            ),
+                        )
+                            as Arc<dyn crate::database::duckdb_backend::DuckDbConn>);
                         connection.connected = true;
 
                         if let Err(e) = self.storage.update_last_connected(&connection_id) {
@@ -851,78 +857,89 @@ impl<'a> ConnectionService<'a> {
         certificates: &Certificates,
         connection_id: Uuid,
     ) -> Result<DatabaseConnectResult, Error> {
-        let mut connection_entry = self
-            .connections
-            .get_mut(&connection_id)
-            .with_context(|| format!("Connection not found: {}", connection_id))?;
+        // Extract the handle + sources without holding the DashMap ref across
+        // the await on the (possibly out-of-process) backend.
+        let (duckdb_conn, file_sources_snapshot) = {
+            let mut connection_entry = self
+                .connections
+                .get_mut(&connection_id)
+                .with_context(|| format!("Connection not found: {}", connection_id))?;
 
-        let connection = connection_entry.value_mut();
+            match &mut connection_entry.value_mut().database {
+                Database::DuckDB {
+                    file_sources,
+                    connection: Some(duckdb_conn),
+                    ..
+                } if !file_sources.is_empty() => (duckdb_conn.clone(), file_sources.clone()),
+                Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
+                    drop(connection_entry);
+                    return self
+                        .connect_to_database(monitor, certificates, connection_id)
+                        .await;
+                }
+                _ => {
+                    return Err(Error::Any(anyhow::anyhow!(
+                        "Connection is not a DuckDB data-file session"
+                    )))
+                }
+            }
+        };
 
-        match &mut connection.database {
-            Database::DuckDB {
-                file_sources,
+        let registration = duckdb_conn.register_sources(file_sources_snapshot).await?;
+        let connected = file_source::has_active_sources(&registration);
+
+        {
+            let mut connection_entry = self
+                .connections
+                .get_mut(&connection_id)
+                .with_context(|| format!("Connection not found: {}", connection_id))?;
+            let connection = connection_entry.value_mut();
+            if let Database::DuckDB {
                 file_source_entries,
-                connection: Some(duckdb_conn),
                 ..
-            } if !file_sources.is_empty() => {
-                let file_sources_snapshot = file_sources.clone();
-                let registration = {
-                    let conn = duckdb_conn.lock().map_err(|_| {
-                        Error::Any(anyhow::anyhow!("DuckDB connection lock poisoned"))
-                    })?;
-                    file_source::register_sources(&conn, &file_sources_snapshot)
-                };
-
-                connection.connected = file_source::has_active_sources(&registration);
+            } = &mut connection.database
+            {
                 *file_source_entries = registration.clone();
-
-                Ok(duckdb_data_file_connect_result(
-                    connection.connected,
-                    registration,
-                ))
             }
-            Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
-                drop(connection_entry);
-                self.connect_to_database(monitor, certificates, connection_id)
-                    .await
-            }
-            _ => Err(Error::Any(anyhow::anyhow!(
-                "Connection is not a DuckDB data-file session"
-            ))),
+            connection.connected = connected;
         }
+
+        Ok(duckdb_data_file_connect_result(connected, registration))
     }
 
-    pub fn save_data_file_session_as_duckdb(
+    pub async fn save_data_file_session_as_duckdb(
         &self,
         connection_id: Uuid,
         destination_path: String,
         overwrite: bool,
     ) -> Result<SaveDataFileSessionResult, Error> {
-        let connection_entry = self
-            .connections
-            .get(&connection_id)
-            .with_context(|| format!("Connection not found: {}", connection_id))?;
+        // Extract the handle and a snapshot of the entries, then drop the
+        // DashMap ref before awaiting the (possibly out-of-process) backend.
+        let (duckdb_conn, file_source_entries) = {
+            let connection_entry = self
+                .connections
+                .get(&connection_id)
+                .with_context(|| format!("Connection not found: {}", connection_id))?;
 
-        let (duckdb_conn, _file_sources, file_source_entries) = match &connection_entry.database {
-            Database::DuckDB {
-                file_sources,
-                file_source_entries,
-                connection: Some(duckdb_conn),
-                ..
-            } if !file_sources.is_empty() => (
-                duckdb_conn.clone(),
-                file_sources.clone(),
-                file_source_entries.clone(),
-            ),
-            Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
-                return Err(Error::InvalidInput(
-                    "Connect the data-file session before saving".to_string(),
-                ));
-            }
-            _ => {
-                return Err(Error::InvalidInput(
-                    "Connection is not a DuckDB data-file session".to_string(),
-                ));
+            match &connection_entry.database {
+                Database::DuckDB {
+                    file_sources,
+                    file_source_entries,
+                    connection: Some(duckdb_conn),
+                    ..
+                } if !file_sources.is_empty() => {
+                    (duckdb_conn.clone(), file_source_entries.clone())
+                }
+                Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
+                    return Err(Error::InvalidInput(
+                        "Connect the data-file session before saving".to_string(),
+                    ));
+                }
+                _ => {
+                    return Err(Error::InvalidInput(
+                        "Connection is not a DuckDB data-file session".to_string(),
+                    ));
+                }
             }
         };
 
@@ -934,17 +951,9 @@ impl<'a> ConnectionService<'a> {
 
         save_session::validate_destination_path(&destination_path).map_err(Error::InvalidInput)?;
 
-        let source_conn = duckdb_conn
-            .lock()
-            .map_err(|_| Error::Any(anyhow::anyhow!("DuckDB connection lock poisoned")))?;
-
-        let result = save_session::materialize_data_file_session(
-            &source_conn,
-            &file_source_entries,
-            &destination_path,
-            overwrite,
-        )
-        .map_err(Error::InvalidInput)?;
+        let result = duckdb_conn
+            .materialize_data_file_session(file_source_entries, destination_path, overwrite)
+            .await?;
 
         log::info!(
             "Saved {} table(s) from data-file session {} to {}",
@@ -956,7 +965,7 @@ impl<'a> ConnectionService<'a> {
         Ok(result)
     }
 
-    pub fn import_files_into_duckdb(
+    pub async fn import_files_into_duckdb(
         &self,
         connection_id: Uuid,
         file_paths: Vec<String>,
@@ -967,47 +976,45 @@ impl<'a> ConnectionService<'a> {
             ));
         }
 
-        let connection_entry = self
-            .connections
-            .get(&connection_id)
-            .with_context(|| format!("Connection not found: {}", connection_id))?;
+        // Extract the handle, then drop the DashMap ref before awaiting.
+        let duckdb_conn = {
+            let connection_entry = self
+                .connections
+                .get(&connection_id)
+                .with_context(|| format!("Connection not found: {}", connection_id))?;
 
-        if !connection_entry.connected {
-            return Err(Error::InvalidInput(
-                "Connect the DuckDB database before importing files".to_string(),
-            ));
-        }
-
-        let duckdb_conn = match &connection_entry.database {
-            Database::DuckDB {
-                file_sources,
-                connection: Some(duckdb_conn),
-                ..
-            } if file_sources.is_empty() => duckdb_conn.clone(),
-            Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
-                return Err(Error::InvalidInput(
-                    "Import files is only available for native DuckDB database connections"
-                        .to_string(),
-                ));
-            }
-            Database::DuckDB { .. } => {
+            if !connection_entry.connected {
                 return Err(Error::InvalidInput(
                     "Connect the DuckDB database before importing files".to_string(),
                 ));
             }
-            _ => {
-                return Err(Error::InvalidInput(
-                    "Import files is only available for DuckDB database connections".to_string(),
-                ));
+
+            match &connection_entry.database {
+                Database::DuckDB {
+                    file_sources,
+                    connection: Some(duckdb_conn),
+                    ..
+                } if file_sources.is_empty() => duckdb_conn.clone(),
+                Database::DuckDB { file_sources, .. } if !file_sources.is_empty() => {
+                    return Err(Error::InvalidInput(
+                        "Import files is only available for native DuckDB database connections"
+                            .to_string(),
+                    ));
+                }
+                Database::DuckDB { .. } => {
+                    return Err(Error::InvalidInput(
+                        "Connect the DuckDB database before importing files".to_string(),
+                    ));
+                }
+                _ => {
+                    return Err(Error::InvalidInput(
+                        "Import files is only available for DuckDB database connections".to_string(),
+                    ));
+                }
             }
         };
 
-        let conn = duckdb_conn
-            .lock()
-            .map_err(|_| Error::Any(anyhow::anyhow!("DuckDB connection lock poisoned")))?;
-
-        let result = import_files::import_files_into_duckdb(&conn, &file_paths)
-            .map_err(Error::InvalidInput)?;
+        let result = duckdb_conn.import_files(file_paths).await?;
 
         log::info!(
             "Imported {} table(s) into DuckDB connection {}",

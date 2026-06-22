@@ -212,7 +212,7 @@ pub enum DatabaseClient {
         connection: Arc<Mutex<rusqlite::Connection>>,
     },
     DuckDB {
-        connection: Arc<Mutex<duckdb::Connection>>,
+        connection: Arc<dyn crate::database::duckdb_backend::DuckDbConn>,
         /// True for file-source connections (CSV/Parquet/JSON views), which
         /// must refuse mutations.
         read_only: bool,
@@ -263,7 +263,7 @@ pub enum Database {
         db_path: String,
         file_sources: Vec<String>,
         file_source_entries: Vec<DataFileSourceEntry>,
-        connection: Option<Arc<Mutex<duckdb::Connection>>>,
+        connection: Option<Arc<dyn crate::database::duckdb_backend::DuckDbConn>>,
     },
     LibSQL {
         url: String,

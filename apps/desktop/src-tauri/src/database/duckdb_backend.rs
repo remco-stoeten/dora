@@ -40,7 +40,7 @@ pub type BoxedDuckDbConn = Arc<dyn DuckDbConn>;
 /// One DuckDB connection's full operation surface, independent of whether the
 /// engine runs in this process or in the helper.
 #[async_trait]
-pub trait DuckDbConn: Send + Sync {
+pub trait DuckDbConn: Send + Sync + std::fmt::Debug {
     // ---- read / query ----
 
     /// Run a parsed statement, streaming `QueryExecEvent`s (TypesResolved →
@@ -196,6 +196,14 @@ pub struct InProcessDuckDbConn {
     /// True for file-source (CSV/Parquet/JSON view) connections, which refuse
     /// mutations.
     read_only: bool,
+}
+
+impl std::fmt::Debug for InProcessDuckDbConn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InProcessDuckDbConn")
+            .field("read_only", &self.read_only)
+            .finish_non_exhaustive()
+    }
 }
 
 impl InProcessDuckDbConn {
@@ -404,7 +412,7 @@ impl DuckDbConn for InProcessDuckDbConn {
     ) -> Result<ImportFilesIntoDuckDbResult, Error> {
         let conn = self.lock()?;
         crate::database::duckdb::import_files::import_files_into_duckdb(&conn, &file_paths)
-            .map_err(|e| Error::Any(anyhow::anyhow!(e)))
+            .map_err(Error::InvalidInput)
     }
 
     async fn materialize_data_file_session(
@@ -420,6 +428,6 @@ impl DuckDbConn for InProcessDuckDbConn {
             &destination_path,
             overwrite,
         )
-        .map_err(|e| Error::Any(anyhow::anyhow!(e)))
+        .map_err(Error::InvalidInput)
     }
 }
