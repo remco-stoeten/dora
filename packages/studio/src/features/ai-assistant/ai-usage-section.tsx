@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useEffect, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { buildMockAiUsageSummary } from '@studio/features/ai-assistant/mock-ai'
@@ -77,7 +77,7 @@ export function AiUsageSection() {
 	if (loading) {
 		return (
 			<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-				<Loader2 className='h-3 w-3 animate-spin' />
+				<Spinner className='h-3 w-3' />
 				Loading usage…
 			</div>
 		)

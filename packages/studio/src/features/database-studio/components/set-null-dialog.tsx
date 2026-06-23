@@ -1,4 +1,5 @@
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Label } from '@studio/shared/ui/label'
@@ -68,7 +69,7 @@ export function SetNullDialog({
 						disabled={!selectedColumn || isLoading || nullableColumns.length === 0}
 						form='set-null-form'
 					>
-						{isLoading && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
+						{isLoading && <Spinner className='h-4 w-4 mr-2' />}
 						Set to NULL
 					</Button>
 				</>

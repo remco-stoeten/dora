@@ -1,4 +1,5 @@
-import { Loader2, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { commands, type AiModelOption, type AiServiceConfig } from '@studio/lib/bindings'
@@ -194,7 +195,7 @@ export function AiProviderSection() {
 
 			{loading ? (
 				<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-					<Loader2 className='h-3 w-3 animate-spin' />
+					<Spinner className='h-3 w-3' />
 					Loading…
 				</div>
 			) : (
@@ -343,7 +344,7 @@ export function AiProviderSection() {
 							onClick={handleSave}
 							disabled={!isTauri || saving || !config.model.trim()}
 						>
-							{saving ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Save provider'}
+							{saving ? <Spinner className='h-3 w-3' /> : 'Save provider'}
 						</Button>
 						{message ? (
 							<span

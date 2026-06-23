@@ -1,4 +1,5 @@
-import { RefreshCw, Loader2, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
+import { RefreshCw, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
+import { Spinner } from "@studio/shared/ui/spinner";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@studio/shared/ui/button";
 import {
@@ -525,7 +526,7 @@ export function CreateContainerDialog({
             <Button type="submit" disabled={isSubmitting || Boolean(nameError)}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2 h-4 w-4" />
                   Creating...
                 </>
               ) : (

@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Checkbox } from '@studio/shared/ui/checkbox'
@@ -107,7 +107,7 @@ export function AddColumnDialog({ open, onOpenChange, tableName, onSubmit, isLoa
 						form='add-column-form'
 						disabled={isLoading || !formData.name.trim()}
 					>
-						{isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+						{isLoading && <Spinner className='mr-2 h-4 w-4' />}
 						Add Column
 					</Button>
 				</>

@@ -1,4 +1,5 @@
-import { Play, Sparkles, Download, Loader2, Braces } from 'lucide-react'
+import { Play, Sparkles, Download, Braces } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAdapter, useIsTauri } from '@studio/core/data-provider'
@@ -144,7 +145,7 @@ export function DrizzleRunner({ connectionId }: Props) {
 						disabled={isExecuting}
 					>
 						{isExecuting ? (
-							<Loader2 className='h-3 w-3 animate-spin' />
+							<Spinner className='h-3 w-3' />
 						) : (
 							<Play className='h-3 w-3 fill-current' />
 						)}

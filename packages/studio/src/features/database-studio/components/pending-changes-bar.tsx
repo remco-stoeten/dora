@@ -1,4 +1,5 @@
-import { Loader2, Check, X, Edit3 } from 'lucide-react'
+import { Check, X, Edit3 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { Button } from '@studio/shared/ui/button'
 import { cn } from '@studio/shared/utils/cn'
 
@@ -42,7 +43,7 @@ export function PendingChangesBar({ editCount, isApplying, onApply, onCancel, cl
 				</Button>
 				<Button size='sm' onClick={onApply} disabled={isApplying} className='gap-1.5'>
 					{isApplying ? (
-						<Loader2 className='h-4 w-4 animate-spin' />
+						<Spinner className='h-4 w-4' />
 					) : (
 						<Check className='h-4 w-4' />
 					)}

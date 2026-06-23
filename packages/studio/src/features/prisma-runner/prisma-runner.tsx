@@ -1,4 +1,5 @@
-import { Play, Sparkles, Download, Loader2, Braces, X, FileCode2 } from 'lucide-react'
+import { Play, Sparkles, Download, Braces, X, FileCode2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAdapter, useConnections } from '@studio/core/data-provider'
@@ -235,7 +236,7 @@ export function PrismaRunner({ connectionId }: PrismaRunnerProps) {
 						disabled={isRunning}
 					>
 						{isRunning ? (
-							<Loader2 className='h-3.5 w-3.5 animate-spin' />
+							<Spinner className='h-3.5 w-3.5' />
 						) : (
 							<Play className='h-3.5 w-3.5 fill-current' />
 						)}

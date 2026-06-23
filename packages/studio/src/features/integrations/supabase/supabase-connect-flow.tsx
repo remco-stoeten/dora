@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from "lucide-react";
+import { Check, ExternalLink, LogOut, PlugZap, RefreshCw, Search } from "lucide-react";
+import { Spinner } from "@studio/shared/ui/spinner";
 import { open } from "@tauri-apps/plugin-shell";
 import type { SupabaseOrganization, SupabaseProject } from "@studio/lib/bindings";
 import { Button } from "@studio/shared/ui/button";
@@ -270,7 +271,7 @@ function SupabaseConnectFlowInner({ onComplete }: Props) {
             className="w-full gap-2"
           >
             {isOauthConnecting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Spinner className="h-3.5 w-3.5" />
             ) : (
               <PlugZap className="h-3.5 w-3.5" />
             )}
@@ -322,7 +323,7 @@ function SupabaseConnectFlowInner({ onComplete }: Props) {
                   className="shrink-0 gap-2"
                 >
                   {isAuthorizing ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Spinner className="h-3.5 w-3.5" />
                   ) : (
                     <PlugZap className="h-3.5 w-3.5" />
                   )}
@@ -377,7 +378,7 @@ function SupabaseConnectFlowInner({ onComplete }: Props) {
           <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
             {isLoading ? (
               <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Spinner className="h-3.5 w-3.5" />
                 Loading projects
               </div>
             ) : null}
@@ -477,7 +478,7 @@ function SupabaseConnectFlowInner({ onComplete }: Props) {
                 className="self-start gap-2"
               >
                 {isBuilding ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Spinner className="h-3.5 w-3.5" />
                 ) : (
                   <PlugZap className="h-3.5 w-3.5" />
                 )}

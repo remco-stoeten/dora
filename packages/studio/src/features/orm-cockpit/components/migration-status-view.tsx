@@ -4,7 +4,8 @@
  * concern (`drizzle-kit migrate`); this just shows the gap.
  */
 
-import { CheckCircle2, Clock, Info, Loader2 } from 'lucide-react'
+import { CheckCircle2, Clock, Info } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { cn } from '@studio/shared/utils/cn'
 import { EmptyState } from '@studio/shared/ui/empty-state'
 import type { MigrationStatusState } from '@studio/features/orm-cockpit/components/use-migration-status'
@@ -13,7 +14,7 @@ export function MigrationStatusView({ state }: { state: MigrationStatusState }) 
 	if (state.loading && !state.status) {
 		return (
 			<div className='flex h-full items-center justify-center gap-2 text-muted-foreground'>
-				<Loader2 className='h-5 w-5 animate-spin' />
+				<Spinner className='h-5 w-5' />
 				<span className='text-sm'>Reading migrations…</span>
 			</div>
 		)

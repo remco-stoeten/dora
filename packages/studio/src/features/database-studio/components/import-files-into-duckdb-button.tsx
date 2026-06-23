@@ -18,7 +18,8 @@ import {
 import { DesktopOnlyButton } from '@studio/core/platform'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { cn } from '@studio/shared/utils/cn'
-import { FileUp, Loader2 } from 'lucide-react'
+import { FileUp } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useImportFilesIntoDuckdb } from '../hooks/use-import-files-into-duckdb'
 import {
 	detectImportNameCollisions,
@@ -124,7 +125,7 @@ export function ImportFilesIntoDuckDbButton({
 				}}
 			>
 				{importFiles.isPending ? (
-					<Loader2 className='h-3.5 w-3.5 animate-spin' aria-hidden />
+					<Spinner className='h-3.5 w-3.5' />
 				) : (
 					<FileUp className='h-3.5 w-3.5' aria-hidden />
 				)}

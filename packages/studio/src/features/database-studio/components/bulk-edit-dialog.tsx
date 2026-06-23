@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import {
@@ -146,7 +146,7 @@ export function BulkEditDialog({
 							Cancel
 						</Button>
 						<Button type='submit' disabled={!selectedColumn || isLoading}>
-							{isLoading && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
+							{isLoading && <Spinner className='h-4 w-4 mr-2' />}
 							Update {selectedCount} Row{selectedCount !== 1 ? 's' : ''}
 						</Button>
 					</DialogFooter>

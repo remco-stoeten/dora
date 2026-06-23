@@ -19,7 +19,8 @@ import { DesktopOnlyButton } from '@studio/core/platform'
 import { mapSaveDataFileSessionError } from '@studio/features/connections/local-file-errors'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { cn } from '@studio/shared/utils/cn'
-import { Database, Loader2 } from 'lucide-react'
+import { Database } from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useSaveDataFileSession } from '../hooks/use-save-data-file-session'
 import {
 	basename,
@@ -139,7 +140,7 @@ export function SaveAsDuckDbButton({
 				}}
 			>
 				{isBusy ? (
-					<Loader2 className='h-3 w-3 animate-spin' aria-hidden />
+					<Spinner className='h-3 w-3' />
 				) : (
 					<Database className='h-3 w-3' aria-hidden />
 				)}
