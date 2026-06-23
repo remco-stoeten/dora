@@ -1,0 +1,32 @@
+---
+title: Connect Neon
+description: Connect Dora to a Neon serverless Postgres database with a connection string or your Neon account.
+---
+
+# Connect Neon
+
+Neon is serverless PostgreSQL. Dora connects with a standard connection string
+and enables SSL automatically for `*.neon.tech` hosts.
+
+## With a connection string
+
+1. In the Neon Console, open your project and click **Connect** (or
+   **Connection Details** on the dashboard).
+2. Copy the connection string. It looks like:
+
+   ```text
+   postgresql://<user>:<password>@<endpoint>.neon.tech/<db>?sslmode=require
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='info'>**Pooled vs direct.** Neon's pooled host contains `-pooler` in the endpoint. Use it for serverless/short-lived connections; use the non-pooler host for sessions that need a direct connection. Both work in Dora.</Callout>
+
+## With your Neon account
+
+Choose **Connect with Neon** in the connection dialog and sign in. Dora lists
+your projects and **branches** and builds the connection string for the branch
+you pick.
+
+SSL is required and is set automatically.

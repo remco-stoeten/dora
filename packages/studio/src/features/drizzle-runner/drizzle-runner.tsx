@@ -1,4 +1,4 @@
-import { Play, Sparkles, Download, Loader2, Braces } from 'lucide-react'
+import { Play, Sparkles, Download, Braces } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAdapter, useIsTauri } from '@studio/core/data-provider'
@@ -12,6 +12,7 @@ import { DEFAULT_QUERY } from './data'
 import { QueryResult, SchemaTable } from './types'
 import { drizzleQueryToSql } from './utils/drizzle-query'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 type Props = {
 	connectionId?: string
 }
@@ -68,10 +69,7 @@ export function DrizzleRunner({ connectionId }: Props) {
 
 			try {
 				const sqlToRun = drizzleQueryToSql(codeToRun || queryCode)
-				const queryResult = await adapter.executeQuery(
-					activeConnectionId,
-					sqlToRun
-				)
+				const queryResult = await adapter.executeQuery(activeConnectionId, sqlToRun)
 				if (queryResult.ok) {
 					setResult(queryResult.data)
 				} else {
@@ -144,7 +142,7 @@ export function DrizzleRunner({ connectionId }: Props) {
 						disabled={isExecuting}
 					>
 						{isExecuting ? (
-							<Loader2 className='h-3 w-3 animate-spin' />
+							<Spinner className='h-3 w-3' />
 						) : (
 							<Play className='h-3 w-3 fill-current' />
 						)}
@@ -202,7 +200,9 @@ export function DrizzleRunner({ connectionId }: Props) {
 						className={cn('h-7 text-xs', isSidebarCollapsed && 'bg-sidebar-accent')}
 						onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
 						aria-expanded={!isSidebarCollapsed}
-						aria-label={isSidebarCollapsed ? 'Show schema sidebar' : 'Hide schema sidebar'}
+						aria-label={
+							isSidebarCollapsed ? 'Show schema sidebar' : 'Hide schema sidebar'
+						}
 					>
 						{isSidebarCollapsed ? 'Show Schema' : 'Hide Schema'}
 					</Button>
@@ -264,7 +264,6 @@ export function DrizzleRunner({ connectionId }: Props) {
 						</Panel>
 					</PanelGroup>
 				</Panel>
-
 			</PanelGroup>
 		</div>
 	)

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, type ComponentProps } from 'react'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@studio/shared/ui/tooltip'
 import {
 	DropdownMenu,
@@ -343,7 +344,11 @@ export function StudioToolbar({
 						disabled={isLoading}
 						tooltip='Refresh'
 					>
-						<RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
+						{isLoading ? (
+							<Spinner className='h-3.5 w-3.5' />
+						) : (
+							<RefreshCw className='h-3.5 w-3.5' />
+						)}
 					</TooltipButton>
 
 					<DropdownMenu>

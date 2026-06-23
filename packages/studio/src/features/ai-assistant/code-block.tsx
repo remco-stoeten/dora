@@ -1,13 +1,5 @@
-import {
-	Check,
-	Copy,
-	FileInput,
-	Loader2,
-	Maximize2,
-	Minimize2,
-	Play,
-	ShieldCheck
-} from 'lucide-react'
+import { Spinner } from '@studio/shared/ui/spinner'
+import { Check, Copy, FileInput, Maximize2, Minimize2, Play, ShieldCheck } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { getEnv } from '@studio/core/env'
 import { notifySchemaChanged } from '@studio/core/schema-refresh'
@@ -30,8 +22,7 @@ const QUERY_POLL_INTERVAL_MS =
 	DEFAULT_QUERY_POLL_INTERVAL_MS
 
 const QUERY_POLL_ATTEMPTS =
-	Number.parseInt(getEnv('VITE_AI_QUERY_POLL_ATTEMPTS') ?? '', 10) ||
-	DEFAULT_QUERY_POLL_ATTEMPTS
+	Number.parseInt(getEnv('VITE_AI_QUERY_POLL_ATTEMPTS') ?? '', 10) || DEFAULT_QUERY_POLL_ATTEMPTS
 
 type Props = {
 	language: string | undefined
@@ -262,7 +253,8 @@ export function CodeBlock({
 					<span className='font-semibold text-zinc-300'>{language ?? 'code'}</span>
 					{isSql && (
 						<span className='truncate normal-case tracking-normal text-muted-foreground'>
-							{sqlKind} · {statementCount} stmt{statementCount === 1 ? '' : 's'} · {lineCount} line{lineCount === 1 ? '' : 's'}
+							{sqlKind} · {statementCount} stmt{statementCount === 1 ? '' : 's'} ·{' '}
+							{lineCount} line{lineCount === 1 ? '' : 's'}
 						</span>
 					)}
 				</div>
@@ -277,7 +269,7 @@ export function CodeBlock({
 							title='Run SQL'
 						>
 							{runState.kind === 'running' && runState.mode === 'run' ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<Play className='mr-1 h-3 w-3' />
 							)}
@@ -294,7 +286,7 @@ export function CodeBlock({
 							title='Dry run with EXPLAIN'
 						>
 							{runState.kind === 'running' && runState.mode === 'dry-run' ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<ShieldCheck className='mr-1 h-3 w-3' />
 							)}
@@ -361,7 +353,10 @@ export function CodeBlock({
 					{isSql
 						? highlightedTokens.map(function (token, index) {
 								return (
-									<span key={`${index}-${token.text}`} className={tokenClassName[token.kind]}>
+									<span
+										key={`${index}-${token.text}`}
+										className={tokenClassName[token.kind]}
+									>
 										{token.text}
 									</span>
 								)

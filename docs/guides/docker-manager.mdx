@@ -1,0 +1,44 @@
+---
+title: Docker Manager
+description: Spin up, manage, and seed local database containers from inside Dora.
+---
+
+# Docker Manager
+
+The Docker Manager runs local database containers without dropping to a terminal.
+It is handy for spinning up a throwaway Postgres or MySQL to test against. Open
+it from the sidebar (requires Docker running on your machine).
+
+## Manage containers
+
+The container list shows each container's name, engine, status, and port. You can
+search and filter by status (running / stopped / created), and choose whether to
+show containers created outside Dora.
+
+Select a container to open its details panel — connection snippet (copy to
+clipboard), credentials, port, and health. From the menu you can **start**,
+**stop**, **remove**, **view logs**, or **refresh** status.
+
+## Create a container
+
+Click **+** to open the create dialog and pick:
+
+- a database engine (PostgreSQL, MySQL, MariaDB, or CockroachDB) and version,
+- a container name (auto-suggested),
+- credentials (user, password, database),
+- a port (auto-assigned, with a "find free port" helper),
+- an optional volume mount for persistent data.
+
+Dora starts the container and it appears in the list, ready to connect to like
+any other database.
+
+## Seed, logs, and terminal
+
+- **Seed** a container by dragging a `.sql` file onto its **Seed** tab.
+- **Logs** stream in the logs panel, with search, tail length, and download.
+- **Terminal** opens an interactive shell inside the container.
+
+## Export as Compose
+
+From a container's menu, **Export as Compose** generates a `docker-compose.yml`
+you can copy or download to reproduce the container elsewhere.

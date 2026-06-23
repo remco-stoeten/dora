@@ -1,0 +1,86 @@
+---
+title: Dora runner (Go CLI/TUI)
+description: A Go-based command-line and terminal-UI tool for building, releasing, dispatching CI, and running disposable test VMs for the Dora project.
+---
+
+# Dora runner
+
+The Dora runner is a developer tool for working on **Dora itself** — not a
+database client. It is a single Go binary that runs either as an interactive
+**TUI** (terminal UI) for browsing and running the project's build, test, and
+release tasks, or as a scriptable **CLI** for CI dispatch and test-VM
+automation.
+
+The source lives in [`tools/dora-runner/`](https://github.com/remcostoeten/dora/tree/master/tools/dora-runner).
+
+## Build and run
+
+Requires Go 1.24+.
+
+```bash
+cd tools/dora-runner
+go build -o dora-runner .
+./dora-runner          # no args → interactive TUI
+```
+
+## Interactive TUI
+
+Running `dora-runner` with no arguments opens a menu-driven interface (built with
+Charm's Bubble Tea). Navigate with the arrow keys or `j`/`k`, select with
+`Enter`, go back with `Esc`, and quit with `q`. Command output streams in place.
+
+The menu groups the project's workflows, including:
+
+- **Run app** and **build** for Linux, macOS, or Windows,
+- **View / install builds** (list and install `.deb` artifacts, check build
+  sizes),
+- **Database ops** — back up `dora.db`, dump SQL, introspect schema,
+- **Release notes** — version bump, generate notes, run the full release
+  pipeline,
+- **Release packaging** — WinGet, AUR, Homebrew, Flatpak, Snap, APT metadata,
+- **AI setup** — configure or diagnose a local Ollama model,
+- **CI dispatch** and **VM operations** (Linux).
+
+## CLI commands
+
+### CI dispatch
+
+Trigger GitHub Actions workflows (requires the GitHub CLI `gh`, authenticated):
+
+```bash
+dora-runner ci dispatch --workflow ci.yml --ref main
+dora-runner ci mac --ref main        # shorthand for the macOS workflow
+```
+
+### Test VMs (Linux + libvirt/KVM)
+
+Manage a disposable Linux guest for smoke-testing builds. Requires KVM, libvirt,
+and `qemu-guest-agent`.
+
+```bash
+dora-runner vm init                  # write a .dora-vm.yaml config
+dora-runner vm ensure                # create / define / start the VM
+dora-runner vm run --command "uname -a"
+dora-runner vm logs                  # show VM state and serial log
+dora-runner vm clean                 # stop and remove ephemeral artifacts
+dora-runner vm nuke                  # undefine the VM and remove everything
+```
+
+Add `--config <path>` to point at a specific config, or `--no-start` to `ensure`
+to define the VM without booting it.
+
+## VM configuration
+
+`vm init` writes a `.dora-vm.yaml` (see `tools/dora-runner/vm.example.yaml`).
+Key fields:
+
+| Field | Purpose | Default |
+| --- | --- | --- |
+| `name` | libvirt domain name | `dora-linux-test` |
+| `uri` | libvirt connection URI | `qemu:///session` |
+| `base_image` / `base_image_url` | base qcow2 template (auto-downloaded for Linux) | — |
+| `memory_mb` / `vcpus` / `disk_size_gb` | guest resources | `8192` / `4` / `80` |
+| `guest_run_command` | default command run in the guest | smoke test |
+| `agent_timeout_sec` | qemu-guest-agent timeout | `180` |
+
+<Callout type='info'>The VM commands are Linux-only and need a working libvirt/KVM setup; the CI commands need an authenticated `gh`. The TUI's build and release tasks shell out to the repo's own scripts, so run it from within a Dora checkout.</Callout>

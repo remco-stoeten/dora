@@ -231,21 +231,28 @@ function getTableLookupCandidates(tableName: string): string[] {
 	return Array.from(new Set([tableName, normalizedTableName]))
 }
 
+// Mocked provider connections (Supabase/Neon/Turso/…) get a fresh id with no
+// schema or data of its own, so the web preview borrows the demo dataset.
+function resolveSchemaConnectionId(connectionId: string): string {
+	return MOCK_SCHEMAS[connectionId] ? connectionId : 'demo-ecommerce-001'
+}
+
 function resolveStoreKey(connectionId: string, tableName: string): string {
+	const effectiveId = resolveSchemaConnectionId(connectionId)
 	const candidates = getTableLookupCandidates(tableName).map(function (candidate) {
-		return `${connectionId}:${candidate}`
+		return `${effectiveId}:${candidate}`
 	})
 
 	const existingKey = candidates.find(function (candidate) {
 		return candidate in store.tables || candidate in MOCK_TABLE_DATA
 	})
 
-	return existingKey || `${connectionId}:${getTableRefParts(tableName).tableName}`
+	return existingKey || `${effectiveId}:${getTableRefParts(tableName).tableName}`
 }
 
 function findTableInfo(connectionId: string, tableName: string): TableInfo | undefined {
 	const { schemaName, tableName: normalizedTableName } = getTableRefParts(tableName)
-	const schema = MOCK_SCHEMAS[connectionId]
+	const schema = MOCK_SCHEMAS[resolveSchemaConnectionId(connectionId)]
 
 	return schema?.tables.find(function (table) {
 		if (table.name !== normalizedTableName) {
@@ -331,9 +338,13 @@ export function createMockAdapter(): DataAdapter {
 
 		async connectToDatabase(connectionId: string) {
 			await randomDelay()
-			const conn = MOCK_CONNECTIONS.find(function (c) {
-				return c.id === connectionId
-			})
+			const conn =
+				MOCK_CONNECTIONS.find(function (c) {
+					return c.id === connectionId
+				}) ??
+				store.connections.find(function (c) {
+					return c.id === connectionId
+				})
 			if (!conn) {
 				return err('Connection not found')
 			}
@@ -446,7 +457,7 @@ export function createMockAdapter(): DataAdapter {
 
 		async getSchema(connectionId: string): Promise<AdapterResult<DatabaseSchema>> {
 			await randomDelay()
-			const schema = MOCK_SCHEMAS[connectionId]
+			const schema = MOCK_SCHEMAS[resolveSchemaConnectionId(connectionId)]
 			if (!schema) {
 				return err('Schema not found for connection')
 			}

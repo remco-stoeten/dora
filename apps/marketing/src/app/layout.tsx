@@ -40,6 +40,7 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     icons: {
         icon: [
+            { url: '/icons/logo.svg', type: 'image/svg+xml' },
             { url: '/favicon.ico', sizes: 'any' },
             { url: '/icons/icon.png', type: 'image/png' }
         ],

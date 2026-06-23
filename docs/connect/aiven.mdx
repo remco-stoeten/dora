@@ -1,0 +1,26 @@
+---
+title: Connect Aiven
+description: Connect Dora to an Aiven-managed PostgreSQL or MySQL service.
+---
+
+# Connect Aiven
+
+Aiven hosts managed PostgreSQL and MySQL. Dora detects the engine from the
+connection string and enables SSL, which Aiven requires.
+
+## With a connection string
+
+1. In the Aiven console open your service and find the **Connection
+   information** / **Overview** panel.
+2. Copy the **Service URI**:
+
+   ```text
+   postgres://avnadmin:<password>@<service>.aivencloud.com:<port>/defaultdb?sslmode=require
+   ```
+
+   For MySQL services the scheme is `mysql://` and the port differs.
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URI,
+   **Test connection**, and **Save**.
+
+<Callout type='info'>Aiven requires SSL (`sslmode=require`). Dora keeps the SSL setting that is in the URI, and enables SSL by default for `*.aivencloud.com` hosts.</Callout>

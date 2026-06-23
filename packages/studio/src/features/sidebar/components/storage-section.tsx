@@ -1,8 +1,9 @@
 import { invoke } from '@tauri-apps/api/core'
-import { Database, FolderOpen, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Database, FolderOpen, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { SidebarSection } from './sidebar-panel'
 
 type DatabaseInfo = {
@@ -13,8 +14,7 @@ type DatabaseInfo = {
 
 function isTauriRuntime(): boolean {
 	return (
-		typeof window !== 'undefined' &&
-		('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
+		typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window)
 	)
 }
 
@@ -166,7 +166,7 @@ export function StorageSection() {
 											}}
 										>
 											{switching === db.name ? (
-												<RefreshCw className='h-3 w-3 animate-spin' />
+												<Spinner className='h-3 w-3' />
 											) : (
 												'Switch'
 											)}
@@ -212,7 +212,7 @@ export function StorageSection() {
 								disabled={saving || !newName.trim() || !newPath.trim()}
 								onClick={handleSave}
 							>
-								{saving ? <RefreshCw className='h-3 w-3 animate-spin' /> : 'Save'}
+								{saving ? <Spinner className='h-3 w-3' /> : 'Save'}
 							</Button>
 							<Button
 								variant='ghost'
@@ -269,7 +269,7 @@ export function StorageSection() {
 						onClick={handleReset}
 					>
 						{resetting ? (
-							<RefreshCw className='h-3 w-3 animate-spin mr-1' />
+							<Spinner className='h-3 w-3 mr-1' />
 						) : (
 							<Trash2 className='h-3 w-3 mr-1' />
 						)}

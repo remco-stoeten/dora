@@ -1,9 +1,9 @@
-import { Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import type { ColumnDefinition } from '../types'
 import { StudioDialog } from './studio-dialog'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 type Props = {
 	open: boolean
 	onOpenChange: (open: boolean) => void
@@ -118,7 +118,7 @@ export function AddRecordDialog({
 					<Button type='submit' disabled={isLoading} form='add-record-form'>
 						{isLoading ? (
 							<>
-								<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+								<Spinner className='mr-2 h-4 w-4' />
 								Saving...
 							</>
 						) : mode === 'edit' ? (

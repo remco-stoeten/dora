@@ -1,6 +1,6 @@
-import { Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import {
 	Dialog,
 	DialogContent,
@@ -91,7 +91,7 @@ export function RenameTableDialog({
 							Cancel
 						</Button>
 						<Button type='submit' disabled={isLoading || !isValid}>
-							{isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+							{isLoading && <Spinner className='mr-2 h-4 w-4' />}
 							Rename
 						</Button>
 					</DialogFooter>

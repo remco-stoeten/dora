@@ -1,4 +1,4 @@
-import { Upload, FileCode, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileCode, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { useToast } from '@studio/shared/ui/use-toast'
 import { Button } from '@studio/shared/ui/button'
@@ -6,6 +6,7 @@ import { useSeedDatabase } from '../api/mutations/use-seed-database'
 import type { DockerContainer } from '../types'
 import { getContainerConnectionDetails } from '../utilities/container-connection'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 type Props = {
 	container: DockerContainer
 }
@@ -217,7 +218,7 @@ export function SeedView({ container }: Props) {
 					disabled={!file || seedMutation.isPending}
 					className='w-full'
 				>
-					{seedMutation.isPending && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+					{seedMutation.isPending && <Spinner className='mr-2 h-4 w-4' />}
 					{seedMutation.isPending ? 'Seeding...' : 'Run Seed Script'}
 				</Button>
 			</div>

@@ -52,3 +52,19 @@ export const ENV_MODE: string =
 export const ENV_PROD: boolean = asBool(VITE.PROD, NODE.NODE_ENV === 'production')
 
 export const ENV_DEV: boolean = asBool(VITE.DEV, NODE.NODE_ENV === 'development')
+
+/**
+ * True when Studio runs as the hosted web preview (no Tauri backend): the mock
+ * adapter is serving data, so connections, edits, and providers are simulated.
+ */
+export function isWebDemo(): boolean {
+	if (typeof window === 'undefined') return false
+	const isTauri = '__TAURI__' in window
+	const isTauriProtocol = window.location.protocol === 'tauri:'
+	if (isTauri || isTauriProtocol) return false
+	return (
+		ENV_MODE === 'demo' ||
+		window.location.hostname.includes('demo') ||
+		getEnv('VITE_IS_WEB') === 'true'
+	)
+}

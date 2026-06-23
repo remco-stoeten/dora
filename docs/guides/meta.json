@@ -1,4 +1,23 @@
 {
 	"title": "Guides",
-	"pages": ["orm-cockpit", "orm-runners", "mock-data", "new-features"]
+	"pages": [
+		"---Working with data---",
+		"data-studio",
+		"sql-console",
+		"schema-visualizer",
+		"charts",
+		"export",
+		"live-monitoring",
+		"---ORMs---",
+		"orm-cockpit",
+		"orm-runners",
+		"---Productivity---",
+		"command-palette",
+		"ai-assistant",
+		"docker-manager",
+		"---Reference & internals---",
+		"security",
+		"mock-data",
+		"new-features"
+	]
 }

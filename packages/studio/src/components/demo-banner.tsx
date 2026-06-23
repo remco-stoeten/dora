@@ -1,7 +1,7 @@
 import { X, Download } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { siteConfig } from '@studio/config/site'
-import { ENV_MODE, getEnv } from '@studio/core/env'
+import { isWebDemo } from '@studio/core/env'
 
 type Props = {
 	githubUrl?: string
@@ -19,18 +19,11 @@ export function DemoBanner({
 	const [isDemo, setIsDemo] = useState(false)
 
 	useEffect(function detectDemoAndOs() {
-		const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
-		const isTauriProtocol = window.location.protocol === 'tauri:'
-		const isWebDemo =
-			!isTauri &&
-			!isTauriProtocol &&
-			(ENV_MODE === 'demo' ||
-				window.location.hostname.includes('demo') ||
-				getEnv('VITE_IS_WEB') === 'true')
+		const webDemo = isWebDemo()
 
-		setIsDemo(isWebDemo)
+		setIsDemo(webDemo)
 
-		if (isWebDemo) {
+		if (webDemo) {
 			const userAgent = window.navigator.userAgent.toLowerCase()
 			if (userAgent.indexOf('win') !== -1) {
 				setOs('Windows')

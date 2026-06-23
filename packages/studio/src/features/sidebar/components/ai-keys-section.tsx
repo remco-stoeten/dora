@@ -1,4 +1,4 @@
-import { Check, Loader2, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react'
+import { Check, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { buildMockProviderModels } from '@studio/features/ai-assistant/mock-ai'
@@ -6,6 +6,7 @@ import { ModelIdInput } from '@studio/features/ai-assistant/components/model-id-
 import { commands, type AiApiKeyRecord, type AiModelOption } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
+import { Spinner } from '@studio/shared/ui/spinner'
 import {
 	Select,
 	SelectContent,
@@ -134,28 +135,39 @@ export function AiKeysSection() {
 		return entry.id === provider
 	})!
 
-	const groupedModels = useMemo(function () {
-		return groupModels(modelOptions)
-	}, [modelOptions])
+	const groupedModels = useMemo(
+		function () {
+			return groupModels(modelOptions)
+		},
+		[modelOptions]
+	)
 
-	const knownModelIds = useMemo(function () {
-		return new Set(modelOptions.map(function (option) {
-			return option.id
-		}))
-	}, [modelOptions])
+	const knownModelIds = useMemo(
+		function () {
+			return new Set(
+				modelOptions.map(function (option) {
+					return option.id
+				})
+			)
+		},
+		[modelOptions]
+	)
 
 	const usingCustomTestModel = !knownModelIds.has(testModel)
 	const testModelSelectValue = usingCustomTestModel ? CUSTOM_MODEL_VALUE : testModel
 
 	const resolvedTestModel = usingCustomTestModel ? customTestModel.trim() : testModel.trim()
 
-	const testKey = useMemo(function () {
-		return (
-			keys.find(function (key) {
-				return key.is_active
-			}) ?? keys[0]
-		)
-	}, [keys])
+	const testKey = useMemo(
+		function () {
+			return (
+				keys.find(function (key) {
+					return key.is_active
+				}) ?? keys[0]
+			)
+		},
+		[keys]
+	)
 
 	const loadModels = useCallback(
 		async function loadModels(nextProvider: KeyProvider, preferredModel?: string) {
@@ -165,13 +177,16 @@ export function AiKeysSection() {
 					const options = buildMockProviderModels(nextProvider)
 					setModelOptions(options)
 					const fallback =
-						preferredModel && options.some(function (option) {
+						preferredModel &&
+						options.some(function (option) {
 							return option.id === preferredModel
 						})
 							? preferredModel
 							: (PROVIDERS.find(function (entry) {
 									return entry.id === nextProvider
-								})?.defaultModel ?? options[0]?.id ?? '')
+								})?.defaultModel ??
+								options[0]?.id ??
+								'')
 					setTestModel(fallback)
 					setCustomTestModel('')
 					return
@@ -199,7 +214,7 @@ export function AiKeysSection() {
 					const match = modelsResult.data.some(function (option) {
 						return option.id === fallback
 					})
-					setTestModel(match ? fallback! : modelsResult.data[0]?.id ?? fallback ?? '')
+					setTestModel(match ? fallback! : (modelsResult.data[0]?.id ?? fallback ?? ''))
 					setCustomTestModel('')
 				}
 			} finally {
@@ -209,15 +224,18 @@ export function AiKeysSection() {
 		[isTauri]
 	)
 
-	const load = useCallback(async function load() {
-		setLoading(true)
-		try {
-			const res = await commands.aiKeysList(provider)
-			if (res.status === 'ok') setKeys(res.data)
-		} finally {
-			setLoading(false)
-		}
-	}, [provider])
+	const load = useCallback(
+		async function load() {
+			setLoading(true)
+			try {
+				const res = await commands.aiKeysList(provider)
+				if (res.status === 'ok') setKeys(res.data)
+			} finally {
+				setLoading(false)
+			}
+		},
+		[provider]
+	)
 
 	useEffect(
 		function loadOnMount() {
@@ -349,15 +367,16 @@ export function AiKeysSection() {
 				</div>
 
 				<div className='text-xs text-muted-foreground leading-tight'>
-					{activeProvider.hint} Keys are encrypted with AES-256-GCM. Environment variables like{' '}
-					<code className='font-mono'>{activeProvider.envVar}</code> are merged automatically.
+					{activeProvider.hint} Keys are encrypted with AES-256-GCM. Environment variables
+					like <code className='font-mono'>{activeProvider.envVar}</code> are merged
+					automatically.
 				</div>
 
 				<div className='text-[10px] leading-snug text-muted-foreground/80'>
 					Groq, OpenAI, Anthropic, and Gemini are cloud providers and need an API key.
 					Ollama runs locally — it needs no key and is configured under the AI provider
-					settings instead. See{' '}
-					<code className='font-mono'>docs/ai-providers.md</code> for per-provider setup.
+					settings instead. See <code className='font-mono'>docs/ai-providers.md</code>{' '}
+					for per-provider setup.
 				</div>
 
 				<div className='space-y-2 rounded-sm border border-sidebar-border bg-background p-2'>
@@ -373,15 +392,19 @@ export function AiKeysSection() {
 							}}
 							className='inline-flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50'
 						>
-							<RefreshCw
-								className={cn('h-3 w-3', loadingModels ? 'animate-spin' : undefined)}
-							/>
+							{loadingModels ? (
+								<Spinner className='h-3 w-3' />
+							) : (
+								<RefreshCw className='h-3 w-3' />
+							)}
 							Refresh models
 						</button>
 					</div>
 
 					<label className='block space-y-1'>
-						<span className='text-[10px] text-muted-foreground'>Model to test against</span>
+						<span className='text-[10px] text-muted-foreground'>
+							Model to test against
+						</span>
 						<p className='text-[10px] leading-snug text-muted-foreground/80'>
 							Cloud models your {activeProvider.label} API key can call — nothing is
 							installed on your device. Pick any model your account supports.
@@ -464,9 +487,7 @@ export function AiKeysSection() {
 							onClick={function () {
 								void handleRunSettingsTest()
 							}}
-							disabled={
-								!isTauri || !resolvedTestModel || settingsTest.testing
-							}
+							disabled={!isTauri || !resolvedTestModel || settingsTest.testing}
 							title={
 								testKey
 									? `Run test with ${testKey.label} using the model and prompt above`
@@ -474,7 +495,7 @@ export function AiKeysSection() {
 							}
 						>
 							{settingsTest.testing ? (
-								<Loader2 className='mr-1 h-3 w-3 animate-spin' />
+								<Spinner className='mr-1 h-3 w-3' />
 							) : (
 								<Zap className='mr-1 h-3 w-3' />
 							)}
@@ -506,7 +527,7 @@ export function AiKeysSection() {
 
 				{loading && (
 					<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-						<Loader2 className='h-3 w-3 animate-spin' /> Loading…
+						<Spinner className='h-3 w-3' /> Loading…
 					</div>
 				)}
 
@@ -545,7 +566,11 @@ export function AiKeysSection() {
 										? `${key.label} provider key active — click to disable`
 										: `${key.label} provider key disabled — click to enable`
 								}
-								title={key.is_active ? 'Active — click to disable' : 'Disabled — click to enable'}
+								title={
+									key.is_active
+										? 'Active — click to disable'
+										: 'Disabled — click to enable'
+								}
 							/>
 							<div className='min-w-0 flex-1'>
 								<div className='text-xs font-medium text-sidebar-foreground truncate'>
@@ -568,7 +593,7 @@ export function AiKeysSection() {
 								title='Test key with the model and prompt above'
 							>
 								{test?.testing ? (
-									<Loader2 className='h-3 w-3 animate-spin' />
+									<Spinner className='h-3 w-3' />
 								) : (
 									<Zap className='h-3 w-3' />
 								)}
@@ -637,7 +662,7 @@ export function AiKeysSection() {
 								}}
 								disabled={testNew.testing || !apiKey.trim() || !resolvedTestModel}
 							>
-								{testNew.testing ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Test'}
+								{testNew.testing ? <Spinner className='h-3 w-3' /> : 'Test'}
 							</Button>
 							<Button
 								variant='default'

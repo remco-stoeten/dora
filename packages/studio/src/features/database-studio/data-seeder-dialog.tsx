@@ -1,3 +1,4 @@
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState } from 'react'
 import { generateData, TableColumn } from '@studio/core/data-generation/generator'
 import {
@@ -11,8 +12,15 @@ import {
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
 import { Label } from '@studio/shared/ui/label'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@studio/shared/ui/table'
-import { Loader2, Sparkles } from 'lucide-react'
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow
+} from '@studio/shared/ui/table'
+import { Sparkles } from 'lucide-react'
 import { useToast } from '@studio/shared/ui/use-toast'
 
 type Props = {
@@ -126,7 +134,7 @@ export function DataSeederDialog({ open, onOpenChange, tableName, columns, onGen
 						Cancel
 					</Button>
 					<Button onClick={handleGenerate} disabled={isGenerating}>
-						{isGenerating && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+						{isGenerating && <Spinner className='mr-2 h-4 w-4' />}
 						Generate {rowCount} Rows
 					</Button>
 				</DialogFooter>

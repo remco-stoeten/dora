@@ -807,6 +807,7 @@ export function DatabaseSidebar({
             onSearchChange={setSearchValue}
             filters={filters}
             onFiltersChange={setFilters}
+            isRefreshing={isLoadingSchema}
             onRefresh={function () {
               if (activeConnectionId) {
                 setRefreshTrigger(function (prev) {

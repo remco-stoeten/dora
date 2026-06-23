@@ -93,6 +93,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    dedupe: ["react", "react-dom", "react-router-dom"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@studio": path.resolve(__dirname, "../../packages/studio/src"),

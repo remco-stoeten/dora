@@ -1,16 +1,8 @@
-import {
-	Activity,
-	Clock,
-	Cpu,
-	HardDrive,
-	Network,
-	Server,
-	Layers,
-	RefreshCw
-} from 'lucide-react'
+import { Activity, Clock, Cpu, HardDrive, Network, Server, Layers } from 'lucide-react'
 import type { DockerContainer } from '../types'
 import { useContainerStats } from '../api/queries/use-container-stats'
 import { cn } from '@studio/shared/utils/cn'
+import { Spinner } from '@studio/shared/ui/spinner'
 
 type Props = {
 	container: DockerContainer
@@ -90,9 +82,7 @@ export function ContainerMetrics({ container }: Props) {
 	})
 
 	const primaryPort = container.ports.find((p) => p.containerPort === 5432)
-	const allPorts = container.ports
-		.map((p) => `${p.hostPort}→${p.containerPort}`)
-		.join(', ')
+	const allPorts = container.ports.map((p) => `${p.hostPort}→${p.containerPort}`).join(', ')
 
 	const imageDisplay =
 		container.imageTag && container.imageTag !== 'latest'
@@ -109,7 +99,7 @@ export function ContainerMetrics({ container }: Props) {
 					Metrics
 				</h4>
 				{isRunning && isFetching && (
-					<RefreshCw className='h-3 w-3 text-muted-foreground/50 animate-spin' />
+					<Spinner className='h-3 w-3 text-muted-foreground/50' />
 				)}
 			</div>
 
@@ -217,7 +207,9 @@ export function ContainerMetrics({ container }: Props) {
 					<HardDrive className='h-3 w-3 mt-0.5 shrink-0' />
 					<span className='truncate'>
 						{container.volumes[0].isEphemeral ? 'Ephemeral' : 'Persistent'} storage
-						{container.volumes.length > 1 ? ` (${container.volumes.length} volumes)` : ''}
+						{container.volumes.length > 1
+							? ` (${container.volumes.length} volumes)`
+							: ''}
 					</span>
 				</div>
 			)}

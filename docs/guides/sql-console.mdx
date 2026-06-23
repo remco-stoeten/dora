@@ -1,0 +1,47 @@
+---
+title: SQL Console
+description: Write SQL with schema-aware autocomplete, run full queries or selections, view and chart results, and reopen anything from history.
+---
+
+# SQL Console
+
+The SQL Console is a Monaco-based editor with SQL syntax highlighting and
+schema-aware autocomplete. Open it from the sidebar.
+
+## Write and run
+
+As you type, Dora completes table names, column names (with type hints), SQL
+keywords, and aggregate functions from the connected schema — so `users.` offers
+the real columns.
+
+- **Run the whole editor** with `Mod+Enter`.
+- **Run just the selection** with `Mod+Shift+Enter` — useful when the editor
+  holds several statements separated by semicolons.
+- **Stop** a long-running query from the toolbar while it executes.
+- **Format** the SQL with `Mod+Shift+F`.
+- **Comment a line** with `Mod+/`, and **save the script** with `Mod+S`.
+
+## Results
+
+Results open in a table you can sort and filter by column. From there you can:
+
+- **Copy a row** as JSON or SQL from its context menu,
+- **Chart** the results — see [Charts](/docs/guides/charts),
+- **Export** to CSV, JSON, or SQL — see [Export](/docs/guides/export).
+
+Run an `EXPLAIN` / `EXPLAIN ANALYZE` query and Dora shows the query plan in a
+dedicated panel.
+
+## Query history
+
+Press `Mod+H` to open history. Every query you run is recorded with a timestamp,
+a preview, its duration, and whether it succeeded. You can search history, group
+it by connection, pin queries you reuse, re-run any entry, and export or clear
+history.
+
+## Ask the AI
+
+Open the assistant from the console to generate SQL from a description, explain
+the current query, or fix an error. See [AI Assistant](/docs/guides/ai-assistant).
+
+<Callout type='info'>Prefer your ORM? The console can switch to a Drizzle mode, and Dora also has dedicated [Drizzle and Prisma runners](/docs/guides/orm-runners).</Callout>

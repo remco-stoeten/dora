@@ -39,7 +39,7 @@ export const siteConfig = {
     ],
     assets: {
         icon: '/icons/icon.png',
-        favicon: '/favicon.ico',
+        favicon: '/icons/logo.svg',
         logo: '/icons/logo.svg',
         ogImage: '/opengraph-image'
     }

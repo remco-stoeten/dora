@@ -1,3 +1,15 @@
 {
-	"pages": ["index", "installation", "api", "types", "guides"]
+	"pages": [
+		"index",
+		"getting-started",
+		"installation",
+		"---Connect a database---",
+		"connect",
+		"---Guides---",
+		"guides",
+		"---Reference---",
+		"api",
+		"types",
+		"go-cli-runner"
+	]
 }

@@ -1,0 +1,31 @@
+---
+title: Connect Azure Database
+description: Connect Dora to Azure Database for PostgreSQL or MySQL.
+---
+
+# Connect Azure Database
+
+Azure Database for PostgreSQL and Azure Database for MySQL are managed services.
+Dora detects the engine from the connection string and enables SSL, which Azure
+requires by default.
+
+## With a connection string
+
+1. In the Azure portal open your database resource and select the **Connect** /
+   **Connection strings** blade.
+2. Copy the connection details and assemble a URL. For PostgreSQL Flexible
+   Server:
+
+   ```text
+   postgresql://<user>:<password>@<server>.postgres.database.azure.com:5432/<db>?sslmode=require
+   ```
+
+   For MySQL the host ends in `.mysql.database.azure.com` and the scheme is
+   `mysql://`.
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='warn'>Add your client IP to the server's **Networking → Firewall rules**, otherwise the connection is refused. Single Server (legacy) requires the `<user>@<server>` username format; Flexible Server uses a plain username.</Callout>
+
+SSL is required and is preserved from the URL.

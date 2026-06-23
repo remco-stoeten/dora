@@ -1,0 +1,30 @@
+---
+title: Connect PlanetScale
+description: Connect Dora to a PlanetScale MySQL database with a connection string or your PlanetScale account.
+---
+
+# Connect PlanetScale
+
+PlanetScale is hosted MySQL. Dora recognizes `*.planetscale.com` / `*.psdb.cloud`
+hosts as MySQL and enables SSL automatically.
+
+## With a connection string
+
+1. In the PlanetScale dashboard open your database, select the branch, and click
+   **Connect**.
+2. Set **Connect with** to **General** / **Prisma** to reveal a full URL, or
+   create a password and copy the credentials. The URL looks like:
+
+   ```text
+   mysql://<user>:<password>@<host>.psdb.cloud/<db>?sslaccept=strict
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='info'>A PlanetScale password is shown **once** when you create it — copy it then. PlanetScale requires TLS; Dora enables SSL for these hosts automatically.</Callout>
+
+## With your PlanetScale account
+
+Choose **Connect with PlanetScale** in the connection dialog, authorize Dora,
+and pick a database and branch to connect without managing passwords by hand.

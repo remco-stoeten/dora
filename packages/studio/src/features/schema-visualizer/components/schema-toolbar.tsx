@@ -7,22 +7,19 @@ import {
 	Map as MapIcon,
 	RefreshCw,
 	Search,
-	X,
+	X
 } from 'lucide-react'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
+	DropdownMenuTrigger
 } from '@studio/shared/ui/dropdown-menu'
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from '@studio/shared/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@studio/shared/ui/tooltip'
 import { cn } from '@studio/shared/utils/cn'
 
 export type SearchSuggestion = {
@@ -67,7 +64,7 @@ function ToolbarIconButton({
 	children,
 	className,
 	disabled,
-	onClick,
+	onClick
 }: ToolbarIconButtonProps) {
 	const prefersReducedMotion = useReducedMotion()
 	const [open, setOpen] = useState(false)
@@ -88,11 +85,12 @@ function ToolbarIconButton({
 	const scheduleOpen = useCallback(
 		function scheduleOpen(immediate: boolean) {
 			clearTimers()
-			const delay = immediate || prefersReducedMotion
-				? 0
-				: Date.now() - lastTooltipOpenedAt < 1400
-					? 70
-					: 450
+			const delay =
+				immediate || prefersReducedMotion
+					? 0
+					: Date.now() - lastTooltipOpenedAt < 1400
+						? 70
+						: 450
 
 			openTimerRef.current = window.setTimeout(function () {
 				lastTooltipOpenedAt = Date.now()
@@ -100,7 +98,7 @@ function ToolbarIconButton({
 				openTimerRef.current = null
 			}, delay)
 		},
-		[clearTimers, prefersReducedMotion],
+		[clearTimers, prefersReducedMotion]
 	)
 
 	const scheduleClose = useCallback(
@@ -111,14 +109,17 @@ function ToolbarIconButton({
 				closeTimerRef.current = null
 			}, delay)
 		},
-		[clearTimers],
+		[clearTimers]
 	)
 
-	useEffect(function cleanup() {
-		return function () {
-			clearTimers()
-		}
-	}, [clearTimers])
+	useEffect(
+		function cleanup() {
+			return function () {
+				clearTimers()
+			}
+		},
+		[clearTimers]
+	)
 
 	return (
 		<Tooltip open={open}>
@@ -135,23 +136,14 @@ function ToolbarIconButton({
 					}}
 					onFocus={() => scheduleOpen(true)}
 					onBlur={() => scheduleClose()}
-					whileHover={
-						disabled || prefersReducedMotion ? undefined : { y: -1 }
-					}
-					whileTap={
-						disabled || prefersReducedMotion
-							? undefined
-							: { scale: 0.97 }
-					}
+					whileHover={disabled || prefersReducedMotion ? undefined : { y: -1 }}
+					whileTap={disabled || prefersReducedMotion ? undefined : { scale: 0.97 }}
 					transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
 				>
 					<Button
 						variant='ghost'
 						size='icon'
-						className={cn(
-							'h-7 w-7 origin-center will-change-transform',
-							className,
-						)}
+						className={cn('h-7 w-7 origin-center will-change-transform', className)}
 						aria-label={label}
 						disabled={disabled}
 						onClick={onClick}
@@ -174,7 +166,7 @@ function ToolbarIconButton({
 function SearchBox({
 	search,
 	onSearchChange,
-	suggestions,
+	suggestions
 }: {
 	search: string
 	onSearchChange: (v: string) => void
@@ -185,11 +177,12 @@ function SearchBox({
 	const wrapperRef = useRef<HTMLDivElement>(null)
 	const inputRef = useRef<HTMLInputElement>(null)
 
-	const filtered = search.trim().length > 0
-		? suggestions
-			.filter((s) => s.label.toLowerCase().includes(search.toLowerCase()))
-			.slice(0, 10)
-		: []
+	const filtered =
+		search.trim().length > 0
+			? suggestions
+					.filter((s) => s.label.toLowerCase().includes(search.toLowerCase()))
+					.slice(0, 10)
+			: []
 
 	const showDropdown = focused && filtered.length > 0
 
@@ -217,9 +210,12 @@ function SearchBox({
 		}
 	}
 
-	useEffect(function resetActiveOnChange() {
-		setActiveIndex(-1)
-	}, [search])
+	useEffect(
+		function resetActiveOnChange() {
+			setActiveIndex(-1)
+		},
+		[search]
+	)
 
 	useEffect(function handleClickOutside() {
 		function onMouseDown(e: MouseEvent) {
@@ -248,7 +244,10 @@ function SearchBox({
 				{search && (
 					<button
 						className='absolute right-1.5 text-muted-foreground transition-colors hover:text-foreground'
-						onClick={() => { onSearchChange(''); inputRef.current?.focus() }}
+						onClick={() => {
+							onSearchChange('')
+							inputRef.current?.focus()
+						}}
 						tabIndex={-1}
 					>
 						<X className='h-3 w-3' />
@@ -265,16 +264,19 @@ function SearchBox({
 								'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors',
 								i === activeIndex
 									? 'bg-sidebar-accent text-sidebar-foreground'
-									: 'text-sidebar-foreground hover:bg-sidebar-accent/60',
+									: 'text-sidebar-foreground hover:bg-sidebar-accent/60'
 							)}
-							onMouseDown={(e) => { e.preventDefault(); select(s.label) }}
+							onMouseDown={(e) => {
+								e.preventDefault()
+								select(s.label)
+							}}
 						>
 							<span
 								className={cn(
 									'shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider',
 									s.type === 'table'
 										? 'bg-[hsl(214_72%_58%/0.15)] text-[hsl(214_72%_68%)]'
-										: 'bg-[hsl(168_52%_48%/0.15)] text-[hsl(168_52%_60%)]',
+										: 'bg-[hsl(168_52%_48%/0.15)] text-[hsl(168_52%_60%)]'
 								)}
 							>
 								{s.type === 'table' ? 'tbl' : 'col'}
@@ -307,7 +309,7 @@ export function SchemaToolbar({
 	edgeCount,
 	isSearchResult,
 	isLoading,
-	rightSlot,
+	rightSlot
 }: Props) {
 	const { fitView } = useReactFlow()
 	const summary = isSearchResult
@@ -366,7 +368,9 @@ export function SchemaToolbar({
 						<DropdownMenuItem onClick={onExportPng}>Export PNG</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={onPreviewSql}>Export SQL</DropdownMenuItem>
-						<DropdownMenuItem onClick={onPreviewDrizzle}>Export Drizzle</DropdownMenuItem>
+						<DropdownMenuItem onClick={onPreviewDrizzle}>
+							Export Drizzle
+						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem onClick={onPreviewJson}>Export JSON</DropdownMenuItem>
 					</DropdownMenuContent>
@@ -376,12 +380,11 @@ export function SchemaToolbar({
 					disabled={isLoading}
 					onClick={onRefresh}
 				>
-					<RefreshCw
-						className={cn(
-							'h-3.5 w-3.5',
-							isLoading && 'animate-spin',
-						)}
-					/>
+					{isLoading ? (
+						<Spinner className='h-3.5 w-3.5' />
+					) : (
+						<RefreshCw className='h-3.5 w-3.5' />
+					)}
 				</ToolbarIconButton>
 				{rightSlot ? (
 					<>

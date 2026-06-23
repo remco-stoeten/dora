@@ -1,10 +1,11 @@
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Button } from '@studio/shared/ui/button'
 import { Input } from '@studio/shared/ui/input'
 import { Label } from '@studio/shared/ui/label'
 import { StudioDialog } from './studio-dialog'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 type Props = {
 	open: boolean
 	onOpenChange: (open: boolean) => void
@@ -68,7 +69,7 @@ export function DropTableDialog({ open, onOpenChange, tableName, onConfirm, isLo
 						disabled={isLoading || !isConfirmed}
 						form='drop-table-form'
 					>
-						{isLoading && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+						{isLoading && <Spinner className='mr-2 h-4 w-4' />}
 						Drop Table
 					</Button>
 				</>

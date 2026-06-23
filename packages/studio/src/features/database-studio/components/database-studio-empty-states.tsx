@@ -1,5 +1,6 @@
+import { Spinner } from '@studio/shared/ui/spinner'
 import { Button } from '@studio/shared/ui/button'
-import { Database, Loader2, PlugZap, Plus, Settings, Table2 } from 'lucide-react'
+import { Database, PlugZap, Plus, Settings, Table2 } from 'lucide-react'
 
 type NoConnectionProps = {
 	onAddConnection?: () => void
@@ -15,8 +16,8 @@ export function DatabaseStudioNoConnection({ onAddConnection }: NoConnectionProp
 				No Database Connected
 			</h2>
 			<p className='text-muted-foreground text-center max-w-sm mb-8 leading-relaxed text-sm'>
-				Select a connection from the sidebar to view its tables, or create a new
-				connection to get started.
+				Select a connection from the sidebar to view its tables, or create a new connection
+				to get started.
 			</p>
 
 			{onAddConnection && (
@@ -39,7 +40,7 @@ type ConnectionLoadingProps = {
 export function DatabaseStudioConnectionLoading({ connectionName }: ConnectionLoadingProps) {
 	return (
 		<div className='flex flex-1 flex-col items-center justify-center p-6 text-center'>
-			<Loader2 className='h-8 w-8 animate-spin text-muted-foreground/70 mb-4' />
+			<Spinner className='h-8 w-8 text-muted-foreground/70 mb-4' />
 			<h2 className='text-lg font-semibold text-foreground mb-1 tracking-tight'>
 				Connecting…
 			</h2>
@@ -132,8 +133,7 @@ export function DatabaseStudioNoTable({
 				No Table Selected
 			</h1>
 			<p className='text-muted-foreground text-sm max-w-md leading-relaxed'>
-				Select a table from the sidebar to browse its records, structure, and
-				relationships.
+				Select a table from the sidebar to browse its records, structure, and relationships.
 				{connectionName ? (
 					<>
 						{' '}
@@ -146,8 +146,8 @@ export function DatabaseStudioNoTable({
 					<>
 						{' '}
 						<span className='text-foreground/85'>
-							This connection has {tableCount.toLocaleString()} {tableLabel} totaling an
-							estimated {formatRecordTotal(totalRecords)} {recordLabel}.
+							This connection has {tableCount.toLocaleString()} {tableLabel} totaling
+							an estimated {formatRecordTotal(totalRecords)} {recordLabel}.
 						</span>
 					</>
 				)}

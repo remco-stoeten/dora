@@ -1,5 +1,6 @@
 import { Search, Filter, RefreshCw } from 'lucide-react'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -20,6 +21,7 @@ type Props = {
 	filters: FilterState
 	onFiltersChange: (filters: FilterState) => void
 	onRefresh: () => void
+	isRefreshing?: boolean
 }
 
 export function TableSearch({
@@ -27,7 +29,8 @@ export function TableSearch({
 	onSearchChange,
 	filters,
 	onFiltersChange,
-	onRefresh
+	onRefresh,
+	isRefreshing = false
 }: Props) {
 	return (
 		<div className='flex items-center gap-1.5'>
@@ -83,8 +86,10 @@ export function TableSearch({
 				size='icon'
 				className='h-8 w-8 text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent shrink-0'
 				onClick={onRefresh}
+				disabled={isRefreshing}
+				aria-label='Refresh tables'
 			>
-				<RefreshCw className='h-4 w-4' />
+				{isRefreshing ? <Spinner className='h-4 w-4' /> : <RefreshCw className='h-4 w-4' />}
 			</Button>
 		</div>
 	)

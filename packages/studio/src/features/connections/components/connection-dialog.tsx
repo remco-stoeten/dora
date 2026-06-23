@@ -1,15 +1,7 @@
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useState, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import {
-	Loader2,
-	CheckCircle2,
-	XCircle,
-	DatabaseZap,
-	FileSpreadsheet,
-	Info,
-	X,
-	Monitor
-} from 'lucide-react'
+import { CheckCircle2, XCircle, DatabaseZap, FileSpreadsheet, Info, X, Monitor } from 'lucide-react'
 import { commands, DatabaseInfo } from '@studio/lib/bindings'
 import { useIsTauri } from '@studio/core/data-provider'
 import { isDesktopOnlyError } from '@studio/core/platform/runtime'
@@ -911,7 +903,7 @@ export function ConnectionDialog({
 								>
 									{isSaving ? (
 										<>
-											<Loader2 className='h-3.5 w-3.5 animate-spin' />
+											<Spinner className='h-3.5 w-3.5' />
 											Saving...
 										</>
 									) : (
@@ -958,7 +950,7 @@ function TestConnectionButton({
 		idle: <span className='whitespace-nowrap'>Test Connection</span>,
 		testing: (
 			<>
-				<Loader2 className='h-3.5 w-3.5 animate-spin' />
+				<Spinner className='h-3.5 w-3.5' />
 				<span className='whitespace-nowrap'>Testing…</span>
 			</>
 		),

@@ -1,4 +1,4 @@
-import { Play, Sparkles, Download, Loader2, Braces, X } from 'lucide-react'
+import { Play, Sparkles, Download, Braces, X } from 'lucide-react'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAdapter, useConnections } from '@studio/core/data-provider'
@@ -13,6 +13,7 @@ import type { PrismaRunnerProps, QueryResult, TranslationError } from './types'
 import { buildModelMap, tableToModelKey } from './utils/model-mapper'
 import { prismaToSql, type Dialect } from './utils/prisma-to-sql'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 const EMPTY_SCHEMA: DatabaseSchema = { tables: [], schemas: [], unique_columns: [] }
 
 function deriveDialect(type: string | undefined): Dialect {
@@ -168,7 +169,9 @@ export function PrismaRunner({ connectionId }: PrismaRunnerProps) {
 		<div className='flex h-full w-full flex-col bg-background overflow-hidden text-sm'>
 			<div className='flex items-center h-10 border-b border-sidebar-border bg-sidebar shrink-0 px-2 justify-between'>
 				<div className='flex items-center gap-2'>
-					<span className='font-semibold text-sidebar-foreground px-2'>Prisma Runner</span>
+					<span className='font-semibold text-sidebar-foreground px-2'>
+						Prisma Runner
+					</span>
 				</div>
 
 				<div className='flex items-center gap-1 mx-4'>
@@ -187,7 +190,7 @@ export function PrismaRunner({ connectionId }: PrismaRunnerProps) {
 						disabled={isRunning}
 					>
 						{isRunning ? (
-							<Loader2 className='h-3 w-3 animate-spin' />
+							<Spinner className='h-3 w-3' />
 						) : (
 							<Play className='h-3 w-3 fill-current' />
 						)}

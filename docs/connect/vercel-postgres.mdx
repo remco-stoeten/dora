@@ -1,0 +1,31 @@
+---
+title: Connect Vercel Postgres
+description: Connect Dora to a Vercel Postgres store with a connection string or your Vercel account.
+---
+
+# Connect Vercel Postgres
+
+Vercel Postgres (Neon-backed) is hosted PostgreSQL. Dora connects with a
+standard connection string and enables SSL automatically.
+
+## With a connection string
+
+1. In the Vercel dashboard open the **Storage** tab and select your Postgres
+   store.
+2. Open the **`.env.local`** / **Quickstart** section and copy the
+   **`POSTGRES_URL`** (or `DATABASE_URL`) value:
+
+   ```text
+   postgres://<user>:<password>@<host>.vercel-storage.com/<db>?sslmode=require
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='info'>Vercel exposes both a pooled (`POSTGRES_URL`) and a direct (`POSTGRES_URL_NON_POOLING`) string. Either works — use the non-pooling URL if you need a direct session.</Callout>
+
+## With your Vercel account
+
+Choose **Connect with Vercel** in the connection dialog, authorize Dora, and
+pick a Postgres store to connect without copying a string. SSL is set
+automatically.

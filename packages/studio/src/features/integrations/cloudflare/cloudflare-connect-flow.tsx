@@ -1,5 +1,15 @@
+import { Spinner } from '@studio/shared/ui/spinner'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, Copy, ExternalLink, Loader2, LogOut, PlugZap, RefreshCw, Search } from 'lucide-react'
+import {
+	ArrowLeft,
+	Check,
+	Copy,
+	ExternalLink,
+	LogOut,
+	PlugZap,
+	RefreshCw,
+	Search
+} from 'lucide-react'
 import { open } from '@tauri-apps/plugin-shell'
 import type { CloudflareAccount, CloudflareD1Database } from '@studio/lib/bindings'
 import { Button } from '@studio/shared/ui/button'
@@ -18,7 +28,8 @@ import {
 } from './cloudflare-api'
 import { useCloudflareDatabases } from './use-cloudflare-databases'
 import { useIsTauri } from '@studio/core/data-provider'
-import { DesktopOnlyNotice } from '@studio/core/platform'
+import { MockProviderConnectFlow } from '../_shared/mock-connect-flow'
+import { CLOUDFLARE_MOCK } from '../_shared/mock-provider-data'
 
 type Props = {
 	onComplete: (connection: Omit<Connection, 'id' | 'createdAt'>) => void
@@ -30,12 +41,7 @@ export function CloudflareConnectFlow({ onComplete }: Props) {
 	const isTauri = useIsTauri()
 
 	if (!isTauri) {
-		return (
-			<DesktopOnlyNotice
-				title='Cloudflare D1 lives in the desktop app'
-				description='Encrypted token storage and D1 discovery need the native app. Download Dora to connect your Cloudflare D1 databases.'
-			/>
-		)
+		return <MockProviderConnectFlow config={CLOUDFLARE_MOCK} onComplete={onComplete} />
 	}
 
 	return <CloudflareConnectFlowInner onComplete={onComplete} />
@@ -240,7 +246,9 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 							{accountLabel ? (
 								<span>
 									Connected as{' '}
-									<span className='font-medium text-foreground'>{accountLabel}</span>
+									<span className='font-medium text-foreground'>
+										{accountLabel}
+									</span>
 								</span>
 							) : (
 								<span>Connected</span>
@@ -336,7 +344,7 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 							className='shrink-0 gap-2'
 						>
 							{isAuthorizing ? (
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 							) : (
 								<PlugZap className='h-3.5 w-3.5' />
 							)}
@@ -362,14 +370,18 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 							className='h-8 shrink-0 gap-1.5 border-border/70 px-3'
 							title='Re-fetch accounts from Cloudflare'
 						>
-							<RefreshCw className={cn('h-3.5 w-3.5', accountsLoading && 'animate-spin')} />
+							{accountsLoading ? (
+								<Spinner className='h-3.5 w-3.5' />
+							) : (
+								<RefreshCw className='h-3.5 w-3.5' />
+							)}
 							Refresh
 						</Button>
 					</div>
 					<div className='max-h-[min(18rem,36vh)] space-y-2 overflow-y-auto pr-1'>
 						{accountsLoading ? (
 							<div className='flex items-center gap-2 py-3 text-sm text-muted-foreground'>
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 								Loading accounts
 							</div>
 						) : null}
@@ -442,7 +454,11 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 							className='h-9 shrink-0 gap-1.5 border-border/70 px-3'
 							title='Re-fetch D1 databases from Cloudflare'
 						>
-							<RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
+							{isLoading ? (
+								<Spinner className='h-3.5 w-3.5' />
+							) : (
+								<RefreshCw className='h-3.5 w-3.5' />
+							)}
 							Refresh
 						</Button>
 					</div>
@@ -450,7 +466,7 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 					<div className='max-h-[min(18rem,36vh)] space-y-2 overflow-y-auto pr-1'>
 						{isLoading ? (
 							<div className='flex items-center gap-2 py-3 text-sm text-muted-foreground'>
-								<Loader2 className='h-3.5 w-3.5 animate-spin' />
+								<Spinner className='h-3.5 w-3.5' />
 								Loading databases
 							</div>
 						) : null}
@@ -491,7 +507,9 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 											{database.uuid}
 										</span>
 									</span>
-									{isSelected ? <Check className='h-4 w-4 text-emerald-500' /> : null}
+									{isSelected ? (
+										<Check className='h-4 w-4 text-emerald-500' />
+									) : null}
 								</button>
 							)
 						})}
@@ -499,7 +517,11 @@ function CloudflareConnectFlowInner({ onComplete }: Props) {
 
 					{selected ? (
 						<div className='sticky bottom-0 z-10 -mx-4 -mb-4 border-t border-border/60 bg-card/95 px-4 py-3 shadow-[0_-18px_32px_-28px_hsl(var(--foreground)/0.45)] backdrop-blur'>
-							<Button type='button' onClick={handleCreateConnection} className='gap-2'>
+							<Button
+								type='button'
+								onClick={handleCreateConnection}
+								className='gap-2'
+							>
 								<PlugZap className='h-3.5 w-3.5' />
 								Create D1 Connection
 							</Button>

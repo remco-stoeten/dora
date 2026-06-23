@@ -1374,11 +1374,7 @@ async installCredentialKeyring() : Promise<KeyringInstallResult> {
 
 /** user-defined events **/
 
-
-
 /** user-defined constants **/
-
-
 
 /** user-defined types **/
 

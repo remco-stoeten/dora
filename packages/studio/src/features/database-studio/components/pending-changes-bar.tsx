@@ -1,7 +1,8 @@
-import { Loader2, Check, X, Edit3 } from 'lucide-react'
+import { Check, X, Edit3 } from 'lucide-react'
 import { Button } from '@studio/shared/ui/button'
 import { cn } from '@studio/shared/utils/cn'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 type Props = {
 	editCount: number
 	isApplying?: boolean
@@ -41,11 +42,7 @@ export function PendingChangesBar({ editCount, isApplying, onApply, onCancel, cl
 					Discard
 				</Button>
 				<Button size='sm' onClick={onApply} disabled={isApplying} className='gap-1.5'>
-					{isApplying ? (
-						<Loader2 className='h-4 w-4 animate-spin' />
-					) : (
-						<Check className='h-4 w-4' />
-					)}
+					{isApplying ? <Spinner className='h-4 w-4' /> : <Check className='h-4 w-4' />}
 					Apply Changes
 				</Button>
 			</div>

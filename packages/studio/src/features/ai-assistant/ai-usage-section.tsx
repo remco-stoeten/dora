@@ -1,10 +1,10 @@
-import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useIsTauri } from '@studio/core/data-provider'
 import { buildMockAiUsageSummary } from '@studio/features/ai-assistant/mock-ai'
 import { commands, type AiUsageSummary } from '@studio/lib/bindings'
 import { cn } from '@studio/shared/utils/cn'
 
+import { Spinner } from '@studio/shared/ui/spinner'
 const SOURCE_LABELS: Record<string, string> = {
 	chat: 'Assistant',
 	sql_gen: '⌘K SQL',
@@ -50,22 +50,25 @@ export function AiUsageSection() {
 	const [summary, setSummary] = useState<AiUsageSummary | null>(null)
 	const [loading, setLoading] = useState(true)
 
-	const load = useCallback(async function load() {
-		setLoading(true)
-		try {
-			if (!isTauri) {
-				setSummary(buildMockAiUsageSummary())
-				return
-			}
+	const load = useCallback(
+		async function load() {
+			setLoading(true)
+			try {
+				if (!isTauri) {
+					setSummary(buildMockAiUsageSummary())
+					return
+				}
 
-			const result = await commands.aiGetUsageSummary(25)
-			if (result.status === 'ok') {
-				setSummary(result.data)
+				const result = await commands.aiGetUsageSummary(25)
+				if (result.status === 'ok') {
+					setSummary(result.data)
+				}
+			} finally {
+				setLoading(false)
 			}
-		} finally {
-			setLoading(false)
-		}
-	}, [isTauri])
+		},
+		[isTauri]
+	)
 
 	useEffect(
 		function loadOnMount() {
@@ -77,7 +80,7 @@ export function AiUsageSection() {
 	if (loading) {
 		return (
 			<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-				<Loader2 className='h-3 w-3 animate-spin' />
+				<Spinner className='h-3 w-3' />
 				Loading usage…
 			</div>
 		)
@@ -98,8 +101,9 @@ export function AiUsageSection() {
 	return (
 		<div className='space-y-3'>
 			<p className='text-xs leading-tight text-muted-foreground'>
-				Estimated costs use published list prices where available. Streaming requests estimate
-				tokens from prompt and response size when providers do not return usage metadata.
+				Estimated costs use published list prices where available. Streaming requests
+				estimate tokens from prompt and response size when providers do not return usage
+				metadata.
 			</p>
 
 			<div className='grid grid-cols-2 gap-2 sm:grid-cols-4'>
@@ -126,14 +130,18 @@ export function AiUsageSection() {
 								key={entry.provider}
 								className='grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b border-sidebar-border px-2 py-1.5 text-xs last:border-b-0'
 							>
-								<span className='font-medium'>{formatProvider(entry.provider)}</span>
+								<span className='font-medium'>
+									{formatProvider(entry.provider)}
+								</span>
 								<span className='text-right tabular-nums text-muted-foreground'>
 									{entry.request_count}
 								</span>
 								<span className='text-right tabular-nums text-muted-foreground'>
 									{formatTokens(entry.total_tokens)}
 								</span>
-								<span className='text-right tabular-nums'>{formatCost(entry.estimated_cost_usd)}</span>
+								<span className='text-right tabular-nums'>
+									{formatCost(entry.estimated_cost_usd)}
+								</span>
 							</div>
 						)
 					})}
