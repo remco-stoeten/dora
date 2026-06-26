@@ -1,6 +1,7 @@
 import { commands } from '@studio/lib/bindings'
 import {
 	detectOrm,
+	type DetectedOrm,
 	type DetectOrmResult,
 	type ProjectReader,
 } from '@studio/features/orm-cockpit/link/detect-orm'
@@ -8,6 +9,10 @@ import {
 	readJournalWithReader,
 	type JournalEntry,
 } from '@studio/features/orm-cockpit/migration/read-journal'
+import {
+	resolveProjectTarget,
+	type DbTarget,
+} from '@studio/features/orm-cockpit/link/connection-target'
 
 /**
  * Tauri-backed wrappers over the `pick_folder` / `read_project_file` /
@@ -55,6 +60,11 @@ export async function detectProjectOrm(folder: string): Promise<DetectOrmResult>
 /**
  * Read the Drizzle migration journal under a linked folder, honoring a custom
  * `out` dir from the given drizzle.config path when available.
+ *
+ * Drizzle resolves `out` relative to the config file's own directory, so in a
+ * monorepo (config at `<root>/apps/api/drizzle.config.ts`, `out: './drizzle'`)
+ * the journal lives under `apps/api/drizzle` — not the linked repo root. We base
+ * the lookup on the config's directory whenever a config path is known.
  */
 export async function readDrizzleJournal(
 	folder: string,
@@ -62,7 +72,34 @@ export async function readDrizzleJournal(
 ): Promise<{ entries: JournalEntry[]; journalPath: string | null }> {
 	const reader = createTauriProjectReader()
 	const configText = configPath ? await reader.readFile(configPath) : null
-	return readJournalWithReader(folder, configText, reader)
+	const base = configPath ? dirname(configPath) : folder
+	return readJournalWithReader(base, configText, reader)
+}
+
+function dirname(path: string): string {
+	const normalized = path.replace(/\/+$/, '')
+	const i = normalized.lastIndexOf('/')
+	return i > 0 ? normalized.slice(0, i) : normalized
+}
+
+/**
+ * Resolve which database a linked project points at (from its config `url` /
+ * `.env*`), so the cockpit can warn when it differs from the connection being
+ * diffed against. Resolution is rooted at the config's directory in a monorepo.
+ */
+export async function resolveProjectDatabaseTarget(
+	rootDir: string,
+	configPath: string | undefined,
+	orm: DetectedOrm,
+	schemaTexts: string[] = [],
+): Promise<DbTarget | null> {
+	const reader = createTauriProjectReader()
+	const base = configPath ? dirname(configPath) : rootDir
+	const configText = configPath ? await reader.readFile(configPath) : null
+	// Drizzle keeps the url in its config; Prisma keeps it in the schema's
+	// `datasource` block — fall back to the schema text when there's no config.
+	const text = configText ?? schemaTexts.join('\n\n')
+	return resolveProjectTarget(base, text, orm, reader)
 }
 
 /**

@@ -24,7 +24,14 @@ type BatchCellMutation = {
 	}>
 }
 
-type Mutation = CellMutation | BatchCellMutation
+type RowDeletion = {
+	type: 'row-delete'
+	connectionId: string
+	tableName: string
+	rows: Record<string, unknown>[]
+}
+
+type Mutation = CellMutation | BatchCellMutation | RowDeletion
 
 type UndoableAction = {
 	id: string
@@ -118,4 +125,4 @@ export const useUndoStore = create<UndoStore>(function (set, get) {
 	}
 })
 
-export type { Mutation, CellMutation, BatchCellMutation, UndoableAction }
+export type { Mutation, CellMutation, BatchCellMutation, RowDeletion, UndoableAction }

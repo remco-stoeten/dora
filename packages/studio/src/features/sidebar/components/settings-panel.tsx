@@ -1525,7 +1525,7 @@ export function SettingsView({ windowControls, initialSection, highlightSection 
 											</div>
 											<div className='min-w-[120px] flex-shrink-0 pt-0.5'>
 												<Select
-													value={settings.selectionBarStyle || 'floating'}
+													value={settings.selectionBarStyle || 'static'}
 													onValueChange={function (value) {
 														updateSetting(
 															'selectionBarStyle',

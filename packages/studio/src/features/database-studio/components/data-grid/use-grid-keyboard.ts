@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type React from 'react'
 import { ColumnDefinition } from '../../types'
+import { getColumnDefault } from '../../utils/studio-data'
 import { getCellKey, getCellsInRectangle } from './selection'
 import { CellPosition, EditingCell } from './types'
 
@@ -22,7 +23,6 @@ type UseGridKeyboardArgs = {
 	setAnchorCell: (cell: CellPosition | null) => void
 	setFocusedCell: (cell: CellPosition | null) => void
 	startCellEdit: (rowIndex: number, columnName: string, currentValue: unknown) => void
-	startTypeEdit: (rowIndex: number, columnName: string, currentValue: unknown, char: string) => void
 	updateCellSelection: (cells: Set<string>) => void
 }
 
@@ -44,7 +44,6 @@ export function useGridKeyboard({
 	setAnchorCell,
 	setFocusedCell,
 	startCellEdit,
-	startTypeEdit,
 	updateCellSelection
 }: UseGridKeyboardArgs) {
 	const pendingNavFrameRef = useRef<number | null>(null)
@@ -132,11 +131,6 @@ export function useGridKeyboard({
 				})
 			}
 
-			// Start editing the focused cell by typing a printable character.
-			function beginTypeEdit(char: string) {
-				startTypeEdit(row, columns[col].name, rows[row][columns[col].name], char)
-			}
-
 			switch (e.key) {
 				case 'ArrowUp':
 					e.preventDefault()
@@ -192,18 +186,26 @@ export function useGridKeyboard({
 					e.preventDefault()
 					startCellEdit(row, columns[col].name, rows[row][columns[col].name])
 					break
+				// Delete removes the active row(s). onDeleteSelectedRows resolves
+				// the target via rowsForActions, which falls back to the focused
+				// row when nothing is explicitly selected — matching the "Del"
+				// hint shown in the selection bar whenever a row is active.
 				case 'Delete':
-				case 'Backspace':
 					if (e.ctrlKey || e.metaKey) break
-					// preventDefault in both cases so the document-level
-					// `deleteRows` shortcut (which would otherwise delete the
-					// focused row via the rowsForActions fallback) does not
-					// also fire — the grid handler is authoritative here.
+					// preventDefault so the document-level `deleteRows` shortcut
+					// does not also fire — the grid handler is authoritative here.
 					e.preventDefault()
-					if (selectedRows.size > 0) {
-						onDeleteSelectedRows?.()
-					} else if (onCellEdit) {
-						onCellEdit(row, columns[col].name, null)
+					onDeleteSelectedRows?.()
+					break
+				// Backspace clears the focused cell back to its column default,
+				// distinct from Delete's whole-row removal. shift+Backspace is
+				// handled as a delete by the document-level shortcut. Primary
+				// keys are left untouched — clearing them would orphan the row.
+				case 'Backspace':
+					if (e.ctrlKey || e.metaKey || e.shiftKey) break
+					e.preventDefault()
+					if (onCellEdit && !columns[col].primaryKey) {
+						onCellEdit(row, columns[col].name, getColumnDefault(columns[col]))
 					}
 					break
 				case 'Escape':
@@ -259,33 +261,32 @@ export function useGridKeyboard({
 					if (e.ctrlKey || e.metaKey) {
 						e.preventDefault()
 						onSelectAll(!allSelected)
-					} else if (!e.altKey) {
-						e.preventDefault()
-						beginTypeEdit('a')
 					}
 					break
+				// Single-key command: copy the focused cell / selection. mod+c
+				// works too. A focused cell is a command surface — there is
+				// nothing to type until you enter edit mode — so a bare letter
+				// runs the command instead of starting an edit.
 				case 'c':
-					if (e.ctrlKey || e.metaKey) {
+					if (!e.altKey) {
 						e.preventDefault()
 						copySelectionToClipboard(selectedCellsSet, focusedCell, rows, columns)
-					} else if (!e.altKey) {
-						e.preventDefault()
-						beginTypeEdit('c')
 					}
 					break
+				// Single-key command: paste into the focused cell. mod+v works too.
 				case 'v':
-					if ((e.ctrlKey || e.metaKey) && focusedCell && onCellEdit) {
+					if (!e.altKey && focusedCell && onCellEdit) {
 						e.preventDefault()
 						pasteClipboardIntoGrid(focusedCell, rows.length, columns, onCellEdit)
-					} else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-						e.preventDefault()
-						beginTypeEdit('v')
 					}
 					break
 				default:
+					// A focused cell never types-to-edit: editing is entered
+					// explicitly via Enter / e / F2 / double-click. Swallow lone
+					// printable keys so they neither edit nor trigger stray
+					// document-level shortcuts while navigating the grid.
 					if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 						e.preventDefault()
-						beginTypeEdit(e.key)
 					}
 					break
 			}
@@ -308,7 +309,6 @@ export function useGridKeyboard({
 			setAnchorCell,
 			setFocusedCell,
 			startCellEdit,
-			startTypeEdit,
 			updateCellSelection
 		]
 	)

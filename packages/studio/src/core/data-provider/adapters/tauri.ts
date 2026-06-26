@@ -70,6 +70,48 @@ function err<T>(error: string): AdapterResult<T> {
 
 const formatError = formatBackendError
 
+/**
+ * How long to poll a backend query before giving up. The previous 5s (50 ×
+ * 100ms) was too tight for cloud Postgres (Neon/Supabase) cold starts and large
+ * tables, and the timeout fell through to a misleading "Failed to get columns".
+ */
+const QUERY_POLL_TIMEOUT_MS = 30_000
+const QUERY_POLL_INTERVAL_MS = 100
+
+type QueryPage = Extract<Awaited<ReturnType<typeof commands.fetchQuery>>, { status: 'ok' }>['data']
+
+type QueryPollResult =
+	| { kind: 'completed'; pageInfo: QueryPage }
+	| { kind: 'error'; message: string }
+	| { kind: 'timeout' }
+	| { kind: 'fetch-failed' }
+
+/**
+ * Poll a started query to a terminal state. Distinguishes a real timeout (still
+ * running) from completion and error, so callers never mistake "still running"
+ * for "no columns".
+ */
+async function pollQueryToCompletion(queryId: number): Promise<QueryPollResult> {
+	const deadline = performance.now() + QUERY_POLL_TIMEOUT_MS
+
+	while (performance.now() < deadline) {
+		const fetchResult = await commands.fetchQuery(queryId)
+		if (fetchResult.status !== 'ok') {
+			console.error('[TauriAdapter] Failed to fetch query status for ID:', queryId, fetchResult)
+			return { kind: 'fetch-failed' }
+		}
+		const pageInfo = fetchResult.data
+		if (pageInfo.status === 'Completed') {
+			return { kind: 'completed', pageInfo }
+		}
+		if (pageInfo.status === 'Error') {
+			return { kind: 'error', message: pageInfo.error || 'Query failed' }
+		}
+		await delay(QUERY_POLL_INTERVAL_MS)
+	}
+	return { kind: 'timeout' }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null
 }
@@ -292,52 +334,33 @@ export function createTauriAdapter(): DataAdapter {
 
 			const queryId = startResult.data[0]
 
-			let pageInfo
-			let attempts = 0
-			const maxAttempts = 50
-
-			while (attempts < maxAttempts) {
-				// Poll for results
-				const fetchResult = await commands.fetchQuery(queryId)
-				if (fetchResult.status !== 'ok') {
-					console.error(
-						'[TauriAdapter] Failed to fetch query status for ID:',
-						queryId,
-						fetchResult
-					)
-					return err('Failed to fetch query results')
-				}
-
-				pageInfo = fetchResult.data
-
-				if (pageInfo.status === 'Completed' || pageInfo.status === 'Error') {
-					break
-				}
-
-				await delay(100)
-				attempts++
+			const poll = await pollQueryToCompletion(queryId)
+			if (poll.kind === 'fetch-failed') {
+				return err('Failed to fetch query results')
+			}
+			if (poll.kind === 'timeout') {
+				return err(
+					`Query is still running after ${QUERY_POLL_TIMEOUT_MS / 1000}s. The database may be slow to respond (a serverless cold start, a large table, or a dropped connection). Try again or reconnect.`
+				)
+			}
+			if (poll.kind === 'error') {
+				console.error('[TauriAdapter] Query execution error:', poll.message)
+				return err(poll.message)
 			}
 
-			if (!pageInfo) {
-				return err('Query timed out')
-			}
-
-			if (pageInfo.status === 'Error') {
-				console.error('[TauriAdapter] Query execution error:', pageInfo.error)
-				return err(pageInfo.error || 'Query failed')
-			}
+			const pageInfo = poll.pageInfo
 
 			const columnsResult = await commands.getColumns(queryId)
-			if (columnsResult.status !== 'ok' || !columnsResult.data) {
+			if (columnsResult.status !== 'ok') {
 				console.error(
-					'[TauriAdapter] Failed to get columns for query:',
+					'[TauriAdapter] getColumns failed for query:',
 					queryId,
-					columnsResult
+					columnsResult.error
 				)
-				return err('Failed to get columns')
+				return err(formatError(columnsResult.error) || 'Failed to get columns')
 			}
 
-			const columns = parseColumns(columnsResult.data)
+			const columns = parseColumns(columnsResult.data ?? [])
 			// pageInfo.first_page contains the rows for the first page
 			const rows = parseRows(pageInfo.first_page, columns)
 
@@ -369,38 +392,22 @@ export function createTauriAdapter(): DataAdapter {
 
 			const queryId = startResult.data[0]
 
-			// Poll for query completion (same as fetchTableData)
-			let pageInfo
-			let attempts = 0
-			const maxAttempts = 50
-
-			while (attempts < maxAttempts) {
-				const fetchResult = await commands.fetchQuery(queryId)
-				if (fetchResult.status !== 'ok') {
-					console.error('[TauriAdapter] Failed to fetch query status:', fetchResult)
-					return err('Failed to fetch query results')
-				}
-
-				pageInfo = fetchResult.data
-
-				if (pageInfo.status === 'Completed' || pageInfo.status === 'Error') {
-					break
-				}
-
-				await delay(100)
-				attempts++
+			const poll = await pollQueryToCompletion(queryId)
+			if (poll.kind === 'fetch-failed') {
+				return err('Failed to fetch query results')
+			}
+			if (poll.kind === 'timeout') {
+				return err(
+					`Query is still running after ${QUERY_POLL_TIMEOUT_MS / 1000}s. The database may be slow to respond (a serverless cold start, a large result, or a dropped connection). Try again or reconnect.`
+				)
+			}
+			if (poll.kind === 'error') {
+				if (poll.message === 'Query cancelled') return err('Query cancelled')
+				console.error('[TauriAdapter] Query execution error:', poll.message)
+				return err(poll.message)
 			}
 
-			if (!pageInfo) {
-				return err('Query timed out')
-			}
-
-			if (pageInfo.status === 'Error') {
-				const msg = pageInfo.error || 'Query execution failed'
-				if (msg === 'Query cancelled') return err('Query cancelled')
-				console.error('[TauriAdapter] Query execution error:', msg)
-				return err(msg)
-			}
+			const pageInfo = poll.pageInfo
 
 			const columnsResult = await commands.getColumns(queryId)
 			const columnDefs =

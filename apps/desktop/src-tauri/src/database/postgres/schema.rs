@@ -120,6 +120,43 @@ pub async fn get_database_schema(
         count_map.insert((schema.to_owned(), table.to_owned()), count as u64);
     }
 
+    // Query for closed value sets (enum labels + single-column CHECK lists).
+    // Best-effort: a failure here (e.g. restricted catalog access) must not sink
+    // the whole introspection, so we log and continue with an empty map.
+    let mut allowed_map: HashMap<(String, String, String), Vec<String>> = HashMap::new();
+    match client.query(queries.value_constraints, &[]).await {
+        Ok(constraint_rows) => {
+            for row in &constraint_rows {
+                let schema: &str = row.get(0);
+                let table: &str = row.get(1);
+                let column: &str = row.get(2);
+                let kind: &str = row.get(3);
+                let payload: &str = row.get(4);
+
+                let values = match kind {
+                    "enum" => vec![payload.to_owned()],
+                    "check" => match parse_check_allowed_values(payload) {
+                        Some(parsed) => parsed,
+                        None => continue,
+                    },
+                    _ => continue,
+                };
+
+                let entry = allowed_map
+                    .entry((schema.to_owned(), table.to_owned(), column.to_owned()))
+                    .or_default();
+                for value in values {
+                    if !entry.contains(&value) {
+                        entry.push(value);
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            log::debug!("Failed to query value constraints: {}", err);
+        }
+    }
+
     // Key is (schema, table_name)
     let mut tables_map: HashMap<(&str, &str), TableInfo> = HashMap::new();
     let mut schemas_set = HashSet::new();
@@ -176,6 +213,12 @@ pub async fn get_database_schema(
             ))
             .cloned();
 
+        let allowed_values = allowed_map.get(&(
+            schema.to_owned(),
+            table_name.to_owned(),
+            column_name.to_owned(),
+        ));
+
         table_info.columns.push(ColumnInfo {
             name: column_name.to_owned(),
             data_type: data_type.to_owned(),
@@ -184,6 +227,7 @@ pub async fn get_database_schema(
             is_primary_key,
             is_auto_increment,
             foreign_key,
+            allowed_values: allowed_values.cloned(),
         });
     }
 
@@ -249,6 +293,63 @@ fn quote_identifier(identifier: &str) -> String {
     format!("\"{}\"", identifier.replace('"', "\"\""))
 }
 
+/// Extract the allowed-value list from a single-column `CHECK` constraint
+/// definition as returned by `pg_get_constraintdef`.
+///
+/// Postgres normalizes `col IN ('a', 'b')` to
+/// `CHECK ((col = ANY (ARRAY['a'::text, 'b'::text])))`, so we accept both the
+/// `= ANY (ARRAY[...])` and the literal `IN (...)` forms. Only those membership
+/// forms are treated as allow-lists; any other predicate (e.g. a range check or
+/// a `<>` exclusion) returns `None` so it is never mistaken for a value set.
+///
+/// Within a recognized form every single-quoted SQL literal is a member; the
+/// surrounding `::type` casts are ignored because only the quoted text is read.
+/// Embedded quotes use SQL's doubled-quote escaping (`''`).
+fn parse_check_allowed_values(def: &str) -> Option<Vec<String>> {
+    let upper = def.to_uppercase();
+    let is_membership =
+        (upper.contains("= ANY") && upper.contains("ARRAY[")) || upper.contains(" IN (");
+    if !is_membership {
+        return None;
+    }
+
+    let mut values = Vec::new();
+    let chars: Vec<char> = def.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] != '\'' {
+            i += 1;
+            continue;
+        }
+        // Opening quote: consume until the closing quote, treating `''` as an
+        // escaped single quote rather than a terminator.
+        i += 1;
+        let mut literal = String::new();
+        while i < chars.len() {
+            if chars[i] == '\'' {
+                if i + 1 < chars.len() && chars[i + 1] == '\'' {
+                    literal.push('\'');
+                    i += 2;
+                    continue;
+                }
+                i += 1;
+                break;
+            }
+            literal.push(chars[i]);
+            i += 1;
+        }
+        if !values.contains(&literal) {
+            values.push(literal);
+        }
+    }
+
+    if values.is_empty() {
+        None
+    } else {
+        Some(values)
+    }
+}
+
 /// Strip a trailing sort-direction token from an index column reference.
 ///
 /// Vanilla Postgres' `pg_get_indexdef` emits a direction only for non-default
@@ -282,6 +383,58 @@ mod tests {
     #[test]
     fn strips_desc_direction() {
         assert_eq!(strip_index_column_direction("created DESC"), "created");
+    }
+
+    #[test]
+    fn parses_normalized_any_array_check() {
+        // The form Postgres rewrites `variant IN (...)` into.
+        let def = "CHECK ((variant = ANY (ARRAY['info'::text, 'success'::text, 'warning'::text, 'danger'::text])))";
+        assert_eq!(
+            parse_check_allowed_values(def),
+            Some(vec![
+                "info".to_string(),
+                "success".to_string(),
+                "warning".to_string(),
+                "danger".to_string(),
+            ])
+        );
+    }
+
+    #[test]
+    fn parses_varchar_cast_any_array_check() {
+        let def = "CHECK (((status)::text = ANY ((ARRAY['a'::character varying, 'b'::character varying])::text[])))";
+        assert_eq!(
+            parse_check_allowed_values(def),
+            Some(vec!["a".to_string(), "b".to_string()])
+        );
+    }
+
+    #[test]
+    fn parses_literal_in_list_check() {
+        let def = "CHECK ((kind IN ('x'::text, 'y'::text)))";
+        assert_eq!(
+            parse_check_allowed_values(def),
+            Some(vec!["x".to_string(), "y".to_string()])
+        );
+    }
+
+    #[test]
+    fn handles_doubled_quote_escaping() {
+        let def = "CHECK ((label = ANY (ARRAY['it''s'::text, 'ok'::text])))";
+        assert_eq!(
+            parse_check_allowed_values(def),
+            Some(vec!["it's".to_string(), "ok".to_string()])
+        );
+    }
+
+    #[test]
+    fn ignores_non_membership_checks() {
+        // Range and exclusion predicates are not allow-lists.
+        assert_eq!(parse_check_allowed_values("CHECK ((age >= 0))"), None);
+        assert_eq!(
+            parse_check_allowed_values("CHECK ((status <> 'deleted'::text))"),
+            None
+        );
     }
 
     #[test]

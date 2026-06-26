@@ -1,21 +1,72 @@
-import type { ColumnDefinition } from '../types'
+import type { ColumnDefinition, TableData } from '../types'
+
+/**
+ * Returns a new TableData with the rows whose primary key matches one of
+ * `primaryKeyValues` removed, adjusting `totalCount` accordingly. Used to drop
+ * rows from the grid optimistically before the delete mutation resolves. The
+ * original object is returned unchanged when nothing matches.
+ */
+export function removeRowsByPrimaryKey(
+	tableData: TableData,
+	primaryKeyColumn: string,
+	primaryKeyValues: unknown[]
+): TableData {
+	const removed = new Set(primaryKeyValues)
+	const rows = tableData.rows.filter(function (row) {
+		return !removed.has(row[primaryKeyColumn])
+	})
+	if (rows.length === tableData.rows.length) return tableData
+	const removedCount = tableData.rows.length - rows.length
+	return {
+		...tableData,
+		rows,
+		totalCount: Math.max(0, tableData.totalCount - removedCount)
+	}
+}
+
+/**
+ * Returns a new TableData with `newRows` appended and `totalCount` bumped. Used
+ * to show duplicated/inserted rows in the grid optimistically before the insert
+ * mutation resolves; a later reload swaps them for the authoritative rows
+ * (including server-generated primary keys). The original object is returned
+ * unchanged when there's nothing to add.
+ */
+export function appendRows(
+	tableData: TableData,
+	newRows: Record<string, unknown>[]
+): TableData {
+	if (newRows.length === 0) return tableData
+	return {
+		...tableData,
+		rows: [...tableData.rows, ...newRows],
+		totalCount: tableData.totalCount + newRows.length
+	}
+}
+
+/**
+ * Best-effort default value for a single column. The grid has no access to the
+ * database's declared DEFAULT, so this infers a sensible one: now() for
+ * date/time columns and audit columns, null for nullable columns, and an empty
+ * string for everything else. Used when clearing a cell back to its default.
+ */
+export function getColumnDefault(column: ColumnDefinition): unknown {
+	const type = column.type.toLowerCase()
+	const name = column.name.toLowerCase()
+	if (type.includes('timestamp') || type.includes('datetime') || type.includes('date')) {
+		return new Date().toISOString()
+	}
+	if (name.includes('created') || name.includes('updated') || name === 'date') {
+		return new Date().toISOString()
+	}
+	return column.nullable ? null : ''
+}
 
 export function createDefaultValues(columns: ColumnDefinition[]): Record<string, unknown> {
 	const defaults: Record<string, unknown> = {}
-	const now = new Date().toISOString()
 
 	for (const col of columns) {
 		if (col.primaryKey) continue
-
-		const type = col.type.toLowerCase()
-		const name = col.name.toLowerCase()
-		if (type.includes('timestamp') || type.includes('datetime') || type.includes('date')) {
-			defaults[col.name] = now
-		} else if (name.includes('created') || name.includes('updated') || name === 'date') {
-			defaults[col.name] = now
-		} else {
-			defaults[col.name] = col.nullable ? null : ''
-		}
+		defaults[col.name] = getColumnDefault(col)
 	}
 
 	return defaults

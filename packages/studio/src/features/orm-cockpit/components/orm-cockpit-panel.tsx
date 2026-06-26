@@ -20,16 +20,24 @@ import {
 	GitCompareArrows,
 	ListChecks,
 	ShieldCheck,
+	AlertTriangle,
 	Eye,
 	EyeOff
 } from 'lucide-react'
 import { Spinner } from '@studio/shared/ui/spinner'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '@studio/shared/ui/button'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger
+} from '@studio/shared/ui/dropdown-menu'
 import { EmptyState } from '@studio/shared/ui/empty-state'
 import { CockpitEmptySkeleton } from './cockpit-empty-skeleton'
 import { cn } from '@studio/shared/utils/cn'
 import { useConnections } from '@studio/core/data-provider'
+import type { Connection } from '@studio/features/connections/types'
 import type { MigrationResult } from '@studio/features/orm-cockpit/migration/generate-sql'
 import { useOrmCockpit } from '@studio/features/orm-cockpit/components/use-orm-cockpit'
 import { useMigrationStatus } from '@studio/features/orm-cockpit/components/use-migration-status'
@@ -50,6 +58,19 @@ type Props = {
 function shortFolder(path: string): string {
 	const parts = path.replace(/\/+$/, '').split('/')
 	return parts.slice(-2).join('/') || path
+}
+
+/** The workspace path of a detected option, relative to the linked folder. */
+function relativeWorkspace(linkedFolder: string | null, rootDir: string): string | null {
+	if (!linkedFolder) {
+		return null
+	}
+	const base = linkedFolder.replace(/\/+$/, '')
+	const root = rootDir.replace(/\/+$/, '')
+	if (root === base) {
+		return null
+	}
+	return root.startsWith(`${base}/`) ? root.slice(base.length + 1) : shortFolder(root)
 }
 
 /**
@@ -76,6 +97,87 @@ function CompareContext({
 			<Database className='h-3 w-3 text-emerald-500' />
 			<span className='font-mono text-foreground/70'>{connectionName}</span>
 		</span>
+	)
+}
+
+/** Picks which connection the linked project is diffed against. */
+function ConnectionPicker({
+	connections,
+	selectedId,
+	onSelect,
+	disabled
+}: {
+	connections: Connection[] | undefined
+	selectedId: string | undefined
+	onSelect: (id: string) => void
+	disabled?: boolean
+}) {
+	const selected = connections?.find(function (c) {
+		return c.id === selectedId
+	})
+	if (!connections || connections.length === 0) {
+		return null
+	}
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant='ghost'
+					size='sm'
+					className='h-7 max-w-[180px] gap-1.5 text-xs'
+					disabled={disabled}
+				>
+					<Database className='h-3.5 w-3.5 text-emerald-500 shrink-0' />
+					<span className='truncate'>{selected?.name ?? 'Select connection'}</span>
+					<ChevronDown className='h-3 w-3 text-muted-foreground/70 shrink-0' />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align='end' className='max-h-[280px] overflow-y-auto'>
+				{connections.map(function (connection) {
+					return (
+						<DropdownMenuItem
+							key={connection.id}
+							onClick={function () {
+								onSelect(connection.id)
+							}}
+							className='gap-2 text-sm'
+						>
+							<Database
+								className={cn(
+									'h-3.5 w-3.5 shrink-0',
+									connection.id === selectedId
+										? 'text-emerald-500'
+										: 'text-muted-foreground'
+								)}
+							/>
+							<span className='truncate'>{connection.name}</span>
+						</DropdownMenuItem>
+					)
+				})}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
+}
+
+/** Warns when the linked project resolves to a different database than the comparison. */
+function MismatchBanner({
+	projectLabel,
+	connectionLabel
+}: {
+	projectLabel: string
+	connectionLabel: string
+}) {
+	return (
+		<div className='flex items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200'>
+			<AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-amber-400' />
+			<span>
+				This project's <span className='font-mono'>DATABASE_URL</span> points at{' '}
+				<span className='font-medium'>{projectLabel}</span>, but you're comparing against{' '}
+				<span className='font-medium'>{connectionLabel}</span>. They look like different
+				databases — the diff below is likely meaningless. Switch the connection above, or proceed
+				if you know what you're doing.
+			</span>
+		</div>
 	)
 }
 
@@ -154,9 +256,10 @@ function HowItWorks() {
 export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, windowControls }: Props) {
 	const cockpit = useOrmCockpit(activeConnectionId)
 	const { data: connections } = useConnections()
+	const compareConnectionId = cockpit.compareConnectionId
 	const connectionName =
 		connections?.find(function (c) {
-			return c.id === activeConnectionId
+			return c.id === compareConnectionId
 		})?.name ?? 'this database'
 	const [migration, setMigration] = useState<MigrationResult | null>(null)
 	const [notesOpen, setNotesOpen] = useState(false)
@@ -166,7 +269,7 @@ export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, window
 		folder: cockpit.linked?.folder ?? null,
 		configPath: cockpit.linked?.link.configPath,
 		orm: cockpit.linked?.orm ?? null,
-		connectionId: activeConnectionId,
+		connectionId: compareConnectionId,
 		dialect: cockpit.dialect
 	})
 
@@ -200,6 +303,12 @@ export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, window
 					) : null}
 				</div>
 				<div className='flex items-center gap-1'>
+					<ConnectionPicker
+						connections={connections}
+						selectedId={compareConnectionId}
+						onSelect={cockpit.setCompareConnection}
+						disabled={busy}
+					/>
 					{cockpit.linked ? (
 						<Button
 							variant='ghost'
@@ -230,17 +339,24 @@ export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, window
 				</div>
 			</header>
 
+			{cockpit.connectionMismatch ? (
+				<MismatchBanner
+					projectLabel={cockpit.connectionMismatch.projectLabel}
+					connectionLabel={cockpit.connectionMismatch.connectionLabel}
+				/>
+			) : null}
+
 			<div className='min-h-0 flex-1'>{renderBody()}</div>
 		</div>
 	)
 
 	function renderBody() {
-		if (!activeConnectionId) {
+		if (!compareConnectionId) {
 			return (
 				<EmptyState
 					icon={<Database className='h-10 w-10' />}
 					title='No database connection'
-					description='Select a connection, then link a project to compare your code schema against it.'
+					description='Pick a connection above, then link a project to compare your code schema against it.'
 				/>
 			)
 		}
@@ -259,29 +375,42 @@ export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, window
 		}
 
 		if (cockpit.phase === 'choice' && cockpit.choices) {
+			const distinctOrms = new Set(cockpit.choices.map((o) => o.orm)).size
+			const heading =
+				distinctOrms > 1 && cockpit.choices.length === distinctOrms
+					? 'This project has both Drizzle and Prisma'
+					: 'This project has more than one schema'
 			return (
 				<div className='mx-auto flex max-w-md flex-col gap-3 p-8'>
-					<h3 className='text-base font-medium text-foreground'>
-						This project has both Drizzle and Prisma
-					</h3>
+					<h3 className='text-base font-medium text-foreground'>{heading}</h3>
 					<p className='text-sm text-muted-foreground'>
 						Pick which schema to compare against the live database.
 					</p>
 					{cockpit.choices.map(function (option) {
+						const workspace = relativeWorkspace(cockpit.choiceFolder, option.rootDir)
 						return (
 							<Button
-								key={option.orm}
+								key={`${option.orm}:${option.rootDir}`}
 								variant='outline'
-								className='justify-start capitalize'
+								className='h-auto justify-start py-2 capitalize'
 								onClick={function () {
 									void cockpit.chooseOrm(option)
 								}}
 							>
-								<FolderGit2 className='mr-2 h-4 w-4' />
-								{option.orm}
-								<span className='ml-2 text-xs text-muted-foreground'>
-									{option.schemaFiles.length} file
-									{option.schemaFiles.length === 1 ? '' : 's'}
+								<FolderGit2 className='mr-2 h-4 w-4 shrink-0' />
+								<span className='flex flex-col items-start'>
+									<span>
+										{option.orm}
+										{workspace ? (
+											<span className='ml-2 font-mono text-xs lowercase text-muted-foreground'>
+												{workspace}
+											</span>
+										) : null}
+									</span>
+									<span className='text-xs normal-case text-muted-foreground'>
+										{option.schemaFiles.length} file
+										{option.schemaFiles.length === 1 ? '' : 's'}
+									</span>
 								</span>
 							</Button>
 						)

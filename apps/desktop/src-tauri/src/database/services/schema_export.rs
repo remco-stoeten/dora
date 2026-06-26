@@ -587,6 +587,7 @@ mod tests {
                             is_primary_key: true,
                             is_auto_increment: true,
                             foreign_key: None,
+                            allowed_values: None,
                         },
                         ColumnInfo {
                             name: "email".to_string(),
@@ -596,6 +597,7 @@ mod tests {
                             is_primary_key: false,
                             is_auto_increment: false,
                             foreign_key: None,
+                            allowed_values: None,
                         },
                         ColumnInfo {
                             name: "name".to_string(),
@@ -605,6 +607,7 @@ mod tests {
                             is_primary_key: false,
                             is_auto_increment: false,
                             foreign_key: None,
+                            allowed_values: None,
                         },
                     ],
                     primary_key_columns: vec!["id".to_string()],
@@ -623,6 +626,7 @@ mod tests {
                             is_primary_key: true,
                             is_auto_increment: true,
                             foreign_key: None,
+                            allowed_values: None,
                         },
                         ColumnInfo {
                             name: "author_id".to_string(),
@@ -636,6 +640,7 @@ mod tests {
                                 referenced_column: "id".to_string(),
                                 referenced_schema: "public".to_string(),
                             }),
+                            allowed_values: None,
                         },
                     ],
                     primary_key_columns: vec!["id".to_string()],

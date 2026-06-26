@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { appendRows, removeRowsByPrimaryKey } from '../utils/studio-data'
 import type { FilterDescriptor, TableData } from '../types'
 
 type Args = {
@@ -13,11 +14,12 @@ type Args = {
 	deleteRows: { mutate: Function }
 	insertRow: { mutateAsync: Function }
 	onLoadTableData: () => void
+	trackRowDeletion: (connectionId: string, tableName: string, rows: Record<string, unknown>[]) => string | null
+	setTableData: React.Dispatch<React.SetStateAction<TableData | null>>
 	setSelectedRows: React.Dispatch<React.SetStateAction<Set<number>>>
 	setSelectedCells: React.Dispatch<React.SetStateAction<Set<string>>>
 	setFocusedCell: React.Dispatch<React.SetStateAction<{ row: number; col: number } | null>>
 	setShowDeleteConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>
-	setIsBulkActionLoading: React.Dispatch<React.SetStateAction<boolean>>
 	setFilters: React.Dispatch<React.SetStateAction<FilterDescriptor[]>>
 	notifyActionFailure: (title: string, error: unknown) => void
 }
@@ -35,11 +37,12 @@ export function useDatabaseStudioBulkActions(args: Args) {
 		deleteRows,
 		insertRow,
 		onLoadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setSelectedCells,
 		setFocusedCell,
 		setShowDeleteConfirmDialog,
-		setIsBulkActionLoading,
 		setFilters,
 		notifyActionFailure
 	} = args
@@ -51,21 +54,26 @@ export function useDatabaseStudioBulkActions(args: Args) {
 			setShowDeleteConfirmDialog(true)
 			return
 		}
-		const primaryKeyValues = Array.from(rowsForActions).map((rowIndex) => tableData.rows[rowIndex][primaryKeyColumn.name])
+		const deletedRows = Array.from(rowsForActions).map((rowIndex) => tableData.rows[rowIndex])
+		const primaryKeyValues = deletedRows.map((row) => row[primaryKeyColumn.name])
+		const snapshot = tableData
+		setTableData(removeRowsByPrimaryKey(tableData, primaryKeyColumn.name, primaryKeyValues))
+		setSelectedRows(new Set())
 		deleteRows.mutate(
 			{ connectionId: activeConnectionId, tableName: tableRefName, primaryKeyColumn: primaryKeyColumn.name, primaryKeyValues },
 			{
 				onSuccess: function () {
-					setSelectedRows(new Set())
+					trackRowDeletion(activeConnectionId, tableRefName ?? '', deletedRows)
 					onLoadTableData()
 					setShowDeleteConfirmDialog(false)
 				},
 				onError: function (error: Error) {
+					setTableData(snapshot)
 					notifyActionFailure('Failed to delete rows', error)
 				}
 			}
 		)
-	}, [activeConnectionId, deleteRows, notifyActionFailure, onLoadTableData, rowsForActions, setSelectedRows, setShowDeleteConfirmDialog, settingsConfirmBeforeDelete, tableData, tableId, tableRefName])
+	}, [activeConnectionId, deleteRows, notifyActionFailure, onLoadTableData, rowsForActions, setSelectedRows, setShowDeleteConfirmDialog, setTableData, settingsConfirmBeforeDelete, tableData, tableId, tableRefName, trackRowDeletion])
 
 	const handleBulkCopy = useCallback(function () {
 		if (!tableData) return
@@ -81,19 +89,22 @@ export function useDatabaseStudioBulkActions(args: Args) {
 			if (primaryKeyColumn) delete row[primaryKeyColumn.name]
 			return row
 		})
-		setIsBulkActionLoading(true)
+		if (rowsToDuplicate.length === 0) return
+
+		// Show the copies immediately; reconcile with authoritative rows on reload,
+		// roll back on failure (mirrors handleBulkDelete).
+		const snapshot = tableData
+		setTableData(appendRows(tableData, rowsToDuplicate))
+		setSelectedRows(new Set())
 		Promise.all(rowsToDuplicate.map((rowData) => insertRow.mutateAsync({ connectionId: activeConnectionId, tableName: tableRefName, rowData })))
 			.then(function () {
-				setSelectedRows(new Set())
 				onLoadTableData()
 			})
 			.catch(function (error) {
+				setTableData(snapshot)
 				notifyActionFailure('Failed to duplicate rows', error)
 			})
-			.finally(function () {
-				setIsBulkActionLoading(false)
-			})
-	}, [activeConnectionId, insertRow, notifyActionFailure, onLoadTableData, rowsForActions, setIsBulkActionLoading, setSelectedRows, tableData, tableId, tableRefName])
+	}, [activeConnectionId, insertRow, notifyActionFailure, onLoadTableData, rowsForActions, setSelectedRows, setTableData, tableData, tableId, tableRefName])
 
 	const handleExportJson = useCallback(function () {
 		if (!tableData) return

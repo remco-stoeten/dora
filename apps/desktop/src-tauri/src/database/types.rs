@@ -660,6 +660,12 @@ pub struct ColumnInfo {
     /// Foreign key relationship, if any
     #[serde(default)]
     pub foreign_key: Option<ForeignKeyInfo>,
+    /// Closed set of values the database constrains this column to: a Postgres
+    /// `enum` type's labels, or the literals in a `CHECK (col IN (...))`
+    /// constraint. `None` when the column is unconstrained. The studio uses
+    /// this to render a dropdown instead of a free-text cell editor.
+    #[serde(default)]
+    pub allowed_values: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

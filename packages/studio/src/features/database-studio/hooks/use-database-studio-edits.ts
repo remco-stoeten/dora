@@ -249,18 +249,39 @@ export function useDatabaseStudioEdits(args: Args) {
 
 		setIsApplyingEdits(true)
 		try {
-			for (const edit of edits) {
-				await updateCell.mutateAsync({
-					connectionId: activeConnectionId,
-					tableName: tableRefName,
-					primaryKeyColumn: edit.primaryKeyColumn,
-					primaryKeyValue: edit.primaryKeyValue,
-					columnName: edit.columnName,
-					newValue: edit.newValue
+			await Promise.all(
+				edits.map(function (edit) {
+					return updateCell.mutateAsync({
+						connectionId: activeConnectionId,
+						tableName: tableRefName,
+						primaryKeyColumn: edit.primaryKeyColumn,
+						primaryKeyValue: edit.primaryKeyValue,
+						columnName: edit.columnName,
+						newValue: edit.newValue
+					})
+				})
+			)
+			clearEdits(tableId)
+			// The edited values are already on screen from dry-edit mode, so
+			// patch the cached page instead of reloading (mirrors handleCellEdit).
+			const cached = tableDataCache.get(currentCacheKey)
+			if (cached) {
+				const patchedRows = cached.data.rows.map(function (cachedRow) {
+					const matching = edits.filter(function (edit) {
+						return cachedRow[edit.primaryKeyColumn] === edit.primaryKeyValue
+					})
+					if (matching.length === 0) return cachedRow
+					const patched = { ...cachedRow }
+					for (const edit of matching) {
+						patched[edit.columnName] = edit.newValue
+					}
+					return patched
+				})
+				tableDataCache.set(currentCacheKey, {
+					...cached,
+					data: { ...cached.data, rows: patchedRows }
 				})
 			}
-			clearEdits(tableId)
-			loadTableData()
 		} catch (error) {
 			notifyActionFailure('Failed to apply changes', error)
 		} finally {
@@ -299,6 +320,24 @@ export function useDatabaseStudioEdits(args: Args) {
 			}
 		})
 
+		const editedPrimaryKeyValues = new Set(
+			cellsToTrack.map(function (cell) {
+				return cell.primaryKeyValue
+			})
+		)
+
+		const snapshot = tableData
+		setTableData(function (prev) {
+			if (!prev) return prev
+			const newRows = prev.rows.map(function (row) {
+				if (editedPrimaryKeyValues.has(row[primaryKeyColumn.name])) {
+					return { ...row, [columnName]: newValue }
+				}
+				return row
+			})
+			return { ...prev, rows: newRows }
+		})
+
 		try {
 			await Promise.all(
 				rowIndexes.map(async function (rowIndex) {
@@ -320,8 +359,24 @@ export function useDatabaseStudioEdits(args: Args) {
 				primaryKeyColumn.name,
 				cellsToTrack
 			)
-			loadTableData()
+			// Keep the optimistic values on screen — no refetch (mirrors
+			// handleCellEdit). Patch the cached page so reopening the table later
+			// shows the new values instead of the stale pre-edit ones.
+			const cached = tableDataCache.get(currentCacheKey)
+			if (cached) {
+				const patchedRows = cached.data.rows.map(function (cachedRow) {
+					if (editedPrimaryKeyValues.has(cachedRow[primaryKeyColumn.name])) {
+						return { ...cachedRow, [columnName]: newValue }
+					}
+					return cachedRow
+				})
+				tableDataCache.set(currentCacheKey, {
+					...cached,
+					data: { ...cached.data, rows: patchedRows }
+				})
+			}
 		} catch (error) {
+			setTableData(snapshot)
 			notifyActionFailure('Failed to update cells', error)
 		}
 	}

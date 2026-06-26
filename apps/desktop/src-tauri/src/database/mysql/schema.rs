@@ -163,6 +163,8 @@ pub async fn get_database_schema(
             .get(&(schema, table_name, column_name.clone()))
             .cloned();
 
+        let allowed_values = parse_mysql_enum_values(&data_type);
+
         table_info.columns.push(ColumnInfo {
             name: column_name,
             data_type,
@@ -171,6 +173,7 @@ pub async fn get_database_schema(
             is_primary_key,
             is_auto_increment,
             foreign_key,
+            allowed_values,
         });
     }
 
@@ -209,5 +212,85 @@ fn mysql_get_i64(row: &Row, idx: usize) -> i64 {
         Some(MysqlValue::UInt(u)) => *u as i64,
         Some(MysqlValue::Bytes(b)) => String::from_utf8_lossy(b).parse().unwrap_or(0),
         _ => 0,
+    }
+}
+
+/// Extract the member list from a MySQL `ENUM(...)` column type.
+///
+/// `information_schema.COLUMNS.COLUMN_TYPE` spells an enum out in full, e.g.
+/// `enum('info','success','warning','danger')`, so the allowed values are read
+/// straight off the type. Returns `None` for any non-enum type. (MySQL `SET`
+/// columns accept comma-joined combinations rather than a single value, so they
+/// are intentionally not surfaced as a single-choice list.) Embedded quotes use
+/// MySQL's doubled-quote escaping (`''`).
+fn parse_mysql_enum_values(column_type: &str) -> Option<Vec<String>> {
+    let lower = column_type.trim_start().to_ascii_lowercase();
+    if !lower.starts_with("enum(") {
+        return None;
+    }
+
+    let mut values = Vec::new();
+    let chars: Vec<char> = column_type.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] != '\'' {
+            i += 1;
+            continue;
+        }
+        i += 1;
+        let mut literal = String::new();
+        while i < chars.len() {
+            if chars[i] == '\'' {
+                if i + 1 < chars.len() && chars[i + 1] == '\'' {
+                    literal.push('\'');
+                    i += 2;
+                    continue;
+                }
+                i += 1;
+                break;
+            }
+            literal.push(chars[i]);
+            i += 1;
+        }
+        values.push(literal);
+    }
+
+    if values.is_empty() {
+        None
+    } else {
+        Some(values)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_enum_column_type() {
+        assert_eq!(
+            parse_mysql_enum_values("enum('info','success','warning','danger')"),
+            Some(vec![
+                "info".to_string(),
+                "success".to_string(),
+                "warning".to_string(),
+                "danger".to_string(),
+            ])
+        );
+    }
+
+    #[test]
+    fn handles_doubled_quote_escaping() {
+        assert_eq!(
+            parse_mysql_enum_values("enum('it''s','ok')"),
+            Some(vec!["it's".to_string(), "ok".to_string()])
+        );
+    }
+
+    #[test]
+    fn ignores_non_enum_types() {
+        assert_eq!(parse_mysql_enum_values("varchar(255)"), None);
+        assert_eq!(parse_mysql_enum_values("set('a','b')"), None);
+        assert_eq!(parse_mysql_enum_values("int"), None);
     }
 }

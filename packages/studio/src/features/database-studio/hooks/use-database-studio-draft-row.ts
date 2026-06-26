@@ -1,4 +1,4 @@
-import { createDefaultValues, normalizeRowForInsert, normalizeValueForInsert } from '../utils/studio-data'
+import { appendRows, createDefaultValues, normalizeRowForInsert, normalizeValueForInsert } from '../utils/studio-data'
 import type { TableData } from '../types'
 
 type EditingRowState = {
@@ -18,6 +18,7 @@ type Args = {
 	updateCell: { mutateAsync: Function }
 	insertRow: { mutateAsync: Function; mutate: Function }
 	onLoadTableData: () => void
+	setTableData: React.Dispatch<React.SetStateAction<TableData | null>>
 	setDraftRow: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>
 	setDraftInsertIndex: React.Dispatch<React.SetStateAction<number | null>>
 	setEditingRowState: React.Dispatch<React.SetStateAction<EditingRowState>>
@@ -39,6 +40,7 @@ export function useDatabaseStudioDraftRow(args: Args) {
 		updateCell,
 		insertRow,
 		onLoadTableData,
+		setTableData,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,
@@ -68,6 +70,11 @@ export function useDatabaseStudioDraftRow(args: Args) {
 		if (!activeConnectionId || !tableId || !draftRow || !tableData) return
 		const normalizedDraftRow = normalizeRowForInsert(draftRow, tableData.columns)
 
+		const snapshot = tableData
+		setTableData(appendRows(tableData, [normalizedDraftRow]))
+		setDraftRow(null)
+		setDraftInsertIndex(null)
+
 		insertRow.mutate(
 			{
 				connectionId: activeConnectionId,
@@ -76,11 +83,10 @@ export function useDatabaseStudioDraftRow(args: Args) {
 			},
 			{
 				onSuccess: function onInsertSuccess() {
-					setDraftRow(null)
-					setDraftInsertIndex(null)
 					onLoadTableData()
 				},
 				onError: function onInsertError(error: unknown) {
+					setTableData(snapshot)
 					notifyActionFailure('Failed to create row', error)
 				}
 			}
@@ -103,40 +109,64 @@ export function useDatabaseStudioDraftRow(args: Args) {
 					return rowData[column.name] !== editingRowState.originalRow[column.name]
 				})
 
+			setShowAddDialog(false)
+			setEditingRowState(null)
+			setDuplicateInitialData(undefined)
+			setAddDialogMode('add')
+
 			if (changedColumns.length === 0) {
-				setShowAddDialog(false)
-				setEditingRowState(null)
-				setDuplicateInitialData(undefined)
-				setAddDialogMode('add')
 				return
 			}
 
+			const normalizedChanges = changedColumns.map(function (column) {
+				return { column, newValue: normalizeValueForInsert(column, rowData[column.name]) }
+			})
+
+			const snapshot = tableData
+			setTableData(function (prev) {
+				if (!prev) return prev
+				const newRows = prev.rows.map(function (row) {
+					if (row[editingRowState.primaryKeyColumn] !== editingRowState.primaryKeyValue) {
+						return row
+					}
+					const patched = { ...row }
+					for (const change of normalizedChanges) {
+						patched[change.column.name] = change.newValue
+					}
+					return patched
+				})
+				return { ...prev, rows: newRows }
+			})
+
 			Promise.all(
-				changedColumns.map(function updateChangedColumn(column) {
+				normalizedChanges.map(function updateChangedColumn(change) {
 					return updateCell.mutateAsync({
 						connectionId: activeConnectionId,
 						tableName: tableRefName,
 						primaryKeyColumn: editingRowState.primaryKeyColumn,
 						primaryKeyValue: editingRowState.primaryKeyValue,
-						columnName: column.name,
-						newValue: normalizeValueForInsert(column, rowData[column.name])
+						columnName: change.column.name,
+						newValue: change.newValue
 					})
 				})
 			)
 				.then(function onEditSuccess() {
-					setShowAddDialog(false)
-					setEditingRowState(null)
-					setDuplicateInitialData(undefined)
-					setAddDialogMode('add')
 					onLoadTableData()
 				})
 				.catch(function onEditError(error) {
+					setTableData(snapshot)
 					notifyActionFailure('Failed to update row', error)
 				})
 			return
 		}
 
 		const normalizedRowData = normalizeRowForInsert(rowData, tableData.columns)
+		const snapshot = tableData
+		setTableData(appendRows(tableData, [normalizedRowData]))
+		setShowAddDialog(false)
+		setDuplicateInitialData(undefined)
+		setAddDialogMode('add')
+
 		insertRow.mutate(
 			{
 				connectionId: activeConnectionId,
@@ -145,12 +175,10 @@ export function useDatabaseStudioDraftRow(args: Args) {
 			},
 			{
 				onSuccess: function onInsertSuccess() {
-					setShowAddDialog(false)
-					setDuplicateInitialData(undefined)
-					setAddDialogMode('add')
 					onLoadTableData()
 				},
 				onError: function onInsertError(error: unknown) {
+					setTableData(snapshot)
 					notifyActionFailure('Failed to create row', error)
 				}
 			}

@@ -27,6 +27,8 @@ type Args = {
 	deleteRows: { mutate: Function }
 	insertRow: { mutateAsync: Function; mutate: Function }
 	onLoadTableData: () => void
+	trackRowDeletion: (connectionId: string, tableName: string, rows: Record<string, unknown>[]) => string | null
+	setTableData: React.Dispatch<React.SetStateAction<TableData | null>>
 	setSelectedRows: React.Dispatch<React.SetStateAction<Set<number>>>
 	setSelectedCells: React.Dispatch<React.SetStateAction<Set<string>>>
 	setFocusedCell: React.Dispatch<React.SetStateAction<{ row: number; col: number } | null>>
@@ -39,7 +41,6 @@ type Args = {
 		} | null>
 	>
 	setShowAddDialog: React.Dispatch<React.SetStateAction<boolean>>
-	setIsBulkActionLoading: React.Dispatch<React.SetStateAction<boolean>>
 	setDraftRow: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>
 	setDraftInsertIndex: React.Dispatch<React.SetStateAction<number | null>>
 	setEditingRowState: React.Dispatch<React.SetStateAction<EditingRowState>>
@@ -69,13 +70,14 @@ export function useDatabaseStudioActions(args: Args) {
 		deleteRows,
 		insertRow,
 		onLoadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setSelectedCells,
 		setFocusedCell,
 		setShowDeleteConfirmDialog,
 		setPendingSingleDeleteRow,
 		setShowAddDialog,
-		setIsBulkActionLoading,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,
@@ -115,11 +117,12 @@ export function useDatabaseStudioActions(args: Args) {
 		deleteRows,
 		insertRow,
 		onLoadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setSelectedCells,
 		setFocusedCell,
 		setShowDeleteConfirmDialog,
-		setIsBulkActionLoading,
 		setFilters,
 		notifyActionFailure
 	})
@@ -133,10 +136,11 @@ export function useDatabaseStudioActions(args: Args) {
 		deleteRows,
 		insertRow,
 		onLoadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setShowDeleteConfirmDialog,
 		setPendingSingleDeleteRow,
-		setIsBulkActionLoading,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,
@@ -160,6 +164,7 @@ export function useDatabaseStudioActions(args: Args) {
 		updateCell,
 		insertRow,
 		onLoadTableData,
+		setTableData,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,

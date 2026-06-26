@@ -154,6 +154,7 @@ pub async fn get_database_schema(http: &D1Http) -> Result<DatabaseSchema, Error>
                 is_primary_key,
                 is_auto_increment,
                 foreign_key,
+                allowed_values: None,
             });
         }
 

@@ -129,7 +129,8 @@ describe('useDatabaseStudioEdits', function () {
 
 		expect(updateCell.mutateAsync).toHaveBeenCalledTimes(1)
 		expect(clearEdits).toHaveBeenCalledWith('users')
-		expect(loadTableData).toHaveBeenCalledTimes(1)
+		// Dry-edit values are already on screen — the cache is patched, no refetch.
+		expect(loadTableData).not.toHaveBeenCalled()
 	})
 
 	it('restores the previous edit value on ctrl-z', function () {
@@ -219,6 +220,8 @@ describe('useDatabaseStudioEdits', function () {
 				}
 			]
 		)
-		expect(loadTableData).toHaveBeenCalledTimes(1)
+		// Optimistic update keeps the new value on screen without a refetch.
+		expect(setTableData).toHaveBeenCalled()
+		expect(loadTableData).not.toHaveBeenCalled()
 	})
 })

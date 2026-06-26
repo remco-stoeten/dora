@@ -101,6 +101,7 @@ pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<Databas
                     is_primary_key,
                     is_auto_increment,
                     foreign_key,
+                    allowed_values: None,
                 });
             }
 
@@ -158,6 +159,7 @@ pub async fn get_database_schema(conn: Arc<Mutex<Connection>>) -> Result<Databas
                     is_primary_key: false,
                     is_auto_increment: false,
                     foreign_key: None,
+                    allowed_values: None,
                 });
             }
 

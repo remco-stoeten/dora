@@ -121,6 +121,7 @@ async fn get_table_columns(
             is_primary_key,
             is_auto_increment,
             foreign_key: None, // We'll fill this separately
+            allowed_values: None,
         });
     }
 

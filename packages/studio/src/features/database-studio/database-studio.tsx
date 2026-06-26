@@ -7,6 +7,7 @@ import { useTabs } from '@studio/core/tabs'
 import { useSettings } from '@studio/core/settings'
 import { useEffectiveShortcuts, useShortcut, useActiveScope } from '@studio/core/shortcuts'
 import { useUndo } from '@studio/core/undo'
+import type { Mutation } from '@studio/core/undo'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import { getSourceCaps } from '@studio/features/connections/source-caps'
 import { isUiActionVisible } from '@studio/features/connections/ui-actions'
@@ -50,6 +51,7 @@ import { useDatabaseStudioActions } from './hooks/use-database-studio-actions'
 import { useDatabaseStudioEdits } from './hooks/use-database-studio-edits'
 import { useDatabaseStudioCommands } from './hooks/use-database-studio-commands'
 import { buildDefaultTableCacheKey, buildTableCacheKey } from './utils/table-cache'
+import { appendRows, removeRowsByPrimaryKey } from './utils/studio-data'
 import { FilterConjunction, FilterDescriptor, FilterGroup, PaginationState, SortDescriptor, TableData, ViewMode } from './types'
 import { flatFiltersToGroup, groupToFlatFilters } from '@studio/core/data-provider/filter-sql'
 import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
@@ -219,7 +221,6 @@ export function DatabaseStudio({
 	const [showSetNullDialog, setShowSetNullDialog] = useState(false)
 	const [showDataSeederDialog, setShowDataSeederDialog] = useState(false)
 	const [showImportDialog, setShowImportDialog] = useState(false)
-	const [isBulkActionLoading, setIsBulkActionLoading] = useState(false)
 	const [isDdlLoading, setIsDdlLoading] = useState(false)
 
 	const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
@@ -350,6 +351,47 @@ export function DatabaseStudio({
 		return new Set<number>()
 	}, [selectedRows, focusedCell])
 
+	const applyUndoOptimistically = useCallback(function applyUndoOptimistically(mutation: Mutation) {
+		setTableData(function (prev) {
+			if (!prev) return prev
+			if (mutation.type === 'cell') {
+				return {
+					...prev,
+					rows: prev.rows.map(function (row) {
+						return row[mutation.primaryKeyColumn] === mutation.primaryKeyValue
+							? { ...row, [mutation.columnName]: mutation.previousValue }
+							: row
+					})
+				}
+			}
+			if (mutation.type === 'batch-cell') {
+				return {
+					...prev,
+					rows: prev.rows.map(function (row) {
+						const matching = mutation.cells.filter(function (cell) {
+							return cell.primaryKeyValue === row[mutation.primaryKeyColumn]
+						})
+						if (matching.length === 0) return row
+						const patched = { ...row }
+						for (const cell of matching) {
+							patched[cell.columnName] = cell.previousValue
+						}
+						return patched
+					})
+				}
+			}
+			if (mutation.type === 'row-delete') {
+				return appendRows(prev, mutation.rows)
+			}
+			return prev
+		})
+	}, [setTableData])
+
+	const { trackCellMutation, trackBatchCellMutation, trackRowDeletion } = useUndo({
+		onUndoComplete: loadTableData,
+		onUndoApply: applyUndoOptimistically
+	})
+
 	const {
 		handleBulkDelete,
 		handleBulkCopy,
@@ -383,13 +425,14 @@ export function DatabaseStudio({
 		deleteRows,
 		insertRow,
 		onLoadTableData: loadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setSelectedCells,
 		setFocusedCell,
 		setShowDeleteConfirmDialog,
 		setPendingSingleDeleteRow,
 		setShowAddDialog,
-		setIsBulkActionLoading,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,
@@ -532,7 +575,7 @@ export function DatabaseStudio({
 		.except('typing')
 		.on(
 			function () {
-				if (rowsForActions.size > 0 && !isBulkActionLoading) {
+				if (rowsForActions.size > 0) {
 					handleBulkDelete()
 				}
 			},
@@ -547,8 +590,6 @@ export function DatabaseStudio({
 		},
 		{ description: shortcuts.deselect.description }
 	)
-
-	const { trackCellMutation, trackBatchCellMutation } = useUndo({ onUndoComplete: loadTableData })
 
 	const { openTab } = useTabs()
 
@@ -702,6 +743,8 @@ export function DatabaseStudio({
 		filterConjunction,
 		filterGroup,
 		loadTableData,
+		setTableData,
+		setVisibleColumns,
 		setIsDdlLoading,
 		setShowAddColumnDialog,
 		setShowDropTableDialog,
@@ -976,7 +1019,7 @@ export function DatabaseStudio({
 				)}
 			</div>
 
-			{tableData && settings.selectionBarStyle === 'static' && rowsForActions.size > 0 && (
+			{tableData && (settings.selectionBarStyle === 'static' || !settings.selectionBarStyle) && rowsForActions.size > 0 && (
 				<SelectionActionBar
 					ref={toolbarRef}
 					selectedCount={rowsForActions.size}
@@ -1010,9 +1053,9 @@ export function DatabaseStudio({
 				/>
 			)}
 
-			{/* Render floating bar if mode is floating OR default (undefined) */}
+			{/* Render floating bar if mode is floating */}
 			{tableData &&
-				(settings.selectionBarStyle === 'floating' || !settings.selectionBarStyle) &&
+				settings.selectionBarStyle === 'floating' &&
 				rowsForActions.size > 0 && (
 					<SelectionActionBar
 						ref={toolbarRef}
@@ -1103,24 +1146,38 @@ export function DatabaseStudio({
 						<AlertDialogAction
 							onClick={function handleConfirmDelete(e) {
 								e.preventDefault()
-								if (pendingSingleDeleteRow && activeConnectionId && tableId) {
+								const pendingRow = pendingSingleDeleteRow
+								setShowDeleteConfirmDialog(false)
+								setPendingSingleDeleteRow(null)
+								if (pendingRow && activeConnectionId && tableId) {
+									const snapshot = tableData
+									if (tableData) {
+										setTableData(
+											removeRowsByPrimaryKey(
+												tableData,
+												pendingRow.primaryKeyColumn,
+												[pendingRow.primaryKeyValue]
+											)
+										)
+									}
 									deleteRows.mutate(
 										{
 											connectionId: activeConnectionId,
 											tableName: tableRefName ?? tableId,
-											primaryKeyColumn:
-												pendingSingleDeleteRow.primaryKeyColumn,
-											primaryKeyValues: [
-												pendingSingleDeleteRow.primaryKeyValue
-											]
+											primaryKeyColumn: pendingRow.primaryKeyColumn,
+											primaryKeyValues: [pendingRow.primaryKeyValue]
 										},
 										{
 											onSuccess: function onSingleDeleteSuccess() {
+												trackRowDeletion(
+													activeConnectionId,
+													tableRefName ?? tableId,
+													[pendingRow.row]
+												)
 												loadTableData()
-												setShowDeleteConfirmDialog(false)
-												setPendingSingleDeleteRow(null)
 											},
 											onError: function onSingleDeleteError(error) {
+												setTableData(snapshot)
 												notifyActionFailure('Failed to delete row', error)
 											}
 										}
@@ -1143,45 +1200,11 @@ export function DatabaseStudio({
 					onOpenChange={setShowBulkEditDialog}
 					columns={tableData.columns}
 					selectedCount={selectedRows.size}
-					isLoading={isBulkActionLoading}
 					onSubmit={function handleBulkEditSubmit(columnName: string, newValue: unknown) {
-						if (!activeConnectionId || !tableId || !tableData) return
-
-						const primaryKeyColumn = tableData.columns.find(function (c) {
-							return c.primaryKey
-						})
-						if (!primaryKeyColumn) {
-							notifyMissingPrimaryKey('apply bulk edits')
-							return
-						}
-
-						setIsBulkActionLoading(true)
 						const rowIndexes = Array.from(selectedRows)
-
-						Promise.all(
-							rowIndexes.map(function (rowIndex) {
-								const row = tableData.rows[rowIndex]
-								return updateCell.mutateAsync({
-									connectionId: activeConnectionId,
-									tableName: tableRefName ?? tableId,
-									primaryKeyColumn: primaryKeyColumn.name,
-									primaryKeyValue: row[primaryKeyColumn.name],
-									columnName,
-									newValue
-								})
-							})
-							)
-							.then(function () {
-								setShowBulkEditDialog(false)
-								setSelectedRows(new Set())
-								loadTableData()
-							})
-							.catch(function (error) {
-								notifyActionFailure('Failed to update rows', error)
-							})
-							.finally(function () {
-								setIsBulkActionLoading(false)
-							})
+						setShowBulkEditDialog(false)
+						setSelectedRows(new Set())
+						handleBatchCellEdit(rowIndexes, columnName, newValue)
 					}}
 				/>
 			)}
@@ -1192,45 +1215,11 @@ export function DatabaseStudio({
 					onOpenChange={setShowSetNullDialog}
 					columns={tableData.columns}
 					selectedCount={selectedRows.size}
-					isLoading={isBulkActionLoading}
 					onSubmit={function handleSetNullSubmit(columnName: string) {
-						if (!activeConnectionId || !tableId || !tableData) return
-
-						const primaryKeyColumn = tableData.columns.find(function (c) {
-							return c.primaryKey
-						})
-						if (!primaryKeyColumn) {
-							notifyMissingPrimaryKey('set NULL')
-							return
-						}
-
-						setIsBulkActionLoading(true)
 						const rowIndexes = Array.from(selectedRows)
-
-						Promise.all(
-							rowIndexes.map(function (rowIndex) {
-								const row = tableData.rows[rowIndex]
-								return updateCell.mutateAsync({
-									connectionId: activeConnectionId,
-									tableName: tableRefName ?? tableId,
-									primaryKeyColumn: primaryKeyColumn.name,
-									primaryKeyValue: row[primaryKeyColumn.name],
-									columnName,
-									newValue: null
-								})
-							})
-							)
-							.then(function () {
-								setShowSetNullDialog(false)
-								setSelectedRows(new Set())
-								loadTableData()
-							})
-							.catch(function (error) {
-								notifyActionFailure('Failed to set NULL', error)
-							})
-							.finally(function () {
-								setIsBulkActionLoading(false)
-							})
+						setShowSetNullDialog(false)
+						setSelectedRows(new Set())
+						handleBatchCellEdit(rowIndexes, columnName, null)
 					}}
 				/>
 			)}
