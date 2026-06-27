@@ -13,58 +13,54 @@ export type ChangelogRelease = {
 	groups: ChangelogReleaseGroup[]
 }
 
-export const CURRENT_VERSION = "0.30.0"
+export const CURRENT_VERSION = "0.30.1"
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
 	{
-		version: "0.29.0",
-		date: "2026-06-15",
-		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.29.0",
+		version: "0.30.1",
+		date: "2026-06-27",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.30.1",
 		groups: [
 			{
 				name: "Bug Fixes",
 				items: [
-				"fix(backend): replace high-risk unwrap/panic with error propagation",
-				"fix(studio): resolve strictNullChecks violations",
-				]
-			},
-			{
-				name: "CI/CD",
-				items: [
-				"ci: lower asset count floor to 9 after dropping Intel-macOS build",
-				"ci: bump bun pin to 1.3.14 and add tsc --noEmit typecheck gate",
+				"fix(studio): UI quick wins — remove AI index button, lower AI panel, unified spinner (#181) (#181)",
+				"fix(studio): pin Monaco loader to bundled core so editor loads in release builds",
 				]
 			},
 			{
 				name: "Chores",
 				items: [
-				"chore(ts): enable strictNullChecks for studio and desktop",
+				"chore(aur): update dora to 0.30.0",
 				]
 			},
 			{
 				name: "Features",
 				items: [
-				"feat(marketing): add 15 hosted-provider connection guides for SEO",
-				"feat(connections): Fly.io proxy hint in connection dialog",
-				"feat(connections): first-class presets for 10 hosted providers",
-				"feat(prisma-runner): Prisma ORM Runner — write & execute Prisma client queries natively (#137)",
-				"feat(connections): hosted/serverless provider support + Supabase integration (#128)",
-				"feat(connections): one-click Supabase OAuth + reliable pooler host",
-				"feat(marketing): feature-showcase polish + Prisma runner showcase",
-				"feat(studio): connection dialog, docker view & Supabase flow refinements",
-				"feat(database-studio): drop column support",
+				"feat(drizzle-runner): align translator with LSP, add $count, fix Prisma toolbar (#179) (#179)",
+				"feat(prisma-runner): style schema viewer + add syntax-highlighted schema.prisma preview (#180) (#180)",
 				]
 			}
 		]
 	},
 	{
+		version: "Unreleased",
+		date: "2026-06-27",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/vUnreleased",
+		groups: [
+
+		]
+	},
+	{
 		version: "0.30.0",
-		date: "2026-06-20",
+		date: "2026-06-21",
 		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.30.0",
 		groups: [
 			{
 				name: "Features",
 				items: [
+				"spin up a local MySQL container straight from the Docker manager — MySQL joins PostgreSQL, MariaDB, and CockroachDB as a one-click provisionable engine, with version presets, auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose export",
+				"the bundled `docker-compose.databases.yml` now covers every server engine Dora can talk to locally — PostgreSQL, MySQL, MariaDB, CockroachDB, and libSQL/sqld — for testing against a real database in one `docker compose up`",
 				"ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console",
 				"connect a Cloudflare D1 database with an API token and pick it from your account — a native HTTP query engine, no local file required (#139, #150)",
 				"connect a PlanetScale database with a service token and pick a branch (#141, #149)",
@@ -107,6 +103,47 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
 				"PlanetScale connector #141",
 				"Branch-aware connects for PlanetScale and Neon #142",
 				"Documentation — docs site at doradb.app/docs #130, installation & distribution matrix #131, provider & dialect reference #132, serverless & hosted provider showcase #133, full feature showcase #134",
+				]
+			}
+		]
+	},
+	{
+		version: "0.29.0",
+		date: "2026-06-15",
+		tagUrl: "https://github.com/remcostoeten/dora/releases/tag/v0.29.0",
+		groups: [
+			{
+				name: "Bug Fixes",
+				items: [
+				"fix(backend): replace high-risk unwrap/panic with error propagation",
+				"fix(studio): resolve strictNullChecks violations",
+				]
+			},
+			{
+				name: "CI/CD",
+				items: [
+				"ci: lower asset count floor to 9 after dropping Intel-macOS build",
+				"ci: bump bun pin to 1.3.14 and add tsc --noEmit typecheck gate",
+				]
+			},
+			{
+				name: "Chores",
+				items: [
+				"chore(ts): enable strictNullChecks for studio and desktop",
+				]
+			},
+			{
+				name: "Features",
+				items: [
+				"feat(marketing): add 15 hosted-provider connection guides for SEO",
+				"feat(connections): Fly.io proxy hint in connection dialog",
+				"feat(connections): first-class presets for 10 hosted providers",
+				"feat(prisma-runner): Prisma ORM Runner — write & execute Prisma client queries natively (#137)",
+				"feat(connections): hosted/serverless provider support + Supabase integration (#128)",
+				"feat(connections): one-click Supabase OAuth + reliable pooler host",
+				"feat(marketing): feature-showcase polish + Prisma runner showcase",
+				"feat(studio): connection dialog, docker view & Supabase flow refinements",
+				"feat(database-studio): drop column support",
 				]
 			}
 		]

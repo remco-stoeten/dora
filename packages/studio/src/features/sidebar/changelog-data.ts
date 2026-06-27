@@ -11,9 +11,60 @@ export type ChangelogEntry = {
 	details?: string[]
 }
 
-export const CURRENT_VERSION = "0.30.0"
+export const CURRENT_VERSION = "0.30.1"
 
 export const CHANGELOG: ChangelogEntry[] = [
+	{
+		version: "0.30.1",
+		date: "2026-06-27",
+		commit: "v0.30.1",
+		title: "Feat(drizzle-runner): align translator with LSP, add $count, fix Prisma toolbar (#179) (#179)",
+		description: "Feat(drizzle-runner): align translator with LSP, add $count, fix Prisma toolbar (#179) (#179). Fix(studio): UI quick wins — remove AI index button, lower AI panel, unified spinner (#181) (#181).",
+		type: "feature",
+		details: [
+			"feat(drizzle-runner): align translator with LSP, add $count, fix Prisma toolbar (#179) (#179)",
+			"feat(prisma-runner): style schema viewer + add syntax-highlighted schema.prisma preview (#180) (#180)",
+			"fix(studio): UI quick wins — remove AI index button, lower AI panel, unified spinner (#181) (#181)",
+			"fix(studio): pin Monaco loader to bundled core so editor loads in release builds",
+			"chore(aur): update dora to 0.30.0",
+		]
+	},
+	{
+		version: "Unreleased",
+		date: "2026-06-27",
+		commit: "vUnreleased",
+		title: "Release vUnreleased",
+		description: "Updates in vUnreleased.",
+		type: "feature"
+	},
+	{
+		version: "0.30.0",
+		date: "2026-06-21",
+		commit: "v0.30.0",
+		title: "Spin up a local MySQL container straight from the Docker manager — MySQL joins PostgreSQL, MariaDB, and CockroachDB as a one-click provisionable engine, with version presets, auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose export",
+		description: "Spin up a local MySQL container straight from the Docker manager — MySQL joins PostgreSQL, MariaDB, and CockroachDB as a one-click provisionable engine, with version presets, auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose export. ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console.",
+		type: "feature",
+		details: [
+			"spin up a local MySQL container straight from the Docker manager — MySQL joins PostgreSQL, MariaDB, and CockroachDB as a one-click provisionable engine, with version presets, auto-detected free port, connect-in-data-viewer, SQL seeding, and Compose export",
+			"the bundled `docker-compose.databases.yml` now covers every server engine Dora can talk to locally — PostgreSQL, MySQL, MariaDB, CockroachDB, and libSQL/sqld — for testing against a real database in one `docker compose up`",
+			"ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console",
+			"connect a Cloudflare D1 database with an API token and pick it from your account — a native HTTP query engine, no local file required (#139, #150)",
+			"connect a PlanetScale database with a service token and pick a branch (#141, #149)",
+			"connect a Vercel Postgres store with a token and pick it from your account (#147)",
+			"connect a Xata database with a key and pick it from your account (#140, #148)",
+			"Neon connections are now branch-aware — pick a branch when a project has more than one (#142, #156)",
+			"keep multiple database connections open at once, each with its own isolated tab group; a connection tab bar above the table tabs switches between them (with status dots and per-connection close), and switching preserves each connection's open tabs, active tab, filters and scroll state. Cycle connections with `Ctrl+Shift+[` / `Ctrl+Shift+]` (#96)",
+			"hardened Turso, Supabase, and Neon connect flows with account visibility — Turso gains robust CLI detection and in-app sign-in, and each provider shows \"Connected as\", a refresh button, paginated project/organization lists, and clearer empty and error states",
+			"AI provider errors now use clear, consistent copy across all providers (Groq, OpenAI, Anthropic, Gemini, Ollama): rate limits, invalid keys, missing models, and an offline Ollama daemon each surface an actionable message instead of a raw HTTP status and response body (#82)",
+			"the AI rate-limit message includes a retry hint so the user knows to wait and try again (#82)",
+			"data-grid optimistic cell edits no longer flash back to the stale value before the save lands",
+			"the sidebar no longer blanks out when you rename, duplicate, or drop a table",
+			"the marketing home page ships ~24.7 kB less gzipped JS on first load (-8.6%) by deferring the animation engine until after hydration; first paint is pure CSS so there is no perceived change",
+			"AI Keys settings now spell out that Groq/OpenAI/Anthropic/Gemini need an API key while Ollama runs locally with no key, pointing to `docs/ai-providers.md` for setup (#82)",
+			"new end-user installation guide with a full platform matrix (macOS Apple Silicon/Intel, Windows, Linux packages, and the AUR)",
+			"new connection guides for Cloudflare D1 and Xata, plus ORM Cockpit and ORM Runners guides on doradb.app/docs",
+		]
+	},
 	{
 		version: "0.29.0",
 		date: "2026-06-15",
@@ -36,32 +87,6 @@ export const CHANGELOG: ChangelogEntry[] = [
 			"ci: lower asset count floor to 9 after dropping Intel-macOS build",
 			"ci: bump bun pin to 1.3.14 and add tsc --noEmit typecheck gate",
 			"chore(ts): enable strictNullChecks for studio and desktop",
-		]
-	},
-	{
-		version: "0.30.0",
-		date: "2026-06-20",
-		commit: "v0.30.0",
-		title: "ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console",
-		description: "ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console. Connect a PlanetScale database with a service token and pick a branch (#141, #149).",
-		type: "feature",
-		details: [
-			"ORM cockpit — link a project folder, detect its Drizzle or Prisma schema, compare it against the live database, and preview a dialect-correct migration; drift is grouped per table and flagged safe/review/destructive, with destructive and review statements gated behind explicit opt-in before the SQL is handed to the console",
-			"connect a Cloudflare D1 database with an API token and pick it from your account — a native HTTP query engine, no local file required (#139, #150)",
-			"connect a PlanetScale database with a service token and pick a branch (#141, #149)",
-			"connect a Vercel Postgres store with a token and pick it from your account (#147)",
-			"connect a Xata database with a key and pick it from your account (#140, #148)",
-			"Neon connections are now branch-aware — pick a branch when a project has more than one (#142, #156)",
-			"keep multiple database connections open at once, each with its own isolated tab group; a connection tab bar above the table tabs switches between them (with status dots and per-connection close), and switching preserves each connection's open tabs, active tab, filters and scroll state. Cycle connections with `Ctrl+Shift+[` / `Ctrl+Shift+]` (#96)",
-			"hardened Turso, Supabase, and Neon connect flows with account visibility — Turso gains robust CLI detection and in-app sign-in, and each provider shows \"Connected as\", a refresh button, paginated project/organization lists, and clearer empty and error states",
-			"AI provider errors now use clear, consistent copy across all providers (Groq, OpenAI, Anthropic, Gemini, Ollama): rate limits, invalid keys, missing models, and an offline Ollama daemon each surface an actionable message instead of a raw HTTP status and response body (#82)",
-			"the AI rate-limit message includes a retry hint so the user knows to wait and try again (#82)",
-			"data-grid optimistic cell edits no longer flash back to the stale value before the save lands",
-			"the sidebar no longer blanks out when you rename, duplicate, or drop a table",
-			"the marketing home page ships ~24.7 kB less gzipped JS on first load (-8.6%) by deferring the animation engine until after hydration; first paint is pure CSS so there is no perceived change",
-			"AI Keys settings now spell out that Groq/OpenAI/Anthropic/Gemini need an API key while Ollama runs locally with no key, pointing to `docs/ai-providers.md` for setup (#82)",
-			"new end-user installation guide with a full platform matrix (macOS Apple Silicon/Intel, Windows, Linux packages, and the AUR)",
-			"new connection guides for Cloudflare D1 and Xata, plus ORM Cockpit and ORM Runners guides on doradb.app/docs",
 		]
 	},
 	{

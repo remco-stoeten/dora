@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 
 
+
+## [v0.30.1] - 2026-06-27
+
+### Bug Fixes
+
+- fix(studio): UI quick wins — remove AI index button, lower AI panel, unified spinner (#181) (#181)
+
+- fix(studio): pin Monaco loader to bundled core so editor loads in release builds
+
+
+
+### Chores
+
+- chore(aur): update dora to 0.30.0
+
+
+
+### Features
+
+- feat(drizzle-runner): align translator with LSP, add $count, fix Prisma toolbar (#179) (#179)
+
+- feat(prisma-runner): style schema viewer + add syntax-highlighted schema.prisma preview (#180) (#180)
+
 ## [Unreleased]
 
 ## [v0.30.0] - 2026-06-20
