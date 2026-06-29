@@ -3,6 +3,7 @@ import type * as Monaco from "monaco-editor";
 import { useState, useEffect, useRef, type MutableRefObject } from "react";
 import { useSetting } from "@studio/core/settings";
 import { loadTheme, isBuiltinTheme, MonacoTheme } from "@studio/core/settings/editor-themes";
+import { remeasureMonacoFonts } from "@studio/shared/lib/font-loader";
 import { toast } from "@studio/shared/ui/notifier";
 import { pickDefaultQueryTable } from "@studio/shared/utils/default-query-table";
 import { SchemaColumn, SchemaTable } from "../types";
@@ -505,6 +506,7 @@ export function CodeEditor({ value, onChange, onExecute, onSave, onModeChange, i
     monacoRef.current = monaco;
     setIsEditorReady(true);
 
+    remeasureMonacoFonts(monaco);
     monaco.editor.setTheme(editorTheme);
 
     monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);

@@ -18,6 +18,8 @@
 	},
 	"dependencies": {
 		"@faker-js/faker": "^10.2.0",
+		"@fontsource/inter": "^5.2.8",
+		"@fontsource/jetbrains-mono": "^5.2.8",
 		"@hookform/resolvers": "^3.10.0",
 		"@monaco-editor/react": "^4.6.0",
 		"@radix-ui/react-alert-dialog": "^1.1.14",

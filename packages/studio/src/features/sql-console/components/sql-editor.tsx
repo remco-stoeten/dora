@@ -3,6 +3,7 @@ import type * as Monaco from "monaco-editor";
 import { useRef, useEffect, useState } from "react";
 import { useSetting } from "@studio/core/settings";
 import { loadTheme, isBuiltinTheme, MonacoTheme } from "@studio/core/settings/editor-themes";
+import { remeasureMonacoFonts } from "@studio/shared/lib/font-loader";
 import { toast } from "@studio/shared/ui/notifier";
 import type { TableInfo } from "../types";
 
@@ -309,6 +310,7 @@ export function SqlEditor({ value, onChange, onExecute, onSave, onModeChange, is
     monacoRef.current = monaco;
     setIsEditorReady(true);
 
+    remeasureMonacoFonts(monaco);
     monaco.editor.setTheme(editorTheme);
 
     // Register Execute command (Ctrl/Cmd + Enter)

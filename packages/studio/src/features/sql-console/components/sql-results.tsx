@@ -28,6 +28,7 @@ import {
 import { Input } from '@studio/shared/ui/input'
 import { ScrollArea } from '@studio/shared/ui/scroll-area'
 import { useToast } from '@studio/shared/ui/use-toast'
+import { remeasureMonacoFonts } from '@studio/shared/lib/font-loader'
 import { cn } from '@studio/shared/utils/cn'
 import { areValuesEqual } from '@studio/shared/utils/value-equality'
 import { ResultChartPanel } from '@studio/features/result-charts/result-chart-panel'
@@ -491,6 +492,7 @@ export function SqlResults({
 							defaultLanguage='json'
 							value={JSON.stringify(result.rows, null, 2)}
 							theme='vs-dark'
+							onMount={(_editor, monaco) => remeasureMonacoFonts(monaco)}
 							options={{
 								readOnly: true,
 								minimap: { enabled: false },
