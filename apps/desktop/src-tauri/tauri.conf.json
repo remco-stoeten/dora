@@ -1,7 +1,7 @@
 {
 	"$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
 	"productName": "Dora",
-	"version": "0.30.2",
+	"version": "0.30.3",
 	"identifier": "com.Dora.dev",
 	"build": {
 		"frontendDist": "../dist",
@@ -41,7 +41,9 @@
 	"bundle": {
 		"active": true,
 		"createUpdaterArtifacts": true,
-		"externalBin": ["binaries/duckdb_helper"],
+		"externalBin": [
+			"binaries/duckdb_helper"
+		],
 		"targets": [
 			"deb",
 			"rpm",

@@ -11,12 +11,27 @@ export type ChangelogEntry = {
 	details?: string[]
 }
 
-export const CURRENT_VERSION = "0.30.2"
+export const CURRENT_VERSION = "0.30.3"
 
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "0.30.3",
+		date: "2026-06-29",
+		commit: "v0.30.3",
+		title: "DuckDB-backed local file queries (CSV, Parquet, JSON) now run in a separate helper process instead of being linked into the main app binary, keeping the heavy engine out of the core download",
+		description: "DuckDB-backed local file queries (CSV, Parquet, JSON) now run in a separate helper process instead of being linked into the main app binary, keeping the heavy engine out of the core download. Connection-refused errors now name the host that could not be reached instead of showing a generic message.",
+		type: "feature",
+		details: [
+			"DuckDB-backed local file queries (CSV, Parquet, JSON) now run in a separate helper process instead of being linked into the main app binary, keeping the heavy engine out of the core download",
+			"the SQL and ORM editors now load reliably in packaged builds — Monaco and its fonts are fully self-hosted instead of being fetched from a CDN that the app's content-security policy blocked, which previously left the editor stuck on a blank loading state with mis-spaced text in release builds",
+			"connection-refused errors now name the host that could not be reached instead of showing a generic message",
+			"data-viewer edits now apply instantly — optimistic updates no longer flash back to the stale value before the save lands",
+			"a single 12-blade radial spinner is now used everywhere a loading indicator appears",
+		]
+	},
+	{
 		version: "0.30.2",
-		date: "2026-06-28",
+		date: "2026-06-29",
 		commit: "v0.30.2",
 		title: "Privacy mode can now mask cell values in database results, including grids, SQL results, and runner output (#182)",
 		description: "Privacy mode can now mask cell values in database results, including grids, SQL results, and runner output (#182). Debian/Ubuntu install instructions and apt repository generation now use the current GitHub Pages path.",

@@ -6,6 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.30.3] - 2026-06-29
+
+### Features
+
+- DuckDB-backed local file queries (CSV, Parquet, JSON) now run in a separate helper process instead of being linked into the main app binary, keeping the heavy engine out of the core download
+
+### Bug Fixes
+
+- the SQL and ORM editors now load reliably in packaged builds — Monaco and its fonts are fully self-hosted instead of being fetched from a CDN that the app's content-security policy blocked, which previously left the editor stuck on a blank loading state with mis-spaced text in release builds
+- connection-refused errors now name the host that could not be reached instead of showing a generic message
+
+### Performance
+
+- data-viewer edits now apply instantly — optimistic updates no longer flash back to the stale value before the save lands
+
+### Styling
+
+- a single 12-blade radial spinner is now used everywhere a loading indicator appears
+
 ## [v0.30.2] - 2026-06-28
 
 ### Features

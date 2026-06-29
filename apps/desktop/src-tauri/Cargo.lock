@@ -1959,7 +1959,7 @@ dependencies = [
 
 [[package]]
 name = "dora"
-version = "0.30.2"
+version = "0.30.3"
 dependencies = [
  "aes-gcm 0.10.3",
  "anyhow",

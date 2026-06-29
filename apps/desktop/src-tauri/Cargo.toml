@@ -1,6 +1,6 @@
 [package]
 name = "dora"
-version = "0.30.2"
+version = "0.30.3"
 description = ""
 authors = ["Remco Stoeten"]
 license = "GPLv3"
