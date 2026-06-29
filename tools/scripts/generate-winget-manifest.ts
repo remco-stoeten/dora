@@ -153,7 +153,7 @@ function main() {
 			getFlagValue('license-url') ||
 			'https://github.com/remcostoeten/dora/blob/master/LICENSE',
 		manifestVersion: getFlagValue('manifest-version') || '1.9.0',
-		installerType: getFlagValue('installer-type') || 'msi'
+		installerType: getFlagValue('installer-type') || 'nullsoft'
 	}
 
 	logHeader('Generating Winget Manifest')

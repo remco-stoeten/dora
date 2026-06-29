@@ -38,27 +38,27 @@ jobs:
           set -euo pipefail
           TAG="${{ inputs.tag }}"
 
-          # Resolve actual .msi URL from release assets (filename version may differ from tag)
+          # Resolve the NSIS setup .exe URL from release assets (filename version may differ from tag)
           INSTALLER_URL=""
           for attempt in {1..60}; do
             INSTALLER_URL="$(gh api repos/${GITHUB_REPOSITORY}/releases/tags/${TAG} \
-              --jq '.assets[] | select(.name | endswith("_x64_en-US.msi")) | .browser_download_url' \
+              --jq '.assets[] | select(.name | endswith("_x64-setup.exe")) | .browser_download_url' \
               | head -1)"
             if [[ -n "$INSTALLER_URL" ]]; then
               break
             fi
-            echo "Waiting for _x64_en-US.msi asset on ${TAG} (${attempt}/60)..."
+            echo "Waiting for _x64-setup.exe asset on ${TAG} (${attempt}/60)..."
             sleep 30
           done
 
           if [[ -z "$INSTALLER_URL" ]]; then
-            echo "No _x64_en-US.msi asset found on release ${TAG}. The Release workflow must publish only after Windows assets are uploaded." >&2
+            echo "No _x64-setup.exe asset found on release ${TAG}. The Release workflow must publish only after Windows assets are uploaded." >&2
             exit 1
           fi
 
           INSTALLER_FILE="$(basename "$INSTALLER_URL")"
           # Extract embedded version from filename
-          VERSION="$(echo "$INSTALLER_FILE" | sed 's/Dora_\(.*\)_x64_en-US\.msi/\1/')"
+          VERSION="$(echo "$INSTALLER_FILE" | sed 's/Dora_\(.*\)_x64-setup\.exe/\1/')"
           CHECKSUMS_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/checksums-windows.txt"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -88,7 +88,8 @@ jobs:
             --tag=${{ steps.meta.outputs.tag }} \
             --installer-url=${{ steps.meta.outputs.installer_url }} \
             --checksums-file=checksums-windows.txt \
-            --installer-file=${{ steps.meta.outputs.installer_file }}
+            --installer-file=${{ steps.meta.outputs.installer_file }} \
+            --installer-type=nullsoft
 
       - name: Archive Winget manifests
         run: |
