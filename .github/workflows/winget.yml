@@ -116,38 +116,17 @@ jobs:
           Write-Host "WINGET_CREATE_GITHUB_TOKEN is not configured. Skipping automated Winget submission."
           exit 0
 
-      - name: Install WingetCreate dependencies
-        if: ${{ env.WINGET_CREATE_GITHUB_TOKEN != '' }}
-        shell: pwsh
-        run: |
-          function Install-AppxIfNeeded {
-            param(
-              [Parameter(Mandatory = $true)]
-              [string]$Path
-            )
-
-            try {
-              Add-AppxPackage $Path
-            } catch {
-              $message = $_.Exception.Message
-              if ($message -like '*higher version of this package is already installed*') {
-                Write-Host "Package already installed with a newer version: $Path"
-              } else {
-                throw
-              }
-            }
-          }
-
-          Invoke-WebRequest https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-          Install-AppxIfNeeded .\Microsoft.VCLibs.x64.14.00.Desktop.appx
-          Invoke-WebRequest https://aka.ms/wingetcreate/latest/msixbundle -OutFile wingetcreate.msixbundle
-          Install-AppxIfNeeded .\wingetcreate.msixbundle
-
       - name: Submit Winget update
         if: ${{ env.WINGET_CREATE_GITHUB_TOKEN != '' }}
         shell: pwsh
         run: |
-          wingetcreate update RemcoStoeten.Dora `
+          # Use the standalone wingetcreate.exe instead of the msixbundle: the
+          # Appx module that Add-AppxPackage relies on is not supported under
+          # PowerShell 7 on the windows-2022 Server runner (it fails with
+          # "Operation is not supported on this platform"). The standalone exe is
+          # self-contained and is the recommended way to run wingetcreate in CI.
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          .\wingetcreate.exe update RemcoStoeten.Dora `
             -u "${{ needs.generate-manifests.outputs.installer_url }}" `
             -v "${{ needs.generate-manifests.outputs.version }}" `
             -t "${env:WINGET_CREATE_GITHUB_TOKEN}" `
