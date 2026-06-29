@@ -3,6 +3,7 @@ import { NuqsAdapter } from 'nuqs/adapters/react-router/v6'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { CredentialStorageNotice } from '@studio/components/credential-storage-notice'
 import { DemoBanner } from '@studio/components/demo-banner'
+import { DemoNoticeBar } from '@studio/components/demo-notice-bar'
 import { Toaster } from '@studio/shared/ui/notifier'
 import { useSettings } from '@studio/core/settings'
 import type { AnalyticsConfig } from '@studio/features/analytics'
@@ -42,6 +43,7 @@ export function StudioApp({ forceMock = false, analyticsConfig, basename }: Prop
 			<QueryClientProvider client={queryClient}>
 				<AppProviders forceMock={forceMock} analyticsConfig={analyticsConfig}>
 					<div className='flex flex-col h-screen'>
+						<DemoNoticeBar />
 						<DemoBanner />
 						<CredentialStorageNotice />
 						<div className='flex-1 overflow-hidden'>

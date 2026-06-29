@@ -29,6 +29,11 @@ export function enrichColumnsWithFKs(
 				}
 			: col.foreignKey
 
+		const allowedValues =
+			schemaCol.allowed_values && schemaCol.allowed_values.length > 0
+				? schemaCol.allowed_values
+				: col.allowedValues
+
 		return {
 			...col,
 			type: col.type && col.type !== 'unknown' ? col.type : schemaCol.data_type,
@@ -36,6 +41,7 @@ export function enrichColumnsWithFKs(
 				typeof schemaCol.is_nullable === 'boolean' ? schemaCol.is_nullable : col.nullable,
 			primaryKey: schemaCol.is_primary_key ?? col.primaryKey,
 			foreignKey: fk,
+			allowedValues,
 		}
 	})
 }

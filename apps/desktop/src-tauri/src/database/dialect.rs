@@ -75,6 +75,10 @@ pub struct PgIntrospection {
     pub indexes: &'static str,
     /// Per-table estimated live-row counts.
     pub row_counts: &'static str,
+    /// Closed value sets per column: (schema, table, column, value). One row per
+    /// allowed value, covering both `enum`-typed columns and columns guarded by
+    /// a `CHECK (col IN (...))` / `CHECK (col = ANY(ARRAY[...]))` constraint.
+    pub value_constraints: &'static str,
 }
 
 impl PgIntrospection {
@@ -85,6 +89,7 @@ impl PgIntrospection {
         foreign_keys: VANILLA_FOREIGN_KEYS,
         indexes: VANILLA_INDEXES,
         row_counts: VANILLA_ROW_COUNTS,
+        value_constraints: VANILLA_VALUE_CONSTRAINTS,
     };
 
     /// CockroachDB introspection queries. Starts from [`Self::VANILLA`] and
@@ -112,6 +117,10 @@ impl PgIntrospection {
         // postgres/schema.rs already falls back to an exact COUNT(*) per table —
         // the same safety net vanilla relies on — so correctness is guaranteed.
         row_counts: COCKROACH_ROW_COUNTS,
+        // Enum labels and CHECK constraint expressions live in the same
+        // pg_catalog views CockroachDB implements (`pg_enum`, `pg_constraint`),
+        // and the IN-list parser runs in shared Rust, so no override is needed.
+        value_constraints: VANILLA_VALUE_CONSTRAINTS,
     };
 }
 
@@ -218,6 +227,57 @@ const VANILLA_ROW_COUNTS: &str = r#"
             n_live_tup
         FROM 
             pg_stat_user_tables
+    "#;
+
+/// Vanilla: closed value sets per column.
+///
+/// Two sources, unioned into one (schema, table, column, kind, payload) shape:
+///   * `enum` — one row per label of a Postgres `enum` type a column uses,
+///     emitted in the type's declared label order (`pg_enum.enumsortorder`).
+///   * `check` — one row per single-column `CHECK` constraint, carrying the raw
+///     `pg_get_constraintdef` text. The shared Rust parser extracts the literal
+///     list from `IN (...)` / `= ANY (ARRAY[...])` forms and ignores the rest.
+///
+/// `sort_order` is cast to `double precision` in both branches so the trailing
+/// `ORDER BY` is type-compatible across the union; it keeps enum labels in
+/// declared order (check rows sort arbitrarily, which the parser does not rely
+/// on).
+const VANILLA_VALUE_CONSTRAINTS: &str = r#"
+        SELECT
+            n.nspname AS table_schema,
+            c.relname AS table_name,
+            a.attname AS column_name,
+            'enum'    AS kind,
+            e.enumlabel AS payload,
+            e.enumsortorder::double precision AS sort_order
+        FROM pg_attribute a
+        JOIN pg_class c     ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_type t      ON t.oid = a.atttypid
+        JOIN pg_enum e      ON e.enumtypid = t.oid
+        WHERE c.relkind = 'r'
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+          AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+
+        UNION ALL
+
+        SELECT
+            n.nspname AS table_schema,
+            c.relname AS table_name,
+            a.attname AS column_name,
+            'check'   AS kind,
+            pg_get_constraintdef(con.oid) AS payload,
+            0::double precision AS sort_order
+        FROM pg_constraint con
+        JOIN pg_class c     ON c.oid = con.conrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = con.conkey[1]
+        WHERE con.contype = 'c'
+          AND array_length(con.conkey, 1) = 1
+          AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+
+        ORDER BY table_schema, table_name, column_name, sort_order
     "#;
 
 /// CockroachDB override: row-count estimates.

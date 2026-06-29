@@ -15,7 +15,7 @@ type GridBodyProps = {
 	columns: ColumnDefinition[]
 	draftInsertIndex?: number | null
 	draftRow?: Record<string, unknown> | null
-	editInputRef: React.RefObject<HTMLInputElement>
+	editInputRef: React.RefObject<HTMLInputElement | HTMLSelectElement>
 	editingCell: EditingCell | null
 	editValue: string
 	effectiveSelectedRows: Set<number>
@@ -27,6 +27,7 @@ type GridBodyProps = {
 	handleCellMouseEnter: (rowIndex: number, colIndex: number) => void
 	handleEditKeyDown: (e: React.KeyboardEvent) => void
 	handleEditBlur: () => void
+	handleSelectCommit: (value: string) => void
 	handleRowClick: (e: React.MouseEvent, rowIndex: number) => void
 	handleRowContextMenuChange: (open: boolean, row: number) => void
 	onBatchCellEdit?: (rowIndexes: number[], columnName: string, newValue: unknown) => void
@@ -80,6 +81,7 @@ export function GridBody({
 	handleCellMouseEnter,
 	handleEditKeyDown,
 	handleEditBlur,
+	handleSelectCommit,
 	handleRowClick,
 	handleRowContextMenuChange,
 	onBatchCellEdit,
@@ -300,9 +302,40 @@ export function GridBody({
 													)
 												}}
 											>
-												{isEditing ? (
+												{isEditing && col.allowedValues ? (
+													<select
+														ref={
+															editInputRef as React.RefObject<HTMLSelectElement>
+														}
+														value={editValue}
+														onChange={function (e) {
+															handleSelectCommit(e.target.value)
+														}}
+														onBlur={handleEditBlur}
+														onKeyDown={handleEditKeyDown}
+														data-no-shortcuts='true'
+														className='w-full h-full bg-sidebar-accent/35 outline outline-1 outline-offset-[-1px] outline-sidebar-foreground/25 font-mono text-sm -mx-3 -my-1.5 px-3 py-1.5 box-content'
+													>
+														{!col.allowedValues.includes(editValue) && (
+															<option value={editValue}>
+																{editValue === ''
+																	? '(empty)'
+																	: editValue}
+															</option>
+														)}
+														{col.allowedValues.map(function (value) {
+															return (
+																<option key={value} value={value}>
+																	{value}
+																</option>
+															)
+														})}
+													</select>
+												) : isEditing ? (
 													<input
-														ref={editInputRef}
+														ref={
+															editInputRef as React.RefObject<HTMLInputElement>
+														}
 														type='text'
 														value={editValue}
 														onChange={function (e) {

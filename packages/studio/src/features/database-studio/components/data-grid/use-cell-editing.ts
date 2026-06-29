@@ -32,7 +32,7 @@ export function useCellEditing({
 }: UseCellEditingArgs) {
 	const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
 	const [editValue, setEditValue] = useState<string>('')
-	const editInputRef = useRef<HTMLInputElement>(null)
+	const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null)
 	const editValueRef = useRef(editValue)
 	editValueRef.current = editValue
 	const originalEditValueRef = useRef<string>('')
@@ -126,6 +126,17 @@ export function useCellEditing({
 	// Explicit commit — Enter key, or clicking another cell. Always saves.
 	const handleSaveEdit = useCallback(
 		function () {
+			commitEdit({ clear: true, refocus: true })
+		},
+		[commitEdit]
+	)
+
+	// Picking a value from a dropdown editor is a deliberate commit: seed the
+	// value ref synchronously (state updates are async, commitEdit reads the
+	// ref) and save immediately so a single click both selects and persists.
+	const handleSelectCommit = useCallback(
+		function (value: string) {
+			editValueRef.current = value
 			commitEdit({ clear: true, refocus: true })
 		},
 		[commitEdit]
@@ -231,11 +242,15 @@ export function useCellEditing({
 			const input = editInputRef.current
 			if (!input) return
 			input.focus()
-			if (editSelectModeRef.current === 'end') {
-				const end = input.value.length
-				input.setSelectionRange(end, end)
-			} else {
-				input.select()
+			// Caret/selection seeding only applies to the free-text input editor;
+			// a dropdown editor (HTMLSelectElement) has neither.
+			if (input instanceof HTMLInputElement) {
+				if (editSelectModeRef.current === 'end') {
+					const end = input.value.length
+					input.setSelectionRange(end, end)
+				} else {
+					input.select()
+				}
 			}
 			justOpenedRef.current = true
 			const timer = setTimeout(function () {
@@ -257,6 +272,7 @@ export function useCellEditing({
 		handleCellDoubleClick,
 		startTypeEdit,
 		handleSaveEdit,
+		handleSelectCommit,
 		handleEditBlur,
 		handleEditKeyDown
 	}

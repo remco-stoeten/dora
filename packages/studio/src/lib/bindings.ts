@@ -1374,11 +1374,7 @@ async installCredentialKeyring() : Promise<KeyringInstallResult> {
 
 /** user-defined events **/
 
-
-
 /** user-defined constants **/
-
-
 
 /** user-defined types **/
 
@@ -1405,7 +1401,14 @@ is_auto_increment?: boolean;
 /**
  * Foreign key relationship, if any
  */
-foreign_key?: ForeignKeyInfo | null }
+foreign_key?: ForeignKeyInfo | null;
+/**
+ * Closed set of values the database constrains this column to: a Postgres
+ * `enum` type's labels, or the literals in a `CHECK (col IN (...))`
+ * constraint. `None` when the column is unconstrained. The studio uses
+ * this to render a dropdown instead of a free-text cell editor.
+ */
+allowed_values?: string[] | null }
 export type ConnectionHistoryEntry = { id: number; connection_id: string; connection_name: string; database_type: string; attempted_at: number; success: boolean; error_message: string | null; duration_ms: number | null }
 export type ConnectionInfo = { id: string; name: string; connected: boolean; database_type: DatabaseInfo; last_connected_at: number | null; created_at: number | null; updated_at: number | null; pin_hash: string | null; favorite: boolean | null; color: string | null; sort_order: number | null }
 export type CredentialStorageBackend = "os_keyring" | "local_encrypted_file"

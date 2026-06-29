@@ -1,6 +1,7 @@
 import { Container } from 'lucide-react'
 import { useRef } from 'react'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import type { DockerContainer } from '../types'
 import { ContainerCard } from './container-card'
 
@@ -78,7 +79,7 @@ export function ContainerList({
 		return (
 			<div className='flex-1 flex items-center justify-center'>
 				<div className='text-center'>
-					<div className='h-8 w-8 mx-auto mb-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin' />
+					<Spinner className='mx-auto mb-3 h-8 w-8 text-muted-foreground' />
 					<p className='text-sm text-muted-foreground'>Loading containers...</p>
 				</div>
 			</div>
@@ -117,8 +118,8 @@ export function ContainerList({
 					<Container className='h-12 w-12 mx-auto mb-4 text-muted-foreground/50' />
 					<h3 className='text-sm font-medium mb-1'>No containers yet</h3>
 					<p className='text-xs text-muted-foreground max-w-[200px]'>
-						Create your first database container to start working with local
-						development databases.
+						Create your first database container to start working with local development
+						databases.
 					</p>
 				</div>
 			</div>

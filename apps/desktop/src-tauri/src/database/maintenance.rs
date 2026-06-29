@@ -1,12 +1,12 @@
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Pool, Row, Value as MysqlValue};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::database::types::DatabaseSchema;
 use crate::Error;
 
 /// Result of a soft delete operation
-#[derive(Debug, Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct SoftDeleteResult {
     pub success: bool,
     pub affected_rows: usize,
@@ -18,7 +18,7 @@ pub struct SoftDeleteResult {
 }
 
 /// Result of a truncate operation
-#[derive(Debug, Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct TruncateResult {
     pub success: bool,
     pub affected_rows: usize,
@@ -27,7 +27,7 @@ pub struct TruncateResult {
 }
 
 /// Result of a database dump operation
-#[derive(Debug, Clone, Serialize, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct DumpResult {
     pub success: bool,
     pub file_path: String,

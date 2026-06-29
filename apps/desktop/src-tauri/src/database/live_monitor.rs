@@ -796,24 +796,7 @@ fn sqlite_primary_key_columns(
 }
 
 async fn fetch_duckdb_snapshot(
-    connection: Arc<std::sync::Mutex<duckdb::Connection>>,
-    table_name: &str,
-) -> Result<TableSnapshot, Error> {
-    let table_name_owned = table_name.to_string();
-    let handle = tokio::task::spawn_blocking(move || {
-        let conn = connection
-            .lock()
-            .map_err(|_| Error::Any(anyhow::anyhow!("DuckDB connection lock poisoned")))?;
-        duckdb_snapshot_blocking(&conn, &table_name_owned)
-    });
-
-    handle
-        .await
-        .map_err(|err| Error::Any(anyhow::anyhow!("DuckDB snapshot task failed: {}", err)))?
-}
-
-fn duckdb_snapshot_blocking(
-    conn: &duckdb::Connection,
+    connection: Arc<dyn crate::database::duckdb_backend::DuckDbConn>,
     table_name: &str,
 ) -> Result<TableSnapshot, Error> {
     let (schema, table) = split_table_reference(table_name)?;
@@ -824,32 +807,17 @@ fn duckdb_snapshot_blocking(
         quoted_table.clone()
     };
 
-    let pk_columns = duckdb_primary_key_columns(conn, &qualified_table)?;
+    let pk_columns = duckdb_primary_key_columns(&connection, &qualified_table).await?;
 
-    let query = format!("SELECT * FROM {}", qualified_table);
-    let mut statement = conn.prepare(&query)?;
-    let mut rows = statement.query([])?;
-    let column_names: Vec<String> = rows
-        .as_ref()
-        .map(|stmt| stmt.column_names())
-        .unwrap_or_default();
-
-    let mut row_values = Vec::new();
-    while let Some(row) = rows.next()? {
-        let mut values = Vec::with_capacity(column_names.len());
-        for index in 0..column_names.len() {
-            values.push(crate::database::duckdb::row_writer::value_ref_to_json(
-                row.get_ref(index)?,
-            ));
-        }
-        row_values.push(values);
-    }
+    let (column_names, row_values) = connection
+        .query_raw(format!("SELECT * FROM {}", qualified_table))
+        .await?;
 
     Ok(build_snapshot(column_names, pk_columns, row_values))
 }
 
-fn duckdb_primary_key_columns(
-    conn: &duckdb::Connection,
+async fn duckdb_primary_key_columns(
+    connection: &Arc<dyn crate::database::duckdb_backend::DuckDbConn>,
     qualified_table: &str,
 ) -> Result<Vec<String>, Error> {
     let pragma_query = format!(
@@ -857,14 +825,24 @@ fn duckdb_primary_key_columns(
         qualified_table.replace('\'', "''")
     );
 
-    let mut pragma_statement = conn.prepare(&pragma_query)?;
-    let mut pragma_rows = pragma_statement.query([])?;
+    let (_columns, rows) = connection.query_raw(pragma_query).await?;
     let mut primary_keys = Vec::new();
 
-    while let Some(row) = pragma_rows.next()? {
-        let name: String = row.get(1)?;
-        let is_pk: bool = row.get(5)?;
-        if is_pk {
+    // PRAGMA table_info columns: cid, name, type, notnull, dflt_value, pk.
+    for row in rows {
+        let name = row
+            .get(1)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        let is_pk = row
+            .get(5)
+            .map(|value| {
+                value
+                    .as_bool()
+                    .unwrap_or_else(|| value.as_i64().map(|n| n != 0).unwrap_or(false))
+            })
+            .unwrap_or(false);
+        if let (Some(name), true) = (name, is_pk) {
             primary_keys.push(name);
         }
     }

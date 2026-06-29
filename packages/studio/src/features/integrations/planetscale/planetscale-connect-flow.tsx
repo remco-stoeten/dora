@@ -34,7 +34,8 @@ import {
 } from './planetscale-api'
 import { usePlanetscaleDatabases } from './use-planetscale-databases'
 import { useIsTauri } from '@studio/core/data-provider'
-import { DesktopOnlyNotice } from '@studio/core/platform'
+import { MockProviderConnectFlow } from '../_shared/mock-connect-flow'
+import { PLANETSCALE_MOCK } from '../_shared/mock-provider-data'
 
 type Props = {
 	onComplete: (connection: Omit<Connection, 'id' | 'createdAt'>) => void
@@ -63,12 +64,7 @@ export function PlanetscaleConnectFlow({ onComplete }: Props) {
 	const isTauri = useIsTauri()
 
 	if (!isTauri) {
-		return (
-			<DesktopOnlyNotice
-				title='PlanetScale lives in the desktop app'
-				description='Encrypted token storage, database discovery, and password minting need the native app. Download Dora to connect your PlanetScale databases.'
-			/>
-		)
+		return <MockProviderConnectFlow config={PLANETSCALE_MOCK} onComplete={onComplete} />
 	}
 
 	return <PlanetscaleConnectFlowInner onComplete={onComplete} />
@@ -294,7 +290,9 @@ function PlanetscaleConnectFlowInner({ onComplete }: Props) {
 							{accountLabel ? (
 								<span>
 									Connected as{' '}
-									<span className='font-medium text-foreground'>{accountLabel}</span>
+									<span className='font-medium text-foreground'>
+										{accountLabel}
+									</span>
 								</span>
 							) : (
 								<span>Connected</span>
@@ -302,8 +300,8 @@ function PlanetscaleConnectFlowInner({ onComplete }: Props) {
 						</p>
 					) : (
 						<p className='mt-1 text-xs text-muted-foreground/75'>
-							Add a service token to pick a database — Dora mints the MySQL
-							password for you.
+							Add a service token to pick a database — Dora mints the MySQL password
+							for you.
 						</p>
 					)}
 				</div>
@@ -330,7 +328,10 @@ function PlanetscaleConnectFlowInner({ onComplete }: Props) {
 			{!isConnected ? (
 				<div className='space-y-2'>
 					<div className='flex flex-wrap items-center justify-between gap-2'>
-						<Label htmlFor='planetscale-token' className='text-xs text-muted-foreground'>
+						<Label
+							htmlFor='planetscale-token'
+							className='text-xs text-muted-foreground'
+						>
 							Service token
 						</Label>
 						<div className='flex flex-wrap items-center justify-end gap-x-2 gap-y-1'>
@@ -515,7 +516,11 @@ function PlanetscaleConnectFlowInner({ onComplete }: Props) {
 							className='h-9 shrink-0 gap-1.5 border-border/70 px-3'
 							title='Re-fetch databases from PlanetScale'
 						>
-							<RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
+							{isLoading ? (
+								<Spinner className='h-3.5 w-3.5' />
+							) : (
+								<RefreshCw className='h-3.5 w-3.5' />
+							)}
 							Refresh
 						</Button>
 					</div>

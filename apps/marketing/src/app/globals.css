@@ -223,6 +223,7 @@
   --color-fd-accent-foreground: #f5c0c0;
   --color-fd-ring: rgba(245, 192, 192, 0.48);
   --fd-sidebar-width: 286px;
+  --fd-layout-width: 1600px;
   min-height: 100vh;
   background:
     radial-gradient(
@@ -309,9 +310,10 @@
 }
 
 .dora-docs #nd-page {
-  max-width: 860px;
+  max-width: 1140px;
   padding-top: clamp(2.25rem, 5vw, 4.5rem);
   padding-bottom: 5rem;
+  padding-inline: clamp(1.25rem, 3.5vw, 3.5rem);
 }
 
 .dora-docs #nd-page > nav:first-child {
@@ -887,6 +889,13 @@
 .marketing-container {
   width: min(100% - 32px, 1100px);
   margin-inline: auto;
+}
+
+.marketing-container:has(.dora-docs) {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding-inline: 0;
 }
 
 @keyframes dockerBootSpin {

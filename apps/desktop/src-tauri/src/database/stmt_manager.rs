@@ -287,11 +287,10 @@ impl StatementManager {
                 self.execution_handles.insert(id, handle);
             }
             DatabaseClient::DuckDB { connection, .. } => {
-                let handle = spawn_blocking(move || {
-                    let conn = connection.lock().expect("Mutex poisoned");
+                let handle = spawn(async move {
                     log_query_exec_outcome(
                         "DuckDB",
-                        crate::database::duckdb::execute::execute_query(&conn, stmt, &sender),
+                        connection.execute_query(stmt, &sender).await,
                     );
                 });
                 self.execution_handles.insert(id, handle);

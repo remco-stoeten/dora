@@ -1,0 +1,33 @@
+---
+title: Export
+description: Export tables and query results to CSV, JSON, or SQL — with control over whether filters apply.
+---
+
+# Export
+
+Dora exports both table data and query results to three formats:
+
+- **CSV** — quoted, header row, RFC 4180-style escaping.
+- **JSON** — an array of row objects, pretty-printed, with `null` for nulls.
+- **SQL** — `INSERT INTO …` statements, one per row, quoted for the target
+  engine.
+
+## From the Data Studio
+
+Press `Mod+E` or use the toolbar **Export** action. If you have
+[filters](/docs/guides/data-studio#filter) active, Dora asks whether to export
+**matching rows** (respecting the filter and sort) or **all rows**. You can also
+export a single row to JSON or SQL from its context menu.
+
+## From the SQL Console
+
+Run a query and use the **export** action in the results toolbar to save the
+current result set in any of the three formats.
+
+## Where files go
+
+On the desktop app, Dora opens a save dialog so you choose the location. In the
+browser demo, the file downloads with a generated name such as
+`users_export.csv`.
+
+<Callout type='info'>Need a full schema instead of data? The [Schema Visualizer](/docs/guides/schema-visualizer#export-the-diagram) exports `CREATE TABLE` DDL and Drizzle code, and the [Docker Manager](/docs/guides/docker-manager) can export a container as a `docker-compose.yml`.</Callout>

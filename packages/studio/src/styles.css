@@ -1,5 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap')
-layer(base);
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -970,6 +974,48 @@ layer(base);
 			transparent 65%
 		);
 		animation: desktopOnlyNoticeShimmer 3.2s ease-in-out infinite;
+	}
+
+	/*
+	 * A single sheen that sweeps once across a skeleton group, then rests, for an
+	 * intermittent decorative cadence (not a constant loading pulse). Only the
+	 * overlay's transform animates, so it stays on the GPU.
+	 */
+	@keyframes cockpitSkeletonSheen {
+		0% {
+			transform: translateX(-130%);
+		}
+		42%,
+		100% {
+			transform: translateX(130%);
+		}
+	}
+
+	.cockpit-skeleton {
+		position: relative;
+		overflow: hidden;
+	}
+
+	.cockpit-skeleton::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: linear-gradient(
+			100deg,
+			transparent 30%,
+			color-mix(in srgb, hsl(var(--foreground)) 9%, transparent) 50%,
+			transparent 70%
+		);
+		transform: translateX(-130%);
+		animation: cockpitSkeletonSheen 3.6s var(--ease-out) infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cockpit-skeleton::after {
+			animation: none;
+			opacity: 0;
+		}
 	}
 }
 

@@ -25,3 +25,10 @@ dora-runner
 recordings
 .tauri-logs
 .vercel/output
+
+# Docs media (videos/images, tens of MB) — not consumed by the Fumadocs build,
+# which only globs .mdx/.md/meta.json. Keeps the CLI upload small.
+docs/assets
+
+# Desktop-only demo media — the Vercel build only touches apps/marketing.
+apps/desktop/docker.mp4

@@ -3,6 +3,8 @@ pub mod blob_display;
 pub mod connection_repository;
 pub mod d1;
 pub mod duckdb;
+pub mod duckdb_backend;
+pub mod duckdb_ipc;
 pub mod libsql;
 pub mod mysql;
 pub mod postgres;

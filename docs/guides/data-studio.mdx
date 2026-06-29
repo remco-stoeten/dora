@@ -1,0 +1,54 @@
+---
+title: Data Studio
+description: Browse, filter, sort, edit, import, and export table data in Dora's spreadsheet-style grid.
+---
+
+# Data Studio
+
+The Data Studio is Dora's table browser. Click a table in the sidebar to open it
+in a fast, virtualized grid that handles large tables without freezing.
+
+## Browse, sort, and paginate
+
+- **Sort** by clicking a column header; click again to reverse, once more to
+  clear.
+- **Paginate** from the status bar at the bottom — it shows the current row
+  range (e.g. `1–50 of 1,240`) with a page size you can change.
+- **Refresh** the current table with `Mod+R`.
+- **Follow foreign keys** by clicking the badge on a foreign-key cell to jump
+  straight to the referenced row.
+
+Cells are type-aware: numbers, booleans, `NULL`, and JSON render distinctly, and
+binary columns show a `BLOB` badge with view/copy/export actions.
+
+## Filter
+
+Press `Mod+F` to open the filter bar. Build one or more conditions from a
+column, an operator (`=`, `≠`, `>`, `<`, contains, and others), and a value, and
+combine them with AND/OR. Filters apply to what you see, and to what you
+[export](/docs/guides/export).
+
+## Edit data
+
+- **Edit a cell** by clicking it and typing; the change commits when you press
+  Enter or click away. Pending edits are highlighted until saved.
+- **Add a row** with `Mod+Shift+I`, fill the draft row, and save.
+- **Delete** selected rows with `Backspace` / `Delete`.
+- **Bulk edit** multiple selected rows at once from the row context menu.
+
+There are also dialogs to **add or drop a column** and **drop a table**, reached
+from the table header or context menu.
+
+<Callout type='warn'>Edits, deletes, and dropping columns or tables run real SQL against the connected database. There is no undo — take a backup before destructive changes.</Callout>
+
+## Import and export
+
+- **Import CSV** from the toolbar: pick a file and map its columns to the table.
+- **Export** with `Mod+E` (or the toolbar) to CSV, JSON, or SQL `INSERT`
+  statements. See the [Export guide](/docs/guides/export) for scope options.
+
+## Watch a table change live
+
+Open the live monitor with `Mod+Shift+M` to see inserts, updates, and deletes
+made by other clients in near-real time. See
+[Live change monitoring](/docs/guides/live-monitoring).

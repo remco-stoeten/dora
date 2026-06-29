@@ -1,0 +1,28 @@
+---
+title: Connect Railway
+description: Connect Dora to a Postgres or MySQL database hosted on Railway.
+---
+
+# Connect Railway
+
+Railway hosts both PostgreSQL and MySQL. Dora detects which engine you are using
+from the connection string's scheme and port.
+
+## With a connection string
+
+1. In your Railway project, open the database service and go to the
+   **Variables** (or **Connect**) tab.
+2. Copy the **`DATABASE_URL`**. Use the **public** URL (a `*.proxy.rlwy.net` or
+   `*.railway.app` host) when connecting from your machine:
+
+   ```text
+   postgresql://postgres:<password>@<host>.proxy.rlwy.net:<port>/railway
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='warn'>The internal `*.railway.internal` host only resolves inside Railway's private network. From your laptop you must use the public proxy URL.</Callout>
+
+Dora treats `5432` as PostgreSQL and `3306` as MySQL, and enables SSL for the
+public host. See [connection basics](/docs/connect).

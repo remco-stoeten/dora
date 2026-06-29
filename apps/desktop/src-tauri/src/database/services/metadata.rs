@@ -57,7 +57,7 @@ impl<'a> MetadataService<'a> {
             Database::DuckDB {
                 connection: Some(conn),
                 ..
-            } => crate::database::duckdb::schema::get_database_schema(Arc::clone(conn)).await?,
+            } => conn.get_schema().await?,
             Database::DuckDB {
                 connection: None, ..
             } => return Err(Error::Any(anyhow!("DuckDB connection not active"))),
@@ -140,10 +140,7 @@ impl<'a> MetadataService<'a> {
             } => {
                 // File-stat based metadata works for any file-backed database
                 let mut meta = metadata::get_sqlite_metadata(db_path)?;
-                let conn_guard = conn
-                    .lock()
-                    .map_err(|_| Error::Internal("Mutex poisoned".into()))?;
-                let (table_count, row_count) = metadata::get_duckdb_counts(&conn_guard)?;
+                let (table_count, row_count) = conn.get_counts().await?;
                 meta.table_count = table_count;
                 meta.row_count_total = row_count;
                 Ok(meta)

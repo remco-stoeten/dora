@@ -1412,6 +1412,22 @@ async getKeyringInstallPlan() : Promise<KeyringInstallPlan | null> {
 },
 async installCredentialKeyring() : Promise<KeyringInstallResult> {
     return await TAURI_INVOKE("install_credential_keyring");
+},
+async getBuildCacheStats() : Promise<Result<BuildCacheStats, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_build_cache_stats") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async cleanBuildCache(request: BuildCacheCleanRequest) : Promise<Result<BuildCacheCleanResult, { kind: string; detail: string }>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clean_build_cache", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -1436,6 +1452,10 @@ export type AiStreamEvent = { type: "token"; text: string } | { type: "final"; c
 export type AiUsageEntry = { id: number; provider: string; model: string; source: string; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null; estimated_cost_usd: number | null; estimated: boolean; created_at: number }
 export type AiUsageProviderSummary = { provider: string; request_count: number; input_tokens: number; output_tokens: number; total_tokens: number; estimated_cost_usd: number }
 export type AiUsageSummary = { total_requests: number; input_tokens: number; output_tokens: number; total_tokens: number; estimated_cost_usd: number; providers: AiUsageProviderSummary[]; recent: AiUsageEntry[] }
+export type BuildCacheCleanRequest = { entries: string[] }
+export type BuildCacheCleanResult = { removed_bytes: number; removed_entries: string[]; stats: BuildCacheStats }
+export type BuildCacheEntry = { name: string; path: string; bytes: number; removable: boolean }
+export type BuildCacheStats = { target_path: string; exists: boolean; total_bytes: number; entries: BuildCacheEntry[] }
 /**
  * A Cloudflare account the token can see — used for the "Connected as …" label
  * and as the first pick step (D1 databases are account-scoped).
@@ -1458,7 +1478,14 @@ is_auto_increment?: boolean;
 /**
  * Foreign key relationship, if any
  */
-foreign_key?: ForeignKeyInfo | null }
+foreign_key?: ForeignKeyInfo | null; 
+/**
+ * Closed set of values the database constrains this column to: a Postgres
+ * `enum` type's labels, or the literals in a `CHECK (col IN (...))`
+ * constraint. `None` when the column is unconstrained. The studio uses
+ * this to render a dropdown instead of a free-text cell editor.
+ */
+allowed_values?: string[] | null }
 export type ConnectionHistoryEntry = { id: number; connection_id: string; connection_name: string; database_type: string; attempted_at: number; success: boolean; error_message: string | null; duration_ms: number | null }
 export type ConnectionInfo = { id: string; name: string; connected: boolean; database_type: DatabaseInfo; last_connected_at: number | null; created_at: number | null; updated_at: number | null; pin_hash: string | null; favorite: boolean | null; color: string | null; sort_order: number | null }
 export type CredentialStorageBackend = "os_keyring" | "local_encrypted_file"

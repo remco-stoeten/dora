@@ -1,0 +1,69 @@
+---
+title: Connection basics
+description: How Dora connects to a database — connection strings, automatic engine and SSL detection, account integrations, and SSH tunnels.
+---
+
+# Connection basics
+
+Dora connects to any **PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, DuckDB,
+or libSQL** database. Almost every hosted provider gives you a standard
+connection string, and Dora handles the rest.
+
+## Paste a connection string
+
+Open the connection dialog (`Mod+Shift+N`), toggle **Use connection string**, and
+paste a URL. Dora reads the scheme and host to figure out the rest:
+
+| Scheme | Engine |
+| --- | --- |
+| `postgresql://` / `postgres://` | PostgreSQL (or CockroachDB / Yugabyte by host) |
+| `mysql://` | MySQL or MariaDB |
+| `libsql://` | libSQL (Turso) |
+| `sqlite://` | SQLite |
+| `duckdb://` | DuckDB |
+
+## Automatic engine and SSL detection
+
+Dora recognizes the major managed hosts by their hostname and applies the right
+settings for you:
+
+- **Engine** — for example a `*.planetscale.com` host is treated as MySQL, while
+  `*.cockroachlabs.cloud` is treated as CockroachDB.
+- **SSL** — managed providers that require TLS (Supabase, Neon, Vercel Postgres,
+  Render, PlanetScale, and others) have SSL enabled automatically. An explicit
+  `?sslmode=...` or `?ssl=...` in your URL always wins.
+- **Port hints** — for hosts that serve more than one engine, the port helps:
+  `26257` → CockroachDB, `3306` → MySQL, `5432` → PostgreSQL.
+
+If you mistype a scheme (`postgrss://`), Dora suggests the closest valid one
+instead of failing silently.
+
+<Callout type='info'>You can always override detection. The SSL toggle and engine selector in the dialog take precedence over what Dora guesses.</Callout>
+
+## Connect from a provider account
+
+For some providers you can skip copying strings entirely. Dora has account
+integrations for **Supabase, Neon, Vercel, PlanetScale, Xata, Cloudflare D1, and
+Turso**: sign in once, and Dora lists your projects/databases and builds the
+connection for you. Look for the **Connect with…** option in the connection
+dialog. The provider-specific pages note where this is available.
+
+## SSH tunnels
+
+To reach a Postgres or MySQL database on a private network, enable **SSH tunnel**
+in the connection dialog and provide:
+
+- SSH host, port (default `22`), and username,
+- an authentication method — **private key file** or **password** (Dora also
+  falls back to your SSH agent if neither is given).
+
+Dora opens the tunnel before connecting and tears it down on disconnect. Your
+database host and port stay as they are on the private network — Dora forwards
+them locally for you.
+
+## Pooled vs direct connections
+
+Several Postgres hosts (Supabase, Neon, and others) offer a **connection pooler**
+on a different port or hostname. Poolers are great for short-lived queries; use a
+**direct** connection if you need features the pooler does not support (such as
+some session-level settings). Each provider page calls out which string to use.

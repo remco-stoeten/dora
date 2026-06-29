@@ -1,4 +1,22 @@
+import type * as Monaco from 'monaco-editor'
 import type { FontPair } from './appearance-store'
+
+/**
+ * Re-measure Monaco glyph widths once web fonts have finished loading.
+ *
+ * Monaco measures character advance widths when an editor is created. If the
+ * configured web font (e.g. JetBrains Mono) is still loading at that moment it
+ * measures the fallback font and never corrects itself, leaving glyphs visibly
+ * mis-spaced. Calling this after `document.fonts.ready` fixes the spacing.
+ */
+export function remeasureMonacoFonts(monaco: typeof Monaco): void {
+	if (typeof document === 'undefined' || !document.fonts) {
+		return
+	}
+	document.fonts.ready.then(function () {
+		monaco.editor.remeasureFonts()
+	})
+}
 
 type FontConfig = {
 	sans: string

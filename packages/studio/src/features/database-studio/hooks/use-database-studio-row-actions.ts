@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { createDefaultValues } from '../utils/studio-data'
+import { appendRows, createDefaultValues, removeRowsByPrimaryKey } from '../utils/studio-data'
 import type { TableData } from '../types'
 
 type EditingRowState = {
@@ -17,6 +17,8 @@ type Args = {
 	deleteRows: { mutate: Function }
 	insertRow: { mutateAsync: Function }
 	onLoadTableData: () => void
+	trackRowDeletion: (connectionId: string, tableName: string, rows: Record<string, unknown>[]) => string | null
+	setTableData: React.Dispatch<React.SetStateAction<TableData | null>>
 	setSelectedRows: React.Dispatch<React.SetStateAction<Set<number>>>
 	setShowDeleteConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>
 	setPendingSingleDeleteRow: React.Dispatch<
@@ -26,7 +28,6 @@ type Args = {
 			primaryKeyValue: unknown
 		} | null>
 	>
-	setIsBulkActionLoading: React.Dispatch<React.SetStateAction<boolean>>
 	setDraftRow: React.Dispatch<React.SetStateAction<Record<string, unknown> | null>>
 	setDraftInsertIndex: React.Dispatch<React.SetStateAction<number | null>>
 	setEditingRowState: React.Dispatch<React.SetStateAction<EditingRowState>>
@@ -49,10 +50,11 @@ export function useDatabaseStudioRowActions(args: Args) {
 		deleteRows,
 		insertRow,
 		onLoadTableData,
+		trackRowDeletion,
+		setTableData,
 		setSelectedRows,
 		setShowDeleteConfirmDialog,
 		setPendingSingleDeleteRow,
-		setIsBulkActionLoading,
 		setDraftRow,
 		setDraftInsertIndex,
 		setEditingRowState,
@@ -70,9 +72,16 @@ export function useDatabaseStudioRowActions(args: Args) {
 			const primaryKeyColumn = tableData?.columns.find((c) => c.primaryKey)
 			if (!primaryKeyColumn || !activeConnectionId || !tableId || !tableData) return
 
-			const primaryKeyValues = rowIndexes.map(function (targetRowIndex) {
-				return tableData.rows[targetRowIndex][primaryKeyColumn.name]
+			const deletedRows = rowIndexes.map(function (targetRowIndex) {
+				return tableData.rows[targetRowIndex]
 			})
+			const primaryKeyValues = deletedRows.map(function (row) {
+				return row[primaryKeyColumn.name]
+			})
+
+			const snapshot = tableData
+			setTableData(removeRowsByPrimaryKey(tableData, primaryKeyColumn.name, primaryKeyValues))
+			setSelectedRows(new Set())
 
 			deleteRows.mutate(
 				{
@@ -83,18 +92,17 @@ export function useDatabaseStudioRowActions(args: Args) {
 				},
 				{
 					onSuccess: function onDeleteSuccess() {
-						setSelectedRows(new Set())
+						trackRowDeletion(activeConnectionId, tableRefName ?? '', deletedRows)
 						onLoadTableData()
-						setShowDeleteConfirmDialog(false)
-						setPendingSingleDeleteRow(null)
 					},
 					onError: function onDeleteError(error: unknown) {
+						setTableData(snapshot)
 						notifyActionFailure('Failed to delete rows', error)
 					}
 				}
 			)
 		},
-		[activeConnectionId, deleteRows, notifyActionFailure, onLoadTableData, setPendingSingleDeleteRow, setSelectedRows, setShowDeleteConfirmDialog, tableData, tableId, tableRefName]
+		[activeConnectionId, deleteRows, notifyActionFailure, onLoadTableData, setPendingSingleDeleteRow, setSelectedRows, setShowDeleteConfirmDialog, setTableData, tableData, tableId, tableRefName, trackRowDeletion]
 	)
 
 	const duplicateRowIndexes = useCallback(
@@ -109,8 +117,15 @@ export function useDatabaseStudioRowActions(args: Args) {
 				}
 				return row
 			})
+			if (rowsToDuplicate.length === 0) return
 
-			setIsBulkActionLoading(true)
+			// Optimistically show the copies right away (mirrors the delete path);
+			// the reload after the inserts resolve swaps in the authoritative rows
+			// with their server-generated primary keys. Roll back on failure.
+			const snapshot = tableData
+			setTableData(appendRows(tableData, rowsToDuplicate))
+			setSelectedRows(new Set())
+
 			Promise.all(
 				rowsToDuplicate.map(function (rowData) {
 					return insertRow.mutateAsync({
@@ -121,17 +136,14 @@ export function useDatabaseStudioRowActions(args: Args) {
 				})
 			)
 				.then(function () {
-					setSelectedRows(new Set())
 					onLoadTableData()
 				})
 				.catch(function (error) {
+					setTableData(snapshot)
 					notifyActionFailure('Failed to duplicate rows', error)
 				})
-				.finally(function () {
-					setIsBulkActionLoading(false)
-				})
 		},
-		[activeConnectionId, insertRow, notifyActionFailure, onLoadTableData, setIsBulkActionLoading, setSelectedRows, tableData, tableId, tableRefName]
+		[activeConnectionId, insertRow, notifyActionFailure, onLoadTableData, setSelectedRows, setTableData, tableData, tableId, tableRefName]
 	)
 
 	async function handleRowAction(

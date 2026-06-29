@@ -1,0 +1,26 @@
+---
+title: Connect Timescale
+description: Connect Dora to a Timescale Cloud (TimescaleDB / PostgreSQL) service.
+---
+
+# Connect Timescale
+
+Timescale Cloud is PostgreSQL with the TimescaleDB extension. Because it speaks
+the Postgres wire protocol, Dora connects to it like any other Postgres host and
+enables SSL, which Timescale requires.
+
+## With a connection string
+
+1. In the Timescale console open your service and find the **Connection info**
+   panel.
+2. Copy the **Service URL**:
+
+   ```text
+   postgres://tsdbadmin:<password>@<host>.tsdb.cloud.timescale.com:<port>/tsdb?sslmode=require
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+Hypertables, continuous aggregates, and other TimescaleDB objects appear as
+normal tables and views in Dora. SSL is required and is preserved from the URL.

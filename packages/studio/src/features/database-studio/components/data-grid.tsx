@@ -144,8 +144,8 @@ export function DataGrid({
 		setEditValue,
 		editInputRef,
 		handleCellDoubleClick,
-		startTypeEdit,
 		handleSaveEdit,
+		handleSelectCommit,
 		handleEditBlur,
 		handleEditKeyDown
 	} = useCellEditing({
@@ -282,7 +282,6 @@ export function DataGrid({
 		setAnchorCell,
 		setFocusedCell,
 		startCellEdit: handleCellDoubleClick,
-		startTypeEdit,
 		updateCellSelection
 	})
 
@@ -373,6 +372,7 @@ export function DataGrid({
 						handleRowClick={handleRowClick}
 						handleRowContextMenuChange={handleRowContextMenuChange}
 						handleEditBlur={handleEditBlur}
+						handleSelectCommit={handleSelectCommit}
 						onBatchCellEdit={onBatchCellEdit}
 						onCellEdit={onCellEdit}
 						onDraftCancel={onDraftCancel}

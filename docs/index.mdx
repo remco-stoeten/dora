@@ -1,46 +1,70 @@
 ---
 title: Dora docs
-description: Connection guides and setup docs for Dora.
+description: Connect to any database, browse and edit data, write SQL or ORM queries, and visualize your schema — all from one desktop client.
 ---
 
 # Dora docs
 
-Dora connects to local files, hosted databases, and team infrastructure from one desktop SQL client. These docs cover setup, provider connection guides, and lower-level developer references.
+Dora is a native desktop SQL client. It connects to local files, hosted
+databases, and team infrastructure, then gives you a fast table browser, a SQL
+console with autocomplete, type-safe ORM runners, a schema diagram, and an AI
+assistant — in one window.
 
-## Developer docs
+New here? Start with the [getting started walkthrough](/docs/getting-started),
+then [install Dora](/docs/installation) for your platform.
 
-- [Dora manager executor](/docs/go-cli-runner)
-  Go-based CLI and TUI executor for VM workflows, CI dispatch, and local automation.
+## Connect a database
 
-## Connection guides
+Dora connects to any PostgreSQL, MySQL, MariaDB, CockroachDB, SQLite, DuckDB, or
+libSQL host. Paste a connection string and Dora detects the engine and SSL mode
+automatically — see [connection basics](/docs/connect).
 
-- [Connect Supabase](/docs/connect/supabase)
-- [Connect Neon](/docs/connect/neon)
-- [Connect Turso](/docs/connect/turso)
-- [Connect Railway](/docs/connect/railway)
-- [Connect Render](/docs/connect/render)
-- [Connect Vercel Postgres](/docs/connect/vercel-postgres)
-- [Connect Fly.io](/docs/connect/fly)
-- [Connect Aiven](/docs/connect/aiven)
-- [Connect DigitalOcean](/docs/connect/digitalocean)
-- [Connect Crunchy Bridge](/docs/connect/crunchy-bridge)
-- [Connect Timescale](/docs/connect/timescale)
-- [Connect AWS RDS](/docs/connect/aws-rds)
-- [Connect Azure Database](/docs/connect/azure)
-- [Connect Google Cloud SQL](/docs/connect/google-cloud-sql)
-- [Connect CockroachDB Cloud](/docs/connect/cockroachdb)
-- [Connect TiDB Cloud](/docs/connect/tidb)
-- [Connect PlanetScale](/docs/connect/planetscale)
-- [Connect Yugabyte](/docs/connect/yugabyte)
+Provider-specific guides:
 
-Dora connects to any PostgreSQL, MySQL, or libSQL host the same way. Railway, Render, Vercel Postgres, Fly.io, Aiven, DigitalOcean, Crunchy Bridge, Timescale, AWS RDS, Azure, Google Cloud SQL, CockroachDB Cloud, TiDB Cloud, PlanetScale, and self-hosted databases all work with a standard connection string, recognized automatically with the right engine and SSL.
+- [Supabase](/docs/connect/supabase)
+- [Neon](/docs/connect/neon)
+- [Vercel Postgres](/docs/connect/vercel-postgres)
+- [Railway](/docs/connect/railway)
+- [Render](/docs/connect/render)
+- [Fly.io](/docs/connect/fly)
+- [Aiven](/docs/connect/aiven)
+- [DigitalOcean](/docs/connect/digitalocean)
+- [Crunchy Bridge](/docs/connect/crunchy-bridge)
+- [Timescale](/docs/connect/timescale)
+- [AWS RDS](/docs/connect/aws-rds)
+- [Azure Database](/docs/connect/azure)
+- [Google Cloud SQL](/docs/connect/google-cloud-sql)
+- [YugabyteDB](/docs/connect/yugabyte)
+- [CockroachDB Cloud](/docs/connect/cockroachdb)
+- [TiDB Cloud](/docs/connect/tidb)
+- [PlanetScale](/docs/connect/planetscale)
+- [Turso](/docs/connect/turso)
 
-## Product reference
+## Guides
 
-- [Installation](/docs/installation)
-- [ORM Cockpit](/docs/guides/orm-cockpit)
-- [ORM Runners (Drizzle & Prisma)](/docs/guides/orm-runners)
-- [API reference](/docs/api)
-- [Shared types](/docs/types)
-- [Backend feature integration](/docs/guides/new-features)
-- [Mock data guide](/docs/guides/mock-data)
+Working with data:
+
+- [Data Studio](/docs/guides/data-studio) — browse, filter, edit, and import rows
+- [SQL Console](/docs/guides/sql-console) — run queries, autocomplete, history
+- [Schema Visualizer](/docs/guides/schema-visualizer) — an ERD of your database
+- [Charts](/docs/guides/charts) — visualize query results
+- [Export](/docs/guides/export) — CSV, JSON, and SQL
+- [Live change monitoring](/docs/guides/live-monitoring) — watch a table update
+
+ORMs:
+
+- [ORM Cockpit](/docs/guides/orm-cockpit) — schema drift and migration preview
+- [ORM Runners](/docs/guides/orm-runners) — run Drizzle and Prisma queries
+
+Productivity:
+
+- [Command Palette & shortcuts](/docs/guides/command-palette)
+- [AI Assistant](/docs/guides/ai-assistant) — SQL help with Groq, OpenAI, Anthropic, Gemini, or Ollama
+- [Docker Manager](/docs/guides/docker-manager) — run local database containers
+
+## Reference
+
+- [API reference](/docs/api) — Tauri commands and events
+- [Shared types](/docs/types) — TypeScript interfaces for backend data
+- [Dora runner](/docs/go-cli-runner) — the Go CLI/TUI for builds, releases, and CI
+- [Credentials & security](/docs/guides/security) — how Dora stores secrets

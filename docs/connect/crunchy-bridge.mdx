@@ -1,0 +1,25 @@
+---
+title: Connect Crunchy Bridge
+description: Connect Dora to a Crunchy Bridge managed PostgreSQL cluster.
+---
+
+# Connect Crunchy Bridge
+
+Crunchy Bridge is managed PostgreSQL. Dora connects with a standard connection
+string and enables SSL automatically for `*.postgresbridge.com` hosts.
+
+## With a connection string
+
+1. In the Crunchy Bridge dashboard open your cluster and find the **Connection**
+   section.
+2. Copy the **Connection URL** (the `postgres://` superuser or application URL):
+
+   ```text
+   postgres://application:<password>@<host>.postgresbridge.com:5432/postgres
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+SSL is required and is set automatically. If you connect over a private network
+or a TLS-terminating proxy, adjust the SSL toggle in the dialog as needed.

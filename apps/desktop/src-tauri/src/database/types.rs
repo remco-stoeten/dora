@@ -212,7 +212,7 @@ pub enum DatabaseClient {
         connection: Arc<Mutex<rusqlite::Connection>>,
     },
     DuckDB {
-        connection: Arc<Mutex<duckdb::Connection>>,
+        connection: Arc<dyn crate::database::duckdb_backend::DuckDbConn>,
         /// True for file-source connections (CSV/Parquet/JSON views), which
         /// must refuse mutations.
         read_only: bool,
@@ -263,7 +263,7 @@ pub enum Database {
         db_path: String,
         file_sources: Vec<String>,
         file_source_entries: Vec<DataFileSourceEntry>,
-        connection: Option<Arc<Mutex<duckdb::Connection>>>,
+        connection: Option<Arc<dyn crate::database::duckdb_backend::DuckDbConn>>,
     },
     LibSQL {
         url: String,
@@ -660,6 +660,12 @@ pub struct ColumnInfo {
     /// Foreign key relationship, if any
     #[serde(default)]
     pub foreign_key: Option<ForeignKeyInfo>,
+    /// Closed set of values the database constrains this column to: a Postgres
+    /// `enum` type's labels, or the literals in a `CHECK (col IN (...))`
+    /// constraint. `None` when the column is unconstrained. The studio uses
+    /// this to render a dropdown instead of a free-text cell editor.
+    #[serde(default)]
+    pub allowed_values: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

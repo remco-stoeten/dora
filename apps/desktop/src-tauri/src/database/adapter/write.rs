@@ -118,7 +118,7 @@ pub fn write_adapter_from_client(
     client: &crate::database::types::DatabaseClient,
 ) -> BoxedWriteAdapter {
     use super::read::{
-        D1Adapter, DuckDbAdapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter,
+        D1Adapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter,
     };
 
     match client {
@@ -133,13 +133,11 @@ pub fn write_adapter_from_client(
         crate::database::types::DatabaseClient::SQLite { connection } => {
             Box::new(SqliteAdapter::new(connection.clone()))
         }
-        crate::database::types::DatabaseClient::DuckDB {
-            connection,
-            read_only,
-        } => Box::new(DuckDbAdapter::new_with_read_only(
-            connection.clone(),
-            *read_only,
-        )),
+        crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
+            Box::new(crate::database::adapter::DuckDbConnAdapter::new(
+                connection.clone(),
+            ))
+        }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))
         }

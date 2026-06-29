@@ -5,18 +5,28 @@ description = ""
 authors = ["Remco Stoeten"]
 license = "GPLv3"
 edition = "2021"
+default-run = "dora"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+duckdb-engine = ["dep:duckdb"]
+
 [lib]
 name = "app_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["lib"]
+
+[[bin]]
+name = "duckdb_helper"
+path = "src/bin/duckdb_helper.rs"
+required-features = ["duckdb-engine"]
 
 [build-dependencies]
 tauri-build = { version = "2.3.1", features = [] }
 
 [dependencies]
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["raw_value"] }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tracing = "0.1"
@@ -38,7 +48,14 @@ tokio-postgres = { version = "0.7", features = [
 	"with-serde_json-1",
 	"with-uuid-1"
 ] }
-tokio = { version = "1.0" }
+tokio = { version = "1.0", features = [
+	"rt-multi-thread",
+	"macros",
+	"process",
+	"io-util",
+	"io-std",
+	"sync",
+] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 dashmap = "6.0"
 anyhow = "1.0.98"
@@ -85,14 +102,14 @@ libsql = { version = "0.9", default-features = false, features = [
 	"replication",
 	"tls"
 ] }
-ssh2 = "0.9"
+russh = "0.61"
 mysql_async = "0.36"
-duckdb = { version = "1", features = ["bundled"] }
+duckdb = { version = "1", features = ["bundled"], optional = true }
 sqlparser = { version = "0.52", features = ["serde"] }
 fake = { version = "3", features = ["derive"] }
 rand = "0.9"
 bcrypt = "0.15"
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "http2", "charset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-shell = "2.3.4"
 tauri-plugin-updater = "2"
@@ -103,8 +120,9 @@ dotenvy = "0.15"
 toml = "0.8"
 zstd = "0.13"
 tar = "0.4"
-zip = "0.6"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 flate2 = "1.1"
+mimalloc = { version = "0.1", default-features = false }
 
 [profile.release]
 panic = "abort"

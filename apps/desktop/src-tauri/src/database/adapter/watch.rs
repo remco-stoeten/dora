@@ -13,9 +13,9 @@ use base64::Engine;
 use mysql_async::{prelude::Queryable, Row as MySqlRow, Value as MySqlValue};
 use rusqlite::types::ValueRef;
 
-use super::read::{
-    D1Adapter, DuckDbAdapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter,
-};
+#[cfg(feature = "duckdb-engine")]
+use super::read::DuckDbAdapter;
+use super::read::{D1Adapter, LibSqlAdapter, MySqlAdapter, PostgresAdapter, SqliteAdapter};
 use crate::{database::postgres::row_writer::RowWriter as PostgresRowWriter, Error};
 
 #[async_trait]
@@ -93,6 +93,7 @@ impl WatchAdapter for D1Adapter {
     }
 }
 
+#[cfg(feature = "duckdb-engine")]
 #[async_trait]
 impl WatchAdapter for DuckDbAdapter {
     async fn poll_table_hash(&self, table: &str, schema: Option<&str>) -> Result<u64, Error> {
@@ -202,7 +203,9 @@ pub fn watch_adapter_from_client(
             Box::new(SqliteAdapter::new(connection.clone()))
         }
         crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
-            Box::new(DuckDbAdapter::new(connection.clone()))
+            Box::new(crate::database::adapter::DuckDbConnAdapter::new(
+                connection.clone(),
+            ))
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))

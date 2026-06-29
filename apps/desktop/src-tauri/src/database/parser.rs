@@ -2,7 +2,7 @@ use sqlparser::{
     ast::Statement, dialect::Dialect, keywords::Keyword, parser::Parser, tokenizer::Token,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedStatement {
     pub statement: String,
     pub returns_values: bool,

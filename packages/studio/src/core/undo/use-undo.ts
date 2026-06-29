@@ -1,15 +1,25 @@
 import { useCallback, useEffect } from 'react'
 import { toast } from '@studio/shared/ui/notifier'
 import { useDataMutation } from '@studio/core/data-provider'
-import { useUndoStore, Mutation, CellMutation, BatchCellMutation } from './undo-store'
+import { useUndoStore, Mutation, CellMutation, BatchCellMutation, RowDeletion } from './undo-store'
 
 type UndoOptions = {
 	onUndoComplete?: () => void
+	// Applied synchronously before the backend revert runs so the grid reflects
+	// the undo instantly. The reconcile in onUndoComplete swaps in authoritative
+	// data (e.g. server PKs for re-inserted rows); on failure it resyncs the grid
+	// back to the true database state, discarding this optimistic patch.
+	onUndoApply?: (mutation: Mutation) => void
 }
+
+// Deleting more rows than this keeps no undo snapshot — re-inserting that many
+// rows is slow and holding their full contents in memory for the undo window
+// would bloat the store. The delete still happens; it is just not undoable.
+const MAX_UNDOABLE_DELETE_ROWS = 200
 
 export function useUndo(options: UndoOptions = {}) {
 	const { addAction, getLatestAction, removeAction, actions, timeoutDuration } = useUndoStore()
-	const { updateCell } = useDataMutation()
+	const { updateCell, insertRow } = useDataMutation()
 
 	const performUndo = useCallback(
 		async function (mutation: Mutation): Promise<boolean> {
@@ -38,6 +48,17 @@ export function useUndo(options: UndoOptions = {}) {
 						})
 					)
 					return true
+				} else if (mutation.type === 'row-delete') {
+					await Promise.all(
+						mutation.rows.map(function (rowData) {
+							return insertRow.mutateAsync({
+								connectionId: mutation.connectionId,
+								tableName: mutation.tableName,
+								rowData
+							})
+						})
+					)
+					return true
 				}
 				return false
 			} catch (error) {
@@ -45,7 +66,19 @@ export function useUndo(options: UndoOptions = {}) {
 				return false
 			}
 		},
-		[updateCell]
+		[updateCell, insertRow]
+	)
+
+	const runUndo = useCallback(
+		async function (mutation: Mutation): Promise<boolean> {
+			options.onUndoApply?.(mutation)
+			const success = await performUndo(mutation)
+			// Reconcile on success (authoritative data); on failure resync the grid
+			// to the true DB state, discarding the optimistic patch we just applied.
+			options.onUndoComplete?.()
+			return success
+		},
+		[performUndo, options]
 	)
 
 	const undoLatest = useCallback(
@@ -56,19 +89,18 @@ export function useUndo(options: UndoOptions = {}) {
 				return false
 			}
 
-			const success = await performUndo(latestAction.mutation)
+			const success = await runUndo(latestAction.mutation)
 			if (success) {
 				removeAction(latestAction.id)
 				toast.success('Undo successful', {
 					description: `Reverted: ${latestAction.description}`
 				})
-				options.onUndoComplete?.()
 			} else {
 				toast.error('Failed to undo')
 			}
 			return success
 		},
-		[getLatestAction, removeAction, performUndo, options]
+		[getLatestAction, removeAction, runUndo]
 	)
 
 	const trackCellMutation = useCallback(
@@ -103,10 +135,9 @@ export function useUndo(options: UndoOptions = {}) {
 					onClick: function () {
 						const action = useUndoStore.getState().getAction(actionId)
 						if (action) {
-							performUndo(action.mutation).then(function (success) {
+							runUndo(action.mutation).then(function (success) {
 								if (success) {
 									removeAction(actionId)
-									options.onUndoComplete?.()
 								}
 							})
 						}
@@ -117,7 +148,7 @@ export function useUndo(options: UndoOptions = {}) {
 
 			return actionId
 		},
-		[addAction, performUndo, removeAction, timeoutDuration, options]
+		[addAction, runUndo, removeAction, timeoutDuration, options]
 	)
 
 	const trackBatchCellMutation = useCallback(
@@ -150,10 +181,9 @@ export function useUndo(options: UndoOptions = {}) {
 					onClick: function () {
 						const action = useUndoStore.getState().getAction(actionId)
 						if (action) {
-							performUndo(action.mutation).then(function (success) {
+							runUndo(action.mutation).then(function (success) {
 								if (success) {
 									removeAction(actionId)
-									options.onUndoComplete?.()
 								}
 							})
 						}
@@ -164,7 +194,54 @@ export function useUndo(options: UndoOptions = {}) {
 
 			return actionId
 		},
-		[addAction, performUndo, removeAction, timeoutDuration, options]
+		[addAction, runUndo, removeAction, timeoutDuration, options]
+	)
+
+	const trackRowDeletion = useCallback(
+		function (
+			connectionId: string,
+			tableName: string,
+			rows: Record<string, unknown>[]
+		): string | null {
+			if (rows.length === 0) return null
+
+			const description = `Deleted ${rows.length} row${rows.length > 1 ? 's' : ''}`
+
+			if (rows.length > MAX_UNDOABLE_DELETE_ROWS) {
+				toast.success(description)
+				return null
+			}
+
+			const mutation: RowDeletion = {
+				type: 'row-delete',
+				connectionId,
+				tableName,
+				rows
+			}
+
+			const actionId = addAction(description, mutation)
+
+			toast.success(description, {
+				description: `Press Ctrl+Z within ${timeoutDuration / 1000}s to undo`,
+				action: {
+					label: 'Undo',
+					onClick: function () {
+						const action = useUndoStore.getState().getAction(actionId)
+						if (action) {
+							runUndo(action.mutation).then(function (success) {
+								if (success) {
+									removeAction(actionId)
+								}
+							})
+						}
+					}
+				},
+				duration: timeoutDuration
+			})
+
+			return actionId
+		},
+		[addAction, runUndo, removeAction, timeoutDuration, options]
 	)
 
 	useEffect(
@@ -199,6 +276,7 @@ export function useUndo(options: UndoOptions = {}) {
 	return {
 		trackCellMutation,
 		trackBatchCellMutation,
+		trackRowDeletion,
 		undoLatest,
 		hasUndoableActions: actions.length > 0,
 		undoableActionCount: actions.length

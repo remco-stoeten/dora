@@ -1,0 +1,27 @@
+---
+title: Connect Render
+description: Connect Dora to a Render-hosted PostgreSQL database.
+---
+
+# Connect Render
+
+Render hosts managed PostgreSQL. Dora connects with a standard connection string
+and enables SSL automatically for `*.render.com` hosts.
+
+## With a connection string
+
+1. In the Render dashboard open your PostgreSQL instance and find the
+   **Connections** section.
+2. Copy the **External Database URL** (use the external one to connect from your
+   machine):
+
+   ```text
+   postgresql://<user>:<password>@<host>.oregon-postgres.render.com/<db>
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**.
+
+<Callout type='warn'>The **Internal Database URL** only works for services running inside Render. Use the **External** URL from Dora.</Callout>
+
+SSL is required and is set automatically.

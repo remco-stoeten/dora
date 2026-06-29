@@ -9,7 +9,7 @@ import { useToast } from '@studio/shared/ui/use-toast'
 import { getTableRefParts } from '@studio/shared/utils/table-ref'
 import type { ColumnFormData } from '../components/add-column-dialog'
 import { rowsToCsv, rowsToSqlInsert, splitSqlStatements } from '../utils/studio-data'
-import type { FilterConjunction, FilterDescriptor, FilterGroup, SortDescriptor, TableData } from '../types'
+import type { ColumnDefinition, FilterConjunction, FilterDescriptor, FilterGroup, SortDescriptor, TableData } from '../types'
 
 type Args = {
 	adapter: DataAdapter
@@ -23,6 +23,8 @@ type Args = {
 	filterConjunction?: FilterConjunction
 	filterGroup?: FilterGroup
 	loadTableData: () => void
+	setTableData: React.Dispatch<React.SetStateAction<TableData | null>>
+	setVisibleColumns: React.Dispatch<React.SetStateAction<Set<string>>>
 	setIsDdlLoading: (value: boolean) => void
 	setShowAddColumnDialog: (value: boolean) => void
 	setShowDropTableDialog: (value: boolean) => void
@@ -57,6 +59,8 @@ export function useDatabaseStudioCommands(args: Args) {
 		filterConjunction,
 		filterGroup,
 		loadTableData,
+		setTableData,
+		setVisibleColumns,
 		setIsDdlLoading,
 		setShowAddColumnDialog,
 		setShowDropTableDialog,
@@ -251,44 +255,56 @@ export function useDatabaseStudioCommands(args: Args) {
 	}
 
 	async function handleAddColumn(columnDef: ColumnFormData) {
-		if (!activeConnectionId || !tableName) return
+		if (!activeConnectionId || !tableName || !tableData) return
 
-		setIsDdlLoading(true)
+		let sql = `ALTER TABLE "${tableName}" ADD COLUMN "${columnDef.name}" ${columnDef.type}`
+		if (!columnDef.nullable) {
+			sql += ' NOT NULL'
+		}
+		if (columnDef.defaultValue.trim()) {
+			sql += ` DEFAULT ${columnDef.defaultValue}`
+		}
+
+		const snapshot = tableData
+		const newColumn: ColumnDefinition = {
+			name: columnDef.name,
+			type: columnDef.type,
+			nullable: columnDef.nullable,
+			primaryKey: false
+		}
+		setTableData({ ...tableData, columns: [...tableData.columns, newColumn] })
+		setVisibleColumns(function (prev) {
+			const next = new Set(prev)
+			next.add(columnDef.name)
+			return next
+		})
+		setShowAddColumnDialog(false)
+
 		try {
-			let sql = `ALTER TABLE "${tableName}" ADD COLUMN "${columnDef.name}" ${columnDef.type}`
-			if (!columnDef.nullable) {
-				sql += ' NOT NULL'
-			}
-			if (columnDef.defaultValue.trim()) {
-				sql += ` DEFAULT ${columnDef.defaultValue}`
-			}
-
 			const result = await commands.executeBatch(activeConnectionId, [sql])
 			if (result.status === 'ok') {
-				setShowAddColumnDialog(false)
 				tableDataCache.clear()
 				window.dispatchEvent(
 					new CustomEvent('dora-schema-refresh', { detail: { connectionId: activeConnectionId } })
 				)
 				loadTableData()
 			} else {
+				setTableData(snapshot)
 				notifyActionFailure('Failed to add column', result.error)
 			}
 		} catch (error) {
+			setTableData(snapshot)
 			notifyActionFailure('Failed to add column', error)
-		} finally {
-			setIsDdlLoading(false)
 		}
 	}
 
 	async function handleDropTable() {
 		if (!activeConnectionId || !tableName) return
 
-		setIsDdlLoading(true)
+		setShowDropTableDialog(false)
 		try {
 			const result = await adapter.dropTable(activeConnectionId, tableName)
 			if (result.ok) {
-				setShowDropTableDialog(false)
 				tableDataCache.clear()
 				window.dispatchEvent(
 					new CustomEvent('dora-schema-refresh', { detail: { connectionId: activeConnectionId } })
@@ -303,15 +319,20 @@ export function useDatabaseStudioCommands(args: Args) {
 			}
 		} catch (error) {
 			notifyActionFailure('Failed to drop table', error)
-		} finally {
-			setIsDdlLoading(false)
 		}
 	}
 
 	async function handleDropColumn(columnName: string) {
-		if (!activeConnectionId || !tableRefName || !columnName) return
+		if (!activeConnectionId || !tableRefName || !columnName || !tableData) return
 
-		setIsDdlLoading(true)
+		const snapshot = tableData
+		setTableData({
+			...tableData,
+			columns: tableData.columns.filter(function (column) {
+				return column.name !== columnName
+			})
+		})
+
 		try {
 			const result = await adapter.dropColumn(activeConnectionId, tableRefName, columnName)
 			if (result.ok) {
@@ -326,12 +347,12 @@ export function useDatabaseStudioCommands(args: Args) {
 				})
 				loadTableData()
 			} else {
+				setTableData(snapshot)
 				notifyActionFailure('Failed to drop column', getAdapterError(result))
 			}
 		} catch (error) {
+			setTableData(snapshot)
 			notifyActionFailure('Failed to drop column', error)
-		} finally {
-			setIsDdlLoading(false)
 		}
 	}
 

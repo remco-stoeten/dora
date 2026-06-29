@@ -14,6 +14,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@studio/shared/ui/use-toast";
+import { Spinner } from "@studio/shared/ui/spinner";
 import {
   DOCKER_PALETTE_EVENT,
   type DockerPaletteCommand,
@@ -23,13 +24,21 @@ import { Input } from "@studio/shared/ui/input";
 import { Label } from "@studio/shared/ui/label";
 import { Switch } from "@studio/shared/ui/switch";
 import { useCreateContainer } from "../api/mutations/use-create-container";
-import { useContainerActions, useRemoveContainer } from "../api/mutations/use-container-actions";
+import {
+  useContainerActions,
+  useRemoveContainer,
+} from "../api/mutations/use-container-actions";
 import {
   useContainers,
   useContainerSearch,
   useDockerAvailability,
 } from "../api/queries/use-containers";
-import type { DatabaseContainerConfig, DatabaseProvider, DockerContainer, RemoveContainerOptions } from "../types";
+import type {
+  DatabaseContainerConfig,
+  DatabaseProvider,
+  DockerContainer,
+  RemoveContainerOptions,
+} from "../types";
 import { ContainerDetailsPanel } from "./container-details-panel";
 import { ContainerList } from "./container-list";
 import { ContainerTerminal } from "./container-terminal";
@@ -64,33 +73,52 @@ type StatusFilter = "all" | "running" | "stopped" | "created";
 type SortField = "name" | "created" | "status";
 type SortDirection = "asc" | "desc";
 
-const STATUS_FILTER_OPTIONS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
+const STATUS_FILTER_OPTIONS: ReadonlyArray<{
+  value: StatusFilter;
+  label: string;
+}> = [
   { value: "all", label: "All" },
   { value: "running", label: "Running" },
   { value: "stopped", label: "Stopped" },
   { value: "created", label: "Created" },
 ];
 
+function matchesStatusFilter(container: DockerContainer, status: StatusFilter) {
+  if (status === "all") return true;
+  if (status === "running") return container.state === "running";
+  if (status === "stopped") {
+    return container.state === "exited" || container.state === "dead";
+  }
+  return container.state === "created";
+}
+
 export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showExternal, setShowExternal] = useState(true);
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(
+    null,
+  );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [createProviderPreset, setCreateProviderPreset] = useState<DatabaseProvider>("postgres");
+  const [createProviderPreset, setCreateProviderPreset] =
+    useState<DatabaseProvider>("postgres");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("running");
   const [sortBy, setSortBy] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [terminalContainerId, setTerminalContainerId] = useState<string | null>(null);
+  const [terminalContainerId, setTerminalContainerId] = useState<string | null>(
+    null,
+  );
   const [isTerminalPanelOpen, setIsTerminalPanelOpen] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState<"logs" | "terminal">("logs");
-	const [tailLines, setTailLines] = useState(DEFAULT_LOG_TAIL);
-	const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-	const [containerToRemove, setContainerToRemove] = useState<{
-		id: string
-		name: string
-	} | null>(null);
+  const [activeBottomTab, setActiveBottomTab] = useState<"logs" | "terminal">(
+    "logs",
+  );
+  const [tailLines, setTailLines] = useState(DEFAULT_LOG_TAIL);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [containerToRemove, setContainerToRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-	const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -101,7 +129,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
       ((e.ctrlKey || e.metaKey) && e.key === "k")
     ) {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
         return;
       }
       e.preventDefault();
@@ -166,10 +198,7 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
       // Filter by status
       if (statusFilter !== "all") {
         result = result.filter(function (c) {
-          if (statusFilter === "running") return c.state === "running";
-          if (statusFilter === "stopped") return c.state === "exited" || c.state === "dead";
-          if (statusFilter === "created") return c.state === "created";
-          return true;
+          return matchesStatusFilter(c, statusFilter);
         });
       }
 
@@ -195,6 +224,24 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
       });
     },
     [searchedContainers, statusFilter, sortBy, sortDirection],
+  );
+
+  const statusCounts = useMemo(
+    function () {
+      return {
+        all: searchedContainers.length,
+        running: searchedContainers.filter(function (container) {
+          return matchesStatusFilter(container, "running");
+        }).length,
+        stopped: searchedContainers.filter(function (container) {
+          return matchesStatusFilter(container, "stopped");
+        }).length,
+        created: searchedContainers.filter(function (container) {
+          return matchesStatusFilter(container, "created");
+        }).length,
+      } satisfies Record<StatusFilter, number>;
+    },
+    [searchedContainers],
   );
 
   const selectedContainer = useMemo(
@@ -224,10 +271,13 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     [allContainers, terminalContainerId],
   );
 
-  const { data: logs = "", isLoading: logsLoading } = useContainerLogs(selectedContainerId, {
-    tail: tailLines,
-    enabled: activeBottomTab === "logs" && !!selectedContainerId,
-  });
+  const { data: logs = "", isLoading: logsLoading } = useContainerLogs(
+    selectedContainerId,
+    {
+      tail: tailLines,
+      enabled: activeBottomTab === "logs" && !!selectedContainerId,
+    },
+  );
 
   const containerSummary = useMemo(
     function () {
@@ -255,13 +305,15 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         setSelectedContainerId(result.containerId);
         toast({
           title: "Container Created",
-          description: `${config?.provider === "mariadb"
-            ? "MariaDB"
-            : config?.provider === "mysql"
-              ? "MySQL"
-              : config?.provider === "cockroach"
-                ? "CockroachDB"
-                : "PostgreSQL"} container is starting up...`,
+          description: `${
+            config?.provider === "mariadb"
+              ? "MariaDB"
+              : config?.provider === "mysql"
+                ? "MySQL"
+                : config?.provider === "cockroach"
+                  ? "CockroachDB"
+                  : "PostgreSQL"
+          } container is starting up...`,
           variant: "success",
         });
       } else if (!result.success) {
@@ -281,16 +333,16 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     },
   });
 
-	const containerActions = useContainerActions();
-	const removeContainer = useRemoveContainer({
-		onSuccess: function () {
-			setShowRemoveDialog(false);
-			setContainerToRemove(null);
-			setSelectedContainerId(null);
-		}
-	});
+  const containerActions = useContainerActions();
+  const removeContainer = useRemoveContainer({
+    onSuccess: function () {
+      setShowRemoveDialog(false);
+      setContainerToRemove(null);
+      setSelectedContainerId(null);
+    },
+  });
 
-	function handleCreateContainer(config: DatabaseContainerConfig) {
+  function handleCreateContainer(config: DatabaseContainerConfig) {
     createContainer.mutate(config);
   }
 
@@ -318,29 +370,29 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     }
   }
 
-	function handleSelectContainer(id: string) {
-		setSelectedContainerId(id);
-		setActiveBottomTab("logs");
-		setIsTerminalPanelOpen(false);
-	}
+  function handleSelectContainer(id: string) {
+    setSelectedContainerId(id);
+    setActiveBottomTab("logs");
+    setIsTerminalPanelOpen(false);
+  }
 
-	function handleRemoveContainer(id: string) {
-		const container = visibleContainers.find(function (c) {
-			return c.id === id
-		})
-		if (container) {
-			setContainerToRemove({ id: container.id, name: container.name })
-			setShowRemoveDialog(true)
-		}
-	}
+  function handleRemoveContainer(id: string) {
+    const container = visibleContainers.find(function (c) {
+      return c.id === id;
+    });
+    if (container) {
+      setContainerToRemove({ id: container.id, name: container.name });
+      setShowRemoveDialog(true);
+    }
+  }
 
-	function handleConfirmRemoveContainer(options: RemoveContainerOptions) {
-		if (!containerToRemove) return
-		removeContainer.mutate({
-			containerId: containerToRemove.id,
-			options
-		})
-	}
+  function handleConfirmRemoveContainer(options: RemoveContainerOptions) {
+    if (!containerToRemove) return;
+    removeContainer.mutate({
+      containerId: containerToRemove.id,
+      options,
+    });
+  }
 
   function handleOpenTerminal(container: DockerContainer) {
     setSelectedContainerId(container.id);
@@ -448,9 +500,15 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         }
       }
 
-      window.addEventListener(DOCKER_PALETTE_EVENT, onPaletteCommand as EventListener);
+      window.addEventListener(
+        DOCKER_PALETTE_EVENT,
+        onPaletteCommand as EventListener,
+      );
       return function () {
-        window.removeEventListener(DOCKER_PALETTE_EVENT, onPaletteCommand as EventListener);
+        window.removeEventListener(
+          DOCKER_PALETTE_EVENT,
+          onPaletteCommand as EventListener,
+        );
       };
     },
     [allContainers, containerActions, onOpenInDataViewer],
@@ -460,8 +518,10 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="h-10 w-10 mx-auto mb-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Checking Docker status...</p>
+          <Spinner className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            Checking Docker status...
+          </p>
         </div>
       </div>
     );
@@ -486,7 +546,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
               <p>$ sudo usermod -aG docker $USER</p>
             </div>
           )}
-          <Button variant="outline" className="mt-4" onClick={handleRetryDockerConnection}>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={handleRetryDockerConnection}
+          >
             Retry
           </Button>
         </div>
@@ -501,10 +565,14 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         data-tauri-drag-region="true"
       >
         <div className="flex min-w-0 items-center gap-2 px-2">
-          <Container className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+          <Container
+            className="h-4 w-4 shrink-0 text-emerald-500"
+            aria-hidden="true"
+          />
           <span className="font-semibold text-sidebar-foreground">Docker</span>
           <span className="truncate text-xs text-muted-foreground tabular-nums">
-            {containerSummary.total} {containerSummary.total === 1 ? "container" : "containers"}
+            {containerSummary.total}{" "}
+            {containerSummary.total === 1 ? "container" : "containers"}
             {" · "}
             {containerSummary.running} running
             {" · "}
@@ -522,7 +590,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
             }}
             disabled={isFetchingContainers}
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", isFetchingContainers && "animate-spin")} />
+            {isFetchingContainers ? (
+              <Spinner className="h-3.5 w-3.5" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
             Refresh
           </Button>
 
@@ -551,24 +623,32 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
               <DropdownMenuContent align="end" className="min-w-48">
                 <DropdownMenuLabel>Quick start</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={function () {
-                  handleOpenCreateDialog("postgres");
-                }}>
+                <DropdownMenuItem
+                  onClick={function () {
+                    handleOpenCreateDialog("postgres");
+                  }}
+                >
                   PostgreSQL
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={function () {
-                  handleOpenCreateDialog("mariadb");
-                }}>
+                <DropdownMenuItem
+                  onClick={function () {
+                    handleOpenCreateDialog("mariadb");
+                  }}
+                >
                   MariaDB
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={function () {
-                  handleOpenCreateDialog("mysql");
-                }}>
+                <DropdownMenuItem
+                  onClick={function () {
+                    handleOpenCreateDialog("mysql");
+                  }}
+                >
                   MySQL
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={function () {
-                  handleOpenCreateDialog("cockroach");
-                }}>
+                <DropdownMenuItem
+                  onClick={function () {
+                    handleOpenCreateDialog("cockroach");
+                  }}
+                >
                   CockroachDB
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -623,6 +703,16 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
                 )}
               >
                 {option.label}
+                <span
+                  className={cn(
+                    "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums",
+                    isActive
+                      ? "bg-primary-foreground/15 text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {statusCounts[option.value]}
+                </span>
               </button>
             );
           })}
@@ -635,7 +725,10 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
               setSortBy(value as SortField);
             }}
           >
-            <SelectTrigger aria-label="Sort containers" className="h-7 w-[110px] border-0 bg-transparent text-xs shadow-none">
+            <SelectTrigger
+              aria-label="Sort containers"
+              className="h-7 w-[110px] border-0 bg-transparent text-xs shadow-none"
+            >
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -669,8 +762,15 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
         </div>
 
         <div className="flex items-center gap-2 pl-1">
-          <Switch id="show-external" checked={showExternal} onCheckedChange={setShowExternal} />
-          <Label htmlFor="show-external" className="whitespace-nowrap text-xs text-muted-foreground">
+          <Switch
+            id="show-external"
+            checked={showExternal}
+            onCheckedChange={setShowExternal}
+          />
+          <Label
+            htmlFor="show-external"
+            className="whitespace-nowrap text-xs text-muted-foreground"
+          >
             Show all
             {!showExternal && externalCount > 0 && (
               <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-medium text-muted-foreground tabular-nums">
@@ -740,7 +840,8 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
                       activeBottomTab === "terminal"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
-                      selectedContainer.state !== "running" && "opacity-50 cursor-not-allowed",
+                      selectedContainer.state !== "running" &&
+                        "opacity-50 cursor-not-allowed",
                     )}
                   >
                     Terminal
@@ -775,7 +876,10 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
                 />
               )}
               {activeBottomTab === "terminal" && terminalContainer && (
-                <ContainerTerminal container={terminalContainer} enabled={isTerminalPanelOpen} />
+                <ContainerTerminal
+                  container={terminalContainer}
+                  enabled={isTerminalPanelOpen}
+                />
               )}
               {activeBottomTab === "terminal" && !terminalContainer && (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -797,11 +901,11 @@ export function DockerView({ onOpenInDataViewer, windowControls }: Props) {
       />
 
       <RemoveContainerDialog
-        containerName={containerToRemove?.name ?? ''}
+        containerName={containerToRemove?.name ?? ""}
         open={showRemoveDialog}
         onOpenChange={function (open) {
-          setShowRemoveDialog(open)
-          if (!open) setContainerToRemove(null)
+          setShowRemoveDialog(open);
+          if (!open) setContainerToRemove(null);
         }}
         onConfirm={handleConfirmRemoveContainer}
         isRemoving={removeContainer.isPending}

@@ -7,6 +7,11 @@
  * be unit-tested with fixture folders; the Tauri-backed reader lives in
  * `link-api.ts`. Everything degrades gracefully — a missing/unreadable path
  * just yields fewer files, never a throw.
+ *
+ * Monorepos: the linked folder is scanned both at its top level and across its
+ * workspace packages (`apps/*`, `packages/*`, plus anything declared in
+ * `package.json` `workspaces` or `pnpm-workspace.yaml`), so a Drizzle/Prisma
+ * project nested under e.g. `apps/api` is found when the repo root is linked.
  */
 
 export type SchemaFile = { path: string; text: string }
@@ -18,6 +23,12 @@ export type OrmLink = {
 	schemaFiles: SchemaFile[]
 	/** The drizzle.config.* path, when detection went through it. */
 	configPath?: string
+	/**
+	 * The folder this link was detected in — the linked folder itself, or a
+	 * workspace package under it (e.g. `<root>/apps/api`). Downstream uses it to
+	 * resolve migration journals and to disambiguate `choice` options.
+	 */
+	rootDir: string
 }
 
 export type DetectOrmResult =
@@ -48,26 +59,152 @@ const DRIZZLE_FALLBACK_DIRS = ['src/db/schema', 'db/schema', 'src/schema']
 const PRISMA_FILES = ['prisma/schema.prisma', 'schema.prisma']
 const PRISMA_SCHEMA_DIR = 'prisma/schema'
 
-export async function detectOrm(folder: string, reader: ProjectReader): Promise<DetectOrmResult> {
-	const [drizzle, prisma] = await Promise.all([
-		detectDrizzle(folder, reader),
-		detectPrisma(folder, reader),
-	])
+// Workspace package globs tried even without an explicit declaration — covers
+// the common Turborepo/pnpm monorepo layout.
+const DEFAULT_WORKSPACE_GLOBS = ['apps/*', 'packages/*']
 
-	if (drizzle && prisma) {
-		return { kind: 'choice', options: [drizzle, prisma] }
+// Never descend into these while walking `**` globs or resolving workspaces.
+const IGNORE_DIRS = new Set([
+	'node_modules',
+	'.git',
+	'dist',
+	'build',
+	'.next',
+	'.turbo',
+	'.cache',
+	'coverage',
+	'out',
+	'.svelte-kit',
+	'.output',
+	'.vercel',
+])
+
+// Depth guard for recursive `**` walks — feature trees are shallow; this just
+// stops a symlink loop or a pathological tree from spinning.
+const MAX_WALK_DEPTH = 12
+
+export async function detectOrm(folder: string, reader: ProjectReader): Promise<DetectOrmResult> {
+	const roots = [cleanDir(folder), ...(await workspaceRoots(folder, reader))]
+
+	const perRoot = await Promise.all(
+		roots.map(async function (root) {
+			const [drizzle, prisma] = await Promise.all([
+				detectDrizzle(root, reader),
+				detectPrisma(root, reader),
+			])
+			return { root, drizzle, prisma }
+		})
+	)
+
+	const links: OrmLink[] = []
+	for (const { root, drizzle, prisma } of perRoot) {
+		if (drizzle) {
+			links.push({ ...drizzle, rootDir: root })
+		}
+		if (prisma) {
+			links.push({ ...prisma, rootDir: root })
+		}
 	}
-	if (drizzle) {
-		return { kind: 'linked', link: drizzle }
+
+	if (links.length === 0) {
+		return {
+			kind: 'none',
+			message:
+				'No Drizzle or Prisma schema found in this folder (or its apps/* and packages/* workspaces). Expected a drizzle.config.* with a schema file, or a prisma/schema.prisma.',
+		}
 	}
-	if (prisma) {
-		return { kind: 'linked', link: prisma }
+	if (links.length === 1) {
+		return { kind: 'linked', link: links[0] }
 	}
-	return {
-		kind: 'none',
-		message:
-			'No Drizzle or Prisma schema found in this folder. Expected a drizzle.config.* with a schema file, or a prisma/schema.prisma.',
+	return { kind: 'choice', options: links }
+}
+
+/** Resolve workspace package directories under the linked folder (one level). */
+async function workspaceRoots(folder: string, reader: ProjectReader): Promise<string[]> {
+	const base = cleanDir(folder)
+	const globs = await workspaceGlobs(base, reader)
+	const dirs = new Set<string>()
+
+	for (const glob of globs) {
+		if (glob.includes('*')) {
+			const prefix = glob.slice(0, glob.indexOf('*')).replace(/\/+$/, '')
+			const entries = await reader.listDir(joinPath(base, prefix))
+			for (const path of entries) {
+				const name = basename(path)
+				if (IGNORE_DIRS.has(name) || looksLikeFile(name)) {
+					continue
+				}
+				dirs.add(cleanDir(path))
+			}
+		} else {
+			dirs.add(cleanDir(joinPath(base, glob)))
+		}
 	}
+
+	dirs.delete(base)
+	return Array.from(dirs)
+}
+
+/** Collect workspace globs from package.json / pnpm-workspace.yaml plus defaults. */
+async function workspaceGlobs(folder: string, reader: ProjectReader): Promise<string[]> {
+	const globs = new Set<string>(DEFAULT_WORKSPACE_GLOBS)
+
+	const pkgText = await reader.readFile(joinPath(folder, 'package.json'))
+	if (pkgText !== null) {
+		for (const glob of readPackageWorkspaces(pkgText)) {
+			globs.add(glob)
+		}
+	}
+
+	const pnpmText = await reader.readFile(joinPath(folder, 'pnpm-workspace.yaml'))
+	if (pnpmText !== null) {
+		for (const glob of readPnpmWorkspaces(pnpmText)) {
+			globs.add(glob)
+		}
+	}
+
+	return Array.from(globs)
+}
+
+function readPackageWorkspaces(pkgText: string): string[] {
+	try {
+		const pkg = JSON.parse(pkgText) as { workspaces?: unknown }
+		const ws = pkg.workspaces
+		const list = Array.isArray(ws)
+			? ws
+			: ws && typeof ws === 'object' && Array.isArray((ws as { packages?: unknown }).packages)
+				? (ws as { packages: unknown[] }).packages
+				: []
+		return list.filter(function (g): g is string {
+			return typeof g === 'string'
+		})
+	} catch {
+		return []
+	}
+}
+
+function readPnpmWorkspaces(yamlText: string): string[] {
+	const globs: string[] = []
+	let inPackages = false
+	for (const rawLine of yamlText.split('\n')) {
+		const line = rawLine.replace(/#.*$/, '')
+		if (/^packages\s*:/.test(line)) {
+			inPackages = true
+			continue
+		}
+		if (inPackages) {
+			const item = line.match(/^\s*-\s*["']?([^"'\s]+)["']?\s*$/)
+			if (item) {
+				globs.push(item[1])
+				continue
+			}
+			// A non-list, non-indented line ends the `packages:` block.
+			if (line.trim() !== '' && !/^\s/.test(line)) {
+				inPackages = false
+			}
+		}
+	}
+	return globs
 }
 
 async function detectDrizzle(folder: string, reader: ProjectReader): Promise<OrmLink | null> {
@@ -87,13 +224,13 @@ async function detectDrizzle(folder: string, reader: ProjectReader): Promise<Orm
 
 	if (configText !== null) {
 		for (const entry of extractDrizzleSchemaEntries(configText)) {
-			collected.addAll(await readSchemaPath(folder, entry, reader, '.ts'))
+			collected.addAll(await collectFiles(folder, entry, reader, '.ts'))
 		}
 	}
 
 	if (collected.isEmpty()) {
 		for (const rel of DRIZZLE_FALLBACK_FILES) {
-			collected.addAll(await readSchemaPath(folder, rel, reader, '.ts'))
+			collected.addAll(await collectFiles(folder, rel, reader, '.ts'))
 		}
 		for (const dir of DRIZZLE_FALLBACK_DIRS) {
 			collected.addAll(await readFilesInDir(joinPath(folder, dir), reader, '.ts'))
@@ -105,21 +242,21 @@ async function detectDrizzle(folder: string, reader: ProjectReader): Promise<Orm
 	if (configPath === undefined && collected.isEmpty()) {
 		return null
 	}
-	return { orm: 'drizzle', schemaFiles: collected.values(), configPath }
+	return { orm: 'drizzle', schemaFiles: collected.values(), configPath, rootDir: cleanDir(folder) }
 }
 
 async function detectPrisma(folder: string, reader: ProjectReader): Promise<OrmLink | null> {
 	const collected = new FileSet()
 
 	for (const rel of PRISMA_FILES) {
-		collected.addAll(await readSchemaPath(folder, rel, reader, '.prisma'))
+		collected.addAll(await collectFiles(folder, rel, reader, '.prisma'))
 	}
 
 	const pkgText = await reader.readFile(joinPath(folder, 'package.json'))
 	if (pkgText !== null) {
 		const schemaField = readPrismaSchemaField(pkgText)
 		if (schemaField !== null) {
-			collected.addAll(await readSchemaPath(folder, schemaField, reader, '.prisma'))
+			collected.addAll(await collectFiles(folder, schemaField, reader, '.prisma'))
 		}
 	}
 
@@ -129,22 +266,24 @@ async function detectPrisma(folder: string, reader: ProjectReader): Promise<OrmL
 	if (collected.isEmpty()) {
 		return null
 	}
-	return { orm: 'prisma', schemaFiles: collected.values() }
+	return { orm: 'prisma', schemaFiles: collected.values(), rootDir: cleanDir(folder) }
 }
 
 /**
- * Resolve a single schema entry (file path, glob, or directory) into files. A
- * `*` glob reads the matching extension in its directory; a plain path is tried
- * as a file first, then as a directory.
+ * Resolve a single schema entry (file path, glob, or directory) into files.
+ * Globs are matched against the trailing filename pattern; a `**` segment walks
+ * subdirectories recursively. A plain path is tried as a file first, then as a
+ * (shallow) directory of schema files.
  */
-async function readSchemaPath(
+async function collectFiles(
 	folder: string,
 	entry: string,
 	reader: ProjectReader,
 	ext: string
 ): Promise<SchemaFile[]> {
-	if (entry.includes('*')) {
-		return readFilesInDir(joinPath(folder, globDir(entry)), reader, ext)
+	const glob = parseGlob(entry)
+	if (glob) {
+		return walkGlob(joinPath(folder, glob.baseRel), glob.fileRe, ext, reader, glob.recursive, 0)
 	}
 
 	const abs = joinPath(folder, entry)
@@ -154,6 +293,70 @@ async function readSchemaPath(
 	}
 	// Not a file — it may be a directory of schema files.
 	return readFilesInDir(abs, reader, ext)
+}
+
+type ParsedGlob = { baseRel: string; recursive: boolean; fileRe: RegExp }
+
+/**
+ * Split a glob entry into its literal base directory, whether it spans
+ * subdirectories (`**`), and a matcher for the trailing filename pattern.
+ * Returns null when the entry has no glob character.
+ */
+function parseGlob(entry: string): ParsedGlob | null {
+	const norm = entry.replace(/^\.\//, '')
+	if (!norm.includes('*')) {
+		return null
+	}
+	const segments = norm.split('/')
+	const base: string[] = []
+	let i = 0
+	for (; i < segments.length; i++) {
+		if (segments[i].includes('*')) {
+			break
+		}
+		base.push(segments[i])
+	}
+	const rest = segments.slice(i)
+	const recursive = rest.includes('**')
+	const filePattern = rest[rest.length - 1]
+	return { baseRel: base.join('/'), recursive, fileRe: globToRegExp(filePattern) }
+}
+
+/** Compile a single-segment glob (`*.schema.ts`) into an anchored RegExp. */
+function globToRegExp(glob: string): RegExp {
+	const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+	return new RegExp(`^${escaped}$`)
+}
+
+/** Walk a directory matching `fileRe`, descending into subdirs when recursive. */
+async function walkGlob(
+	dir: string,
+	fileRe: RegExp,
+	ext: string,
+	reader: ProjectReader,
+	recursive: boolean,
+	depth: number
+): Promise<SchemaFile[]> {
+	if (depth > MAX_WALK_DEPTH) {
+		return []
+	}
+	const entries = await reader.listDir(dir)
+	const files: SchemaFile[] = []
+	for (const path of entries) {
+		const name = basename(path)
+		if (name.toLowerCase().endsWith(ext) && fileRe.test(name)) {
+			const text = await reader.readFile(path)
+			if (text !== null) {
+				files.push({ path, text })
+			}
+			continue
+		}
+		if (!recursive || IGNORE_DIRS.has(name) || looksLikeFile(name)) {
+			continue
+		}
+		files.push(...(await walkGlob(path, fileRe, ext, reader, recursive, depth + 1)))
+	}
+	return files
 }
 
 async function readFilesInDir(
@@ -207,11 +410,18 @@ function joinPath(base: string, rel: string): string {
 	return `${cleanBase}/${cleanRel}`
 }
 
-function globDir(entry: string): string {
-	const star = entry.indexOf('*')
-	const prefix = entry.slice(0, star)
-	const slash = prefix.lastIndexOf('/')
-	return slash >= 0 ? prefix.slice(0, slash) : '.'
+function cleanDir(path: string): string {
+	return path.replace(/\/+$/, '')
+}
+
+function basename(path: string): string {
+	const i = path.lastIndexOf('/')
+	return i >= 0 ? path.slice(i + 1) : path
+}
+
+/** Heuristic: an entry with a trailing `.ext` is a file, not a directory. */
+function looksLikeFile(name: string): boolean {
+	return /\.[^./\\]+$/.test(name)
 }
 
 /** De-duplicating ordered set of schema files keyed by path. */

@@ -118,6 +118,7 @@ pub async fn save_data_file_session_as_duckdb(
         storage: &state.storage,
     };
     svc.save_data_file_session_as_duckdb(connection_id, destination_path, overwrite)
+        .await
 }
 
 #[tauri::command]
@@ -132,6 +133,7 @@ pub async fn import_files_into_duckdb(
         storage: &state.storage,
     };
     svc.import_files_into_duckdb(connection_id, file_paths)
+        .await
 }
 
 #[tauri::command]

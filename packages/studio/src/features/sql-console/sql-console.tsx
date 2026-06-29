@@ -29,6 +29,11 @@ import { SqlResults } from "./components/sql-results";
 import { UnifiedSidebar } from "./components/unified-sidebar";
 import { DEFAULT_SQL } from "./data";
 import { extractMutationSourceTable } from "./query-target";
+import {
+  DEFAULT_SQL_CONSOLE_SIDEBAR_WIDTH,
+  getSqlConsoleSidebarStateForWidth,
+  getSqlConsoleSidebarWidthOnOpen,
+} from "./sidebar-state";
 import { useQueryHistory } from "./stores/query-history-store";
 import { QueryTabProvider, useQueryTabs } from "./stores/tab-store";
 import { clearTableDataCache } from "@studio/core/table-cache";
@@ -52,6 +57,33 @@ const CodeEditor = lazy(function () {
 function notifyFailure(title: string, error: unknown) {
   toast.error(title, {
     description: error instanceof Error ? error.message : String(error),
+  });
+}
+
+/**
+ * Whether a keyboard event originates from a text-entry context (a form
+ * control, a contentEditable region, or the Monaco editor). Bare single-key
+ * shortcuts must defer to it so typing a literal "h"/"v" inside the editor is
+ * not swallowed and re-routed to a panel toggle. The built-in "typing" preset
+ * only inspects `event.target`, which does not resolve to Monaco's hidden
+ * input textarea here, so both `event.target` and the focused element are
+ * checked.
+ */
+function isTextEntryTarget(event: KeyboardEvent): boolean {
+  const candidates: Array<EventTarget | Element | null> = [
+    event.target,
+    typeof document !== "undefined" ? document.activeElement : null,
+  ];
+  return candidates.some(function (candidate) {
+    if (!(candidate instanceof HTMLElement)) return false;
+    if (candidate.closest(".monaco-editor")) return true;
+    const tag = candidate.tagName;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      candidate.isContentEditable
+    );
   });
 }
 
@@ -127,8 +159,8 @@ function SqlConsoleInner({
   const [snippets, setSnippets] = useState<SqlSnippet[]>([]);
   const [activeSnippetId, setActiveSnippetId] = useState<string | null>("playground");
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
-  const sbwRef = useRef(256);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SQL_CONSOLE_SIDEBAR_WIDTH);
+  const sbwRef = useRef(DEFAULT_SQL_CONSOLE_SIDEBAR_WIDTH);
   const cancelledRef = useRef(false);
   const [autoExpandFolder, setAutoExpandFolder] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -765,7 +797,7 @@ function SqlConsoleInner({
         return;
       }
 
-      sbwRef.current = sidebarWidth || 256;
+      sbwRef.current = getSqlConsoleSidebarWidthOnOpen(sidebarWidth);
       setSidebarWidth(sbwRef.current);
       setShowRightSidebar(true);
     },
@@ -1067,7 +1099,7 @@ function SqlConsoleInner({
   );
 
   $.key("h")
-    .except("typing")
+    .except(isTextEntryTarget)
     .on(
       function () {
         setShowHistory(!showHistory);
@@ -1076,7 +1108,7 @@ function SqlConsoleInner({
     );
 
   $.key("v")
-    .except("typing")
+    .except(isTextEntryTarget)
     .on(
       function () {
         const modes: ResultViewMode[] = ["table", "json", "chart"];
@@ -1293,12 +1325,16 @@ function SqlConsoleInner({
             function onMove(ev: MouseEvent) {
               sbwRef.current = Math.max(0, Math.min(500, startW - (ev.clientX - startX)));
               setSidebarWidth(sbwRef.current);
+              setShowRightSidebar(getSqlConsoleSidebarStateForWidth(sbwRef.current).isOpen);
             }
             function onUp() {
               document.body.style.cursor = "";
               document.body.style.userSelect = "";
-              if (sbwRef.current < 150) setShowRightSidebar(false);
-              else setSidebarWidth(sbwRef.current);
+              const sidebarState = getSqlConsoleSidebarStateForWidth(sbwRef.current);
+              setShowRightSidebar(sidebarState.isOpen);
+              if (sidebarState.isOpen) {
+                setSidebarWidth(sidebarState.width);
+              }
               window.removeEventListener("mousemove", onMove);
               window.removeEventListener("mouseup", onUp);
             }

@@ -40,6 +40,26 @@ describe('enrichColumnsWithFKs', () => {
 		expect(result[0].foreignKey).toBeUndefined()
 	})
 
+	it('copies allowed_values from schema onto the column as allowedValues', () => {
+		const enumSchema = {
+			tables: [{ name: 'announcement', schema: 'public', columns: [
+				{ name: 'variant', data_type: 'text', is_nullable: false, is_primary_key: false, is_auto_increment: false, default_value: "'info'", foreign_key: null,
+					allowed_values: ['info', 'success', 'warning', 'danger'] },
+			], primary_key_columns: [], indexes: [], row_count_estimate: null }],
+			schemas: ['public'], unique_columns: [],
+		} as any
+		const result = enrichColumnsWithFKs(
+			[{ name: 'variant', type: 'text', nullable: false, primaryKey: false }],
+			enumSchema, 'announcement', 'public'
+		)
+		expect(result[0].allowedValues).toEqual(['info', 'success', 'warning', 'danger'])
+	})
+
+	it('leaves allowedValues undefined when the schema column is unconstrained', () => {
+		const result = enrichColumnsWithFKs(columns, schema, 'orders', 'public')
+		expect(result[0].allowedValues).toBeUndefined()
+	})
+
 	it('returns original columns when table not in schema', () => {
 		const result = enrichColumnsWithFKs(columns, schema, 'nonexistent', 'public')
 		expect(result).toEqual(columns)

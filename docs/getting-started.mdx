@@ -1,0 +1,61 @@
+---
+title: Getting Started
+description: Open Dora, create your first connection, run a query, and browse your data in a few minutes.
+---
+
+# Getting Started
+
+This walkthrough takes you from a fresh install to running your first query. If
+you have not installed Dora yet, see [Installation](/docs/installation).
+
+## 1. Create a connection
+
+When Dora opens, you land on the connections screen. Press `Mod+Shift+N` (⌘ on
+macOS, Ctrl elsewhere) or click **New connection** to open the connection
+dialog.
+
+You can connect two ways:
+
+- **Paste a connection string.** Toggle **Use connection string** and paste a
+  full URL such as `postgresql://user:pass@host:5432/dbname`. Dora detects the
+  engine and whether SSL is required automatically.
+- **Fill in the fields.** Pick a database type and enter host, port, user,
+  password, and database name individually.
+
+For a local file database, choose **SQLite** or **DuckDB** and browse to the
+file — or drag a `.db` / `.sqlite` / `.duckdb` file onto the dialog to fill it
+in for you.
+
+<Callout type='info'>Connecting to a hosted provider like Supabase, Neon, or Turso? Each has a [step-by-step guide](/docs/connect) for finding the right connection string.</Callout>
+
+Click **Test connection** to verify it works, then **Save**.
+
+## 2. Browse your data
+
+Once connected, your tables appear in the sidebar. Click any table to open it in
+the [Data Studio](/docs/guides/data-studio), where you can:
+
+- scroll, sort (click a column header), and filter rows (`Mod+F`),
+- edit a cell by clicking it, or add a row with `Mod+Shift+I`,
+- follow a foreign key by clicking its badge to jump to the referenced row.
+
+## 3. Run a query
+
+Open the [SQL Console](/docs/guides/sql-console) from the sidebar. Start typing
+and Dora autocompletes table and column names from your schema. Run the query
+with `Mod+Enter`:
+
+```sql
+SELECT * FROM users WHERE plan = 'pro' LIMIT 50;
+```
+
+Results appear in a table you can sort, [chart](/docs/guides/charts), or
+[export](/docs/guides/export). Press `Mod+H` to reopen any past query from your
+[history](/docs/guides/sql-console#query-history).
+
+## 4. Explore further
+
+- See how every table relates in the [Schema Visualizer](/docs/guides/schema-visualizer).
+- Let the [AI Assistant](/docs/guides/ai-assistant) write or explain SQL for you.
+- Query with your ORM using the [Drizzle and Prisma runners](/docs/guides/orm-runners).
+- Learn every keyboard shortcut on the [Command Palette](/docs/guides/command-palette) page.

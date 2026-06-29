@@ -1,0 +1,35 @@
+---
+title: Live change monitoring
+description: Watch a table for inserts, updates, and deletes made by other clients, in near-real time.
+---
+
+# Live change monitoring
+
+Live monitoring keeps the table you are viewing in sync with writes made by
+other clients — another app, a teammate, a background job — so you do not have to
+keep refreshing.
+
+## Turn it on
+
+In the [Data Studio](/docs/guides/data-studio), press `Mod+Shift+M` or click the
+activity icon in the toolbar to open the live-monitor popover. From there you
+can:
+
+- toggle monitoring **on or off**,
+- choose which change types to watch — **inserts**, **updates**, **deletes**,
+- set the **poll interval** (default 5 seconds).
+
+The status bar shows when the table was last checked and how many changes were
+detected, color-coded by type.
+
+## How it works
+
+- **PostgreSQL** uses `LISTEN`/`NOTIFY`. Dora installs a notification trigger the
+  first time you start monitoring, so changes surface almost instantly. If the
+  trigger cannot be installed, Dora falls back to polling.
+- **SQLite and libSQL** are polled: Dora re-reads the table every interval.
+
+Monitoring follows the table you are viewing — switch tables and the monitor
+applies to the new one.
+
+<Callout type='info'>Monitoring watches changes from *other* connections. Edits you make in Dora's own grid update immediately through the normal write path.</Callout>

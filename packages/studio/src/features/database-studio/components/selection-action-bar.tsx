@@ -44,6 +44,7 @@ type TActionItem = {
 	icon: React.ReactNode
 	onClick?: () => void
 	ariaLabel: string
+	shortcut?: string
 }
 
 const FOCUSABLE_SELECTOR =
@@ -76,11 +77,19 @@ function createToolbarKeyHandler(onEscapeToGrid?: () => void) {
 					onEscapeToGrid()
 				}
 				break
+			// Tab cycles within the bar (wrapping) rather than escaping it — the
+			// bar is a transient surface with nothing meaningful to Tab onward to,
+			// and Escape is the deliberate way back to the grid.
+			case 'Tab':
 			case 'ArrowRight':
 			case 'ArrowDown':
 				if (idx === -1) return
 				e.preventDefault()
-				focusable[(idx + 1) % focusable.length]?.focus()
+				if (e.key === 'Tab' && e.shiftKey) {
+					focusable[(idx - 1 + focusable.length) % focusable.length]?.focus()
+				} else {
+					focusable[(idx + 1) % focusable.length]?.focus()
+				}
 				break
 			case 'ArrowLeft':
 			case 'ArrowUp':
@@ -143,7 +152,8 @@ export const SelectionActionBar = forwardRef<HTMLDivElement, Props>(function Sel
 				label: 'Copy',
 				icon: <Copy className='h-3.5 w-3.5' aria-hidden='true' />,
 				onClick: onCopy,
-				ariaLabel: `Copy ${rowLabel} as JSON`
+				ariaLabel: `Copy ${rowLabel} as JSON`,
+				shortcut: 'C'
 			})
 		}
 
@@ -336,11 +346,13 @@ export const SelectionActionBar = forwardRef<HTMLDivElement, Props>(function Sel
 				size='sm'
 				className={getButtonClasses()}
 				onClick={action.onClick}
-				title={action.ariaLabel}
+				title={action.shortcut ? `${action.ariaLabel} (${action.shortcut})` : action.ariaLabel}
 				aria-label={action.ariaLabel}
+				aria-keyshortcuts={action.shortcut}
 			>
 				{action.icon}
 				{action.label}
+				{action.shortcut && <ShortcutBadge>{action.shortcut}</ShortcutBadge>}
 			</Button>
 		)
 	}

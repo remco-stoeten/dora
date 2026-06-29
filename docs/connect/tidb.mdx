@@ -1,0 +1,24 @@
+---
+title: Connect TiDB Cloud
+description: Connect Dora to a TiDB Cloud cluster over the MySQL protocol.
+---
+
+# Connect TiDB Cloud
+
+TiDB Cloud is a distributed SQL database that speaks the MySQL wire protocol.
+Dora connects to it as a MySQL host.
+
+## With a connection string
+
+1. In the TiDB Cloud console open your cluster and click **Connect**.
+2. Set **Connect With** to **General** and **Operating System** as needed, then
+   copy the host, port (`4000`), user, and password. Assemble a MySQL URL:
+
+   ```text
+   mysql://<user>:<password>@<host>.tidbcloud.com:4000/test?ssl-mode=REQUIRED
+   ```
+
+3. In Dora press `Mod+Shift+N`, toggle **Use connection string**, paste the URL,
+   **Test connection**, and **Save**, with the **SSL** toggle enabled.
+
+<Callout type='info'>TiDB Serverless listens on port `4000` and **requires TLS**. The username is often prefixed with your cluster ID (e.g. `<prefix>.root`). Keep that exact username from the console.</Callout>

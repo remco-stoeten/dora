@@ -39,6 +39,7 @@ import { AppearanceControls } from './appearance-panel'
 import { UpdateSection } from '@studio/features/updater/update-section'
 
 import { AiKeysSection } from './ai-keys-section'
+import { BuildCacheSection } from './build-cache-section'
 import { ShortcutRecorder } from './shortcut-recorder'
 import { StorageSection } from './storage-section'
 
@@ -60,6 +61,7 @@ export type SettingsSectionId =
 	| 'ai-keys'
 	| 'ai-usage'
 	| 'storage'
+	| 'build-cache'
 	| 'safety'
 	| 'startup'
 	| 'interface'
@@ -132,6 +134,12 @@ const SETTINGS_SECTIONS: SettingsSectionNav[] = [
 		title: 'Storage',
 		description: 'Database locations and switching',
 		keywords: ['database', 'location', 'switch', 'file']
+	},
+	{
+		id: 'build-cache',
+		title: 'Build cache',
+		description: 'Inspect and clean local Tauri build artifacts',
+		keywords: ['cargo', 'target', 'bundle', 'cache', 'clean', 'size']
 	},
 	{
 		id: 'safety',
@@ -231,6 +239,15 @@ const SETTING_SEARCH_ITEMS: SettingsSearchResult[] = [
 		kind: 'setting',
 		focusId: 'interface-selection-bar',
 		keywords: ['rows', 'selection', 'layout']
+	},
+	{
+		id: 'setting-build-cache-clean',
+		sectionId: 'build-cache',
+		title: 'Build cache',
+		description: 'Inspect and clean Cargo target artifacts',
+		kind: 'setting',
+		focusId: 'build-cache-clean',
+		keywords: ['cargo', 'target', 'bundle', 'cache', 'clean', 'size']
 	},
 	{
 		id: 'setting-interface-show-toasts',
@@ -1400,6 +1417,24 @@ export function SettingsView({ windowControls, initialSection, highlightSection 
 								</SectionCard>
 							) : null}
 
+							{visibleSectionIds.has('build-cache') ? (
+								<SectionCard
+									id='build-cache'
+									title='Build cache'
+									description={renderHighlightedText(
+										'Inspect and clean local Tauri build artifacts.',
+										searchQuery
+									)}
+									sectionRef={registerSectionRef('build-cache')}
+									onFocusReturn={focusSearchInput}
+									query={searchQuery}
+								>
+									<div tabIndex={-1} data-settings-focus='build-cache-clean'>
+										<BuildCacheSection />
+									</div>
+								</SectionCard>
+							) : null}
+
 							{visibleSectionIds.has('safety') ? (
 								<SectionCard
 									id='safety'
@@ -1561,7 +1596,7 @@ export function SettingsView({ windowControls, initialSection, highlightSection 
 											</div>
 											<div className='min-w-[120px] flex-shrink-0 pt-0.5'>
 												<Select
-													value={settings.selectionBarStyle || 'floating'}
+													value={settings.selectionBarStyle || 'static'}
 													onValueChange={function (value) {
 														updateSetting(
 															'selectionBarStyle',

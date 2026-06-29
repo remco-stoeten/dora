@@ -1,6 +1,8 @@
 /**
- * ORM cockpit — link a project folder, see how its schema drifts from the live
- * database, and preview a migration that reconciles the two. Preview-only (plan
+ * ORM cockpit — link a project folder,
+	see how its schema drifts from the live
+ * database,
+	and preview a migration that reconciles the two. Preview-only (plan
  * 06/07): nothing is applied from here; the generated SQL is handed off to the
  * SQL console where the normal prod-safety guardrails apply.
  *
@@ -17,15 +19,25 @@ import {
 	AlertCircle,
 	GitCompareArrows,
 	ListChecks,
+	ShieldCheck,
+	AlertTriangle,
 	Eye,
-	EyeOff,
+	EyeOff
 } from 'lucide-react'
 import { Spinner } from '@studio/shared/ui/spinner'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '@studio/shared/ui/button'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger
+} from '@studio/shared/ui/dropdown-menu'
 import { EmptyState } from '@studio/shared/ui/empty-state'
+import { CockpitEmptySkeleton } from './cockpit-empty-skeleton'
 import { cn } from '@studio/shared/utils/cn'
 import { useConnections } from '@studio/core/data-provider'
+import type { Connection } from '@studio/features/connections/types'
 import type { MigrationResult } from '@studio/features/orm-cockpit/migration/generate-sql'
 import { useOrmCockpit } from '@studio/features/orm-cockpit/components/use-orm-cockpit'
 import { useMigrationStatus } from '@studio/features/orm-cockpit/components/use-migration-status'
@@ -48,6 +60,19 @@ function shortFolder(path: string): string {
 	return parts.slice(-2).join('/') || path
 }
 
+/** The workspace path of a detected option, relative to the linked folder. */
+function relativeWorkspace(linkedFolder: string | null, rootDir: string): string | null {
+	if (!linkedFolder) {
+		return null
+	}
+	const base = linkedFolder.replace(/\/+$/, '')
+	const root = rootDir.replace(/\/+$/, '')
+	if (root === base) {
+		return null
+	}
+	return root.startsWith(`${base}/`) ? root.slice(base.length + 1) : shortFolder(root)
+}
+
 /**
  * The always-visible "what is being compared against what" indicator:
  * `your code <folder>  ⟷  ● <database>`. Keeping this in the header means the
@@ -56,7 +81,7 @@ function shortFolder(path: string): string {
 function CompareContext({
 	orm,
 	folder,
-	connectionName,
+	connectionName
 }: {
 	orm: string
 	folder: string
@@ -65,16 +90,102 @@ function CompareContext({
 	return (
 		<span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
 			<span>your code</span>
-			<span
-				className='font-mono text-foreground/70'
-				title={`${folder} · ${orm}`}
-			>
+			<span className='font-mono text-foreground/70' title={`${folder} · ${orm}`}>
 				{shortFolder(folder)}
 			</span>
 			<GitCompareArrows className='h-3 w-3' />
 			<Database className='h-3 w-3 text-emerald-500' />
 			<span className='font-mono text-foreground/70'>{connectionName}</span>
 		</span>
+	)
+}
+
+/** Picks which connection the linked project is diffed against. */
+function ConnectionPicker({
+	connections,
+	selectedId,
+	onSelect,
+	disabled
+}: {
+	connections: Connection[] | undefined
+	selectedId: string | undefined
+	onSelect: (id: string) => void
+	disabled?: boolean
+}) {
+	const selected = connections?.find(function (c) {
+		return c.id === selectedId
+	})
+	if (!connections || connections.length === 0) {
+		return null
+	}
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant='ghost'
+					size='sm'
+					className='h-7 max-w-[180px] gap-1.5 text-xs'
+					disabled={disabled}
+				>
+					<Database className='h-3.5 w-3.5 text-emerald-500 shrink-0' />
+					<span className='truncate'>{selected?.name ?? 'Select connection'}</span>
+					<ChevronDown className='h-3 w-3 text-muted-foreground/70 shrink-0' />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align='end' className='max-h-[280px] overflow-y-auto'>
+				{connections.map(function (connection) {
+					return (
+						<DropdownMenuItem
+							key={connection.id}
+							onClick={function () {
+								onSelect(connection.id)
+							}}
+							className='gap-2 text-sm'
+						>
+							<Database
+								className={cn(
+									'h-3.5 w-3.5 shrink-0',
+									connection.id === selectedId
+										? 'text-emerald-500'
+										: 'text-muted-foreground'
+								)}
+							/>
+							<span className='truncate'>{connection.name}</span>
+						</DropdownMenuItem>
+					)
+				})}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
+}
+
+/** Warns when the linked project resolves to a different database than the comparison. */
+function MismatchBanner({
+	projectLabel,
+	connectionLabel
+}: {
+	projectLabel: string
+	connectionLabel: string
+}) {
+	return (
+		<div className='flex items-start gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200'>
+			<AlertTriangle className='mt-0.5 h-4 w-4 shrink-0 text-amber-400' />
+			<span>
+				This project's <span className='font-mono'>DATABASE_URL</span> points at{' '}
+				<span className='font-medium'>{projectLabel}</span>, but you're comparing against{' '}
+				<span className='font-medium'>{connectionLabel}</span>. They look like different
+				databases — the diff below is likely meaningless. Switch the connection above, or proceed
+				if you know what you're doing.
+			</span>
+		</div>
+	)
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+	return (
+		<code className='rounded bg-muted px-1 py-px font-mono text-[11px] text-foreground/80'>
+			{children}
+		</code>
 	)
 }
 
@@ -85,40 +196,70 @@ function CompareContext({
  * common "why isn't it showing my migrations?" confusion.
  */
 function HowItWorks() {
-	return (
-		<div className='mt-2 max-w-md rounded-md border border-border/60 bg-muted/30 px-4 py-3 text-left text-xs text-muted-foreground'>
-			<p className='mb-1.5 font-medium text-foreground/80'>How this works</p>
-			<ul className='space-y-1'>
-				<li>
-					· <span className='font-medium text-foreground/80'>Differences</span> reads your{' '}
-					<span className='font-mono'>schema.ts</span> / <span className='font-mono'>schema.prisma</span>{' '}
-					and the live database and computes the difference, then generates fresh SQL (like{' '}
-					<span className='font-mono'>drizzle-kit push</span>).
-				</li>
-				<li>
-					· <span className='font-medium text-foreground/80'>Migrations</span> reads your{' '}
-					<span className='font-mono'>drizzle/</span> journal and shows which generated migrations
+	const items = [
+		{
+			icon: GitCompareArrows,
+			label: 'Differences',
+			body: (
+				<>
+					reads your <Code>schema.ts</Code> / <Code>schema.prisma</Code> and the live
+					database, then generates fresh SQL — like <Code>drizzle-kit push</Code>.
+				</>
+			)
+		},
+		{
+			icon: ListChecks,
+			label: 'Migrations',
+			body: (
+				<>
+					reads your <Code>drizzle/</Code> journal and shows which generated migrations
 					this database has applied vs. pending.
-				</li>
-				<li>
-					· Read-only. Generated SQL opens in the SQL console, where the usual safety guardrails
-					apply — nothing is applied from here.
-				</li>
+				</>
+			)
+		},
+		{
+			icon: ShieldCheck,
+			label: 'Read-only',
+			body: (
+				<>
+					generated SQL opens in the SQL console, where the usual guardrails apply —
+					nothing is ever applied from here.
+				</>
+			)
+		}
+	]
+	return (
+		<div className='mt-8 w-full border-t border-border/50 pt-6 text-left'>
+			<p className='mb-4 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70'>
+				How this works
+			</p>
+			<ul className='space-y-3.5'>
+				{items.map(function (item) {
+					const Icon = item.icon
+					return (
+						<li key={item.label} className='flex gap-3'>
+							<span className='mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-muted-foreground'>
+								<Icon className='h-3.5 w-3.5' />
+							</span>
+							<p className='text-xs leading-relaxed text-muted-foreground'>
+								<span className='font-medium text-foreground/90'>{item.label}</span>{' '}
+								{item.body}
+							</p>
+						</li>
+					)
+				})}
 			</ul>
 		</div>
 	)
 }
 
-export function OrmCockpitPanel({
-	activeConnectionId,
-	onOpenInSqlConsole,
-	windowControls,
-}: Props) {
+export function OrmCockpitPanel({ activeConnectionId, onOpenInSqlConsole, windowControls }: Props) {
 	const cockpit = useOrmCockpit(activeConnectionId)
 	const { data: connections } = useConnections()
+	const compareConnectionId = cockpit.compareConnectionId
 	const connectionName =
 		connections?.find(function (c) {
-			return c.id === activeConnectionId
+			return c.id === compareConnectionId
 		})?.name ?? 'this database'
 	const [migration, setMigration] = useState<MigrationResult | null>(null)
 	const [notesOpen, setNotesOpen] = useState(false)
@@ -128,8 +269,8 @@ export function OrmCockpitPanel({
 		folder: cockpit.linked?.folder ?? null,
 		configPath: cockpit.linked?.link.configPath,
 		orm: cockpit.linked?.orm ?? null,
-		connectionId: activeConnectionId,
-		dialect: cockpit.dialect,
+		connectionId: compareConnectionId,
+		dialect: cockpit.dialect
 	})
 
 	const busy = cockpit.phase === 'linking' || cockpit.phase === 'analyzing'
@@ -144,7 +285,7 @@ export function OrmCockpitPanel({
 		function () {
 			setMigration(null)
 		},
-		[cockpit.diff],
+		[cockpit.diff]
 	)
 
 	return (
@@ -162,6 +303,12 @@ export function OrmCockpitPanel({
 					) : null}
 				</div>
 				<div className='flex items-center gap-1'>
+					<ConnectionPicker
+						connections={connections}
+						selectedId={compareConnectionId}
+						onSelect={cockpit.setCompareConnection}
+						disabled={busy}
+					/>
 					{cockpit.linked ? (
 						<Button
 							variant='ghost'
@@ -170,7 +317,11 @@ export function OrmCockpitPanel({
 							onClick={cockpit.rescan}
 							disabled={busy}
 						>
-							<RefreshCw className={cn('h-3.5 w-3.5', busy && 'animate-spin')} />
+							{busy ? (
+								<Spinner className='h-3.5 w-3.5' />
+							) : (
+								<RefreshCw className='h-3.5 w-3.5' />
+							)}
 							Refresh
 						</Button>
 					) : null}
@@ -188,19 +339,24 @@ export function OrmCockpitPanel({
 				</div>
 			</header>
 
-			<div className='min-h-0 flex-1'>
-				{renderBody()}
-			</div>
+			{cockpit.connectionMismatch ? (
+				<MismatchBanner
+					projectLabel={cockpit.connectionMismatch.projectLabel}
+					connectionLabel={cockpit.connectionMismatch.connectionLabel}
+				/>
+			) : null}
+
+			<div className='min-h-0 flex-1'>{renderBody()}</div>
 		</div>
 	)
 
 	function renderBody() {
-		if (!activeConnectionId) {
+		if (!compareConnectionId) {
 			return (
 				<EmptyState
 					icon={<Database className='h-10 w-10' />}
 					title='No database connection'
-					description='Select a connection, then link a project to compare your code schema against it.'
+					description='Pick a connection above, then link a project to compare your code schema against it.'
 				/>
 			)
 		}
@@ -219,29 +375,42 @@ export function OrmCockpitPanel({
 		}
 
 		if (cockpit.phase === 'choice' && cockpit.choices) {
+			const distinctOrms = new Set(cockpit.choices.map((o) => o.orm)).size
+			const heading =
+				distinctOrms > 1 && cockpit.choices.length === distinctOrms
+					? 'This project has both Drizzle and Prisma'
+					: 'This project has more than one schema'
 			return (
 				<div className='mx-auto flex max-w-md flex-col gap-3 p-8'>
-					<h3 className='text-base font-medium text-foreground'>
-						This project has both Drizzle and Prisma
-					</h3>
+					<h3 className='text-base font-medium text-foreground'>{heading}</h3>
 					<p className='text-sm text-muted-foreground'>
 						Pick which schema to compare against the live database.
 					</p>
 					{cockpit.choices.map(function (option) {
+						const workspace = relativeWorkspace(cockpit.choiceFolder, option.rootDir)
 						return (
 							<Button
-								key={option.orm}
+								key={`${option.orm}:${option.rootDir}`}
 								variant='outline'
-								className='justify-start capitalize'
+								className='h-auto justify-start py-2 capitalize'
 								onClick={function () {
 									void cockpit.chooseOrm(option)
 								}}
 							>
-								<FolderGit2 className='mr-2 h-4 w-4' />
-								{option.orm}
-								<span className='ml-2 text-xs text-muted-foreground'>
-									{option.schemaFiles.length} file
-									{option.schemaFiles.length === 1 ? '' : 's'}
+								<FolderGit2 className='mr-2 h-4 w-4 shrink-0' />
+								<span className='flex flex-col items-start'>
+									<span>
+										{option.orm}
+										{workspace ? (
+											<span className='ml-2 font-mono text-xs lowercase text-muted-foreground'>
+												{workspace}
+											</span>
+										) : null}
+									</span>
+									<span className='text-xs normal-case text-muted-foreground'>
+										{option.schemaFiles.length} file
+										{option.schemaFiles.length === 1 ? '' : 's'}
+									</span>
 								</span>
 							</Button>
 						)
@@ -263,15 +432,24 @@ export function OrmCockpitPanel({
 
 		if (!cockpit.linked || !cockpit.diff) {
 			return (
-				<div className='flex h-full flex-col items-center justify-center'>
-					<EmptyState
-						className='min-h-0'
-						icon={<GitCompareArrows className='h-10 w-10' />}
-						title='Does this database match your code?'
-						description={`Link your Drizzle or Prisma project and Schema Diff shows exactly how your code schema differs from ${connectionName} — and the SQL to reconcile them.`}
-						action={{ label: 'Link project', onClick: cockpit.link }}
-					/>
-					<HowItWorks />
+				<div className='h-full overflow-auto'>
+					<div className='mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-6 py-12'>
+						<CockpitEmptySkeleton />
+						<h3 className='mt-7 text-balance text-lg font-semibold text-foreground'>
+							Does this database match your code?
+						</h3>
+						<p className='mt-2 text-pretty text-center text-sm leading-relaxed text-muted-foreground'>
+							Link your Drizzle or Prisma project and Schema Diff shows exactly how your
+							code schema differs from{' '}
+							<span className='font-medium text-foreground/80'>{connectionName}</span>,
+							plus the SQL to reconcile them.
+						</p>
+						<Button onClick={cockpit.link} className='mt-6 gap-1.5'>
+							<FolderGit2 className='h-4 w-4' />
+							Link project
+						</Button>
+						<HowItWorks />
+					</div>
 				</div>
 			)
 		}
@@ -293,8 +471,12 @@ export function OrmCockpitPanel({
 
 	function renderTabBar() {
 		const tabs: Array<{ id: CockpitTab; label: string; icon: React.ReactNode }> = [
-			{ id: 'drift', label: 'Differences', icon: <GitCompareArrows className='h-3.5 w-3.5' /> },
-			{ id: 'migrations', label: 'Migrations', icon: <ListChecks className='h-3.5 w-3.5' /> },
+			{
+				id: 'drift',
+				label: 'Differences',
+				icon: <GitCompareArrows className='h-3.5 w-3.5' />
+			},
+			{ id: 'migrations', label: 'Migrations', icon: <ListChecks className='h-3.5 w-3.5' /> }
 		]
 		return (
 			<div className='flex shrink-0 items-center gap-1 border-b border-border/60 px-2 py-1'>
@@ -311,7 +493,7 @@ export function OrmCockpitPanel({
 								'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
 								active
 									? 'bg-muted text-foreground'
-									: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+									: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
 							)}
 						>
 							{t.icon}
@@ -382,7 +564,10 @@ export function OrmCockpitPanel({
 				<PanelResizeHandle className='w-1 bg-sidebar-border hover:bg-primary/20' />
 				<Panel defaultSize={50} minSize={30}>
 					{migration ? (
-						<MigrationPreview migration={migration} onOpenInSqlConsole={onOpenInSqlConsole} />
+						<MigrationPreview
+							migration={migration}
+							onOpenInSqlConsole={onOpenInSqlConsole}
+						/>
 					) : (
 						<EmptyState
 							icon={<Wand2 className='h-8 w-8' />}
@@ -410,11 +595,14 @@ export function OrmCockpitPanel({
 					aria-expanded={notesOpen}
 				>
 					<ChevronDown
-						className={cn('h-3.5 w-3.5 transition-transform', !notesOpen && '-rotate-90')}
+						className={cn(
+							'h-3.5 w-3.5 transition-transform',
+							!notesOpen && '-rotate-90'
+						)}
 					/>
 					<AlertCircle className='h-3.5 w-3.5' />
-					{cockpit.notes.length} note{cockpit.notes.length === 1 ? '' : 's'} from parse / diff /
-					generate
+					{cockpit.notes.length} note{cockpit.notes.length === 1 ? '' : 's'} from parse /
+					diff / generate
 				</button>
 				{notesOpen ? (
 					<ul className='max-h-40 overflow-auto px-3 pb-2 text-xs text-muted-foreground'>

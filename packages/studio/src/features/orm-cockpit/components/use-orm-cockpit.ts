@@ -18,12 +18,19 @@ import { fromLiveSchema } from '@studio/features/orm-cockpit/ir/from-live-schema
 import {
 	linkProject,
 	detectProjectOrm,
+	resolveProjectDatabaseTarget,
 } from '@studio/features/orm-cockpit/link/link-api'
 import type {
 	DetectedOrm,
 	DetectOrmResult,
 	OrmLink,
 } from '@studio/features/orm-cockpit/link/detect-orm'
+import {
+	targetFromConnection,
+	compareTargets,
+	describeTarget,
+} from '@studio/features/orm-cockpit/link/connection-target'
+import type { Connection } from '@studio/features/connections/types'
 import { parseDrizzleSchema } from '@studio/features/orm-cockpit/parsers/drizzle/parse-drizzle-schema'
 import { parsePrismaSchema } from '@studio/features/orm-cockpit/parsers/prisma/parse-prisma-schema'
 import { diffSchema } from '@studio/features/orm-cockpit/diff/diff-schema'
@@ -46,6 +53,17 @@ export function deriveDialect(type: DatabaseType | undefined): Dialect {
 
 /** A note surfaced in the collapsible "notes" area, tagged by its source phase. */
 export type CockpitNote = { source: 'parse' | 'diff' | 'generate'; message: string }
+
+/**
+ * Surfaced when the linked project's intended database doesn't resolve to the
+ * connection being diffed against — the diff is then comparing two unrelated
+ * databases. Informational only (warn-and-proceed); null when they agree or
+ * can't be resolved.
+ */
+export type ConnectionMismatch = {
+	projectLabel: string
+	connectionLabel: string
+}
 
 export type CockpitPhase =
 	| 'idle' // no folder linked yet
@@ -75,6 +93,10 @@ export type OrmCockpitState = {
 	dialect: Dialect
 	/** A connection must be selected before we can introspect the live DB. */
 	hasConnection: boolean
+	/** The connection currently being diffed against (defaults to the active one). */
+	compareConnectionId: string | undefined
+	/** Set when the linked project points at a different database than the comparison. */
+	connectionMismatch: ConnectionMismatch | null
 }
 
 const SETTING_PREFIX = 'orm-cockpit:last-folder:'
@@ -95,6 +117,8 @@ export type UseOrmCockpit = OrmCockpitState & {
 	setShowExternal: (show: boolean) => void
 	/** How many managed/system tables are currently hidden (0 when shown). */
 	hiddenCount: number
+	/** Choose which connection the linked project is diffed against. */
+	setCompareConnection: (connectionId: string) => void
 }
 
 /**
@@ -105,14 +129,31 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 	const adapter = useAdapter()
 	const { data: connections } = useConnections()
 
+	// The connection the project is diffed against. Defaults to the active one
+	// but can be pointed at any connection so the cockpit isn't locked to
+	// whatever happens to be selected in the rest of the app.
+	const [compareConnectionId, setCompareConnectionId] = useState(connectionId)
+	useEffect(
+		function () {
+			setCompareConnectionId(connectionId)
+		},
+		[connectionId],
+	)
+
+	const compareConnection = useMemo(
+		function (): Connection | undefined {
+			return connections?.find(function (c) {
+				return c.id === compareConnectionId
+			})
+		},
+		[connections, compareConnectionId],
+	)
+
 	const dialect = useMemo(
 		function () {
-			const connection = connections?.find(function (c) {
-				return c.id === connectionId
-			})
-			return deriveDialect(connection?.type)
+			return deriveDialect(compareConnection?.type)
 		},
-		[connections, connectionId],
+		[compareConnection],
 	)
 
 	const [state, setState] = useState<OrmCockpitState>(function () {
@@ -128,6 +169,8 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 			notes: [],
 			dialect,
 			hasConnection: Boolean(connectionId),
+			compareConnectionId: connectionId,
+			connectionMismatch: null,
 		}
 	})
 
@@ -143,21 +186,26 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 	useEffect(
 		function () {
 			setState(function (prev) {
-				return { ...prev, dialect, hasConnection: Boolean(connectionId) }
+				return {
+					...prev,
+					dialect,
+					hasConnection: Boolean(compareConnectionId),
+					compareConnectionId,
+				}
 			})
 		},
-		[dialect, connectionId],
+		[dialect, compareConnectionId],
 	)
 
 	/** Introspect the live DB → IR. Returns null and reports via notes on failure. */
 	const introspectLive = useCallback(
 		async function (): Promise<SchemaIR | null> {
-			if (!connectionId) return null
-			const result = await adapter.getSchema(connectionId)
+			if (!compareConnectionId) return null
+			const result = await adapter.getSchema(compareConnectionId)
 			if (!result.ok || !result.data) return null
 			return fromLiveSchema(result.data, dialect)
 		},
-		[adapter, connectionId, dialect],
+		[adapter, compareConnectionId, dialect],
 	)
 
 	/** Parse a linked project's schema files into a code-side IR. */
@@ -174,11 +222,39 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 		[dialect],
 	)
 
+	/**
+	 * Resolve whether the linked project actually points at the connection we're
+	 * diffing against. Best-effort — returns null (no warning) unless there's a
+	 * strong mismatch signal (different database name / file).
+	 */
+	const computeMismatch = useCallback(
+		async function (link: OrmLink): Promise<ConnectionMismatch | null> {
+			if (!compareConnection) return null
+			const connectionTarget = targetFromConnection(compareConnection)
+			const projectTarget = await resolveProjectDatabaseTarget(
+				link.rootDir,
+				link.configPath,
+				link.orm,
+				link.schemaFiles.map((f) => f.text),
+			)
+			if (compareTargets(projectTarget, connectionTarget) !== 'mismatch') {
+				return null
+			}
+			return {
+				projectLabel: projectTarget ? describeTarget(projectTarget) : 'a different database',
+				connectionLabel: connectionTarget
+					? describeTarget(connectionTarget)
+					: (compareConnection.name ?? 'the connected database'),
+			}
+		},
+		[compareConnection],
+	)
+
 	/** The full analyze chain: parse code → introspect live → diff. */
 	const analyze = useCallback(
 		async function (folder: string, link: OrmLink, runId: number) {
 			const parsed = parseLink(link)
-			const liveIr = await introspectLive()
+			const [liveIr, mismatch] = await Promise.all([introspectLive(), computeMismatch(link)])
 
 			if (runId !== runIdRef.current) return
 
@@ -187,12 +263,13 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 					return {
 						...prev,
 						phase: 'error',
-						error: connectionId
+						error: compareConnectionId
 							? 'Could not read the live database schema. Make sure the connection is reachable, then Refresh.'
 							: 'Select a database connection to compare against.',
 						linked: { folder, orm: link.orm, link },
 						choices: null,
 						choiceFolder: null,
+						connectionMismatch: mismatch,
 					}
 				})
 				return
@@ -217,6 +294,7 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 					liveIr,
 					diff,
 					notes,
+					connectionMismatch: mismatch,
 				}
 			})
 
@@ -225,7 +303,7 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 				void commands.setSetting(SETTING_PREFIX + connectionId, folder).catch(function () {})
 			}
 		},
-		[parseLink, introspectLive, connectionId],
+		[parseLink, introspectLive, computeMismatch, connectionId, compareConnectionId],
 	)
 
 	const startFromDetect = useCallback(
@@ -384,6 +462,10 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 		[visibleDiff, state.dialect, liveForDiff, state.codeIr],
 	)
 
+	const setCompareConnection = useCallback(function (id: string) {
+		setCompareConnectionId(id)
+	}, [])
+
 	const reset = useCallback(function () {
 		runIdRef.current++
 		setState(function (prev) {
@@ -398,6 +480,7 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 				liveIr: null,
 				diff: null,
 				notes: [],
+				connectionMismatch: null,
 			}
 		})
 	}, [])
@@ -444,6 +527,26 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 		[connectionId],
 	)
 
+	// Re-diff the already-linked project when the comparison connection changes
+	// (the picker, or following the active connection). Keyed solely on the id so
+	// it never fires from `analyze`/link identity churn.
+	const prevCompareRef = useRef(compareConnectionId)
+	useEffect(
+		function () {
+			if (prevCompareRef.current === compareConnectionId) return
+			prevCompareRef.current = compareConnectionId
+			const linked = state.linked
+			if (!linked) return
+			const runId = ++runIdRef.current
+			setState(function (prev) {
+				return { ...prev, phase: 'analyzing', error: null }
+			})
+			void analyze(linked.folder, linked.link, runId)
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[compareConnectionId],
+	)
+
 	return {
 		...state,
 		diff: visibleDiff,
@@ -455,5 +558,6 @@ export function useOrmCockpit(connectionId: string | undefined): UseOrmCockpit {
 		showExternal,
 		setShowExternal,
 		hiddenCount,
+		setCompareConnection,
 	}
 }

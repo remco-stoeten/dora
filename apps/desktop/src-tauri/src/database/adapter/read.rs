@@ -189,6 +189,7 @@ impl DatabaseAdapter for SqliteAdapter {
 }
 
 /// DuckDB adapter implementation.
+#[cfg(feature = "duckdb-engine")]
 pub struct DuckDbAdapter {
     connection: Arc<Mutex<duckdb::Connection>>,
     /// True for file-source connections (CSV/Parquet/JSON views): the write
@@ -196,6 +197,7 @@ pub struct DuckDbAdapter {
     read_only: bool,
 }
 
+#[cfg(feature = "duckdb-engine")]
 impl DuckDbAdapter {
     pub fn new(connection: Arc<Mutex<duckdb::Connection>>) -> Self {
         Self {
@@ -220,6 +222,7 @@ impl DuckDbAdapter {
     }
 }
 
+#[cfg(feature = "duckdb-engine")]
 #[async_trait]
 impl DatabaseAdapter for DuckDbAdapter {
     fn parse_statements(&self, query: &str) -> Result<Vec<ParsedStatement>, Error> {
@@ -378,7 +381,9 @@ pub fn adapter_from_client(client: &crate::database::types::DatabaseClient) -> B
             Box::new(SqliteAdapter::new(connection.clone()))
         }
         crate::database::types::DatabaseClient::DuckDB { connection, .. } => {
-            Box::new(DuckDbAdapter::new(connection.clone()))
+            Box::new(crate::database::adapter::DuckDbConnAdapter::new(
+                connection.clone(),
+            ))
         }
         crate::database::types::DatabaseClient::LibSQL { connection } => {
             Box::new(LibSqlAdapter::new(connection.clone()))

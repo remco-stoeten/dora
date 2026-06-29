@@ -10,6 +10,12 @@ export type ColumnDefinition = {
 	nullable: boolean
 	primaryKey: boolean
 	foreignKey?: ForeignKeyRef
+	/**
+	 * Closed set of values the database constrains this column to (a Postgres
+	 * `enum`, a MySQL `ENUM`, or a `CHECK (col IN (...))` list). When present,
+	 * the grid edits the cell with a dropdown instead of a free-text input.
+	 */
+	allowedValues?: string[]
 }
 
 export type TableData = {

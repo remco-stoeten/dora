@@ -1,5 +1,6 @@
 import { Badge } from '@studio/shared/ui/badge'
 import { Button } from '@studio/shared/ui/button'
+import { Spinner } from '@studio/shared/ui/spinner'
 import { cn } from '@studio/shared/utils/cn'
 import type { DataFileSourceEntry } from '@studio/features/connections/types/data-file-source'
 import { dataFileSourceStatusLabel } from '@studio/features/connections/types/data-file-source'
@@ -47,7 +48,7 @@ export function DataFileSourcePanel({
 	onRemove,
 	onRelocate,
 	onRetry,
-	isRecovering = false,
+	isRecovering = false
 }: Props) {
 	const hasIssues = entries.some(function (entry) {
 		return entry.status !== 'active'
@@ -57,10 +58,7 @@ export function DataFileSourcePanel({
 	return (
 		<section
 			aria-label='Data file sources'
-			className={cn(
-				'border-b border-border/60 bg-background/80 px-4 py-3',
-				className
-			)}
+			className={cn('border-b border-border/60 bg-background/80 px-4 py-3', className)}
 		>
 			<div className='mb-2 flex items-center justify-between gap-2'>
 				<h3 className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
@@ -78,12 +76,19 @@ export function DataFileSourcePanel({
 							disabled={isRecovering}
 							onClick={onRetry}
 						>
-							<RefreshCw className={cn('h-3 w-3', isRecovering && 'animate-spin')} aria-hidden />
+							{isRecovering ? (
+								<Spinner className='h-3 w-3' aria-hidden />
+							) : (
+								<RefreshCw className='h-3 w-3' aria-hidden />
+							)}
 							Retry registration
 						</Button>
 					)}
 					{isReadonly && (
-						<Badge variant='outline' className='gap-1 font-normal text-muted-foreground'>
+						<Badge
+							variant='outline'
+							className='gap-1 font-normal text-muted-foreground'
+						>
 							<Lock className='h-3 w-3' aria-hidden />
 							Readonly
 						</Badge>
@@ -119,7 +124,9 @@ export function DataFileSourcePanel({
 							)}
 						>
 							<div className='flex flex-wrap items-center gap-2'>
-								<span className='font-medium text-foreground'>{entry.fileType}</span>
+								<span className='font-medium text-foreground'>
+									{entry.fileType}
+								</span>
 								<span className='text-muted-foreground'>→</span>
 								<code className='rounded bg-background px-1.5 py-0.5 text-[11px] text-foreground'>
 									{entry.viewName}
@@ -140,7 +147,9 @@ export function DataFileSourcePanel({
 								{entry.path}
 							</p>
 							{entry.error && entry.status !== 'active' && (
-								<p className='mt-1 text-[11px] text-destructive/90'>{entry.error}</p>
+								<p className='mt-1 text-[11px] text-destructive/90'>
+									{entry.error}
+								</p>
 							)}
 							{showRecovery && (
 								<div className='mt-2 flex flex-wrap gap-2'>

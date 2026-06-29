@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
 	lastConnectionId: null,
 	lastTableId: null,
 	lastRowPK: null,
-	selectionBarStyle: 'floating',
+	selectionBarStyle: 'static',
 	showToasts: true
 }
 
