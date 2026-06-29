@@ -6,7 +6,9 @@ use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
 use russh::client::{self, Config, Handle};
+#[cfg(unix)]
 use russh::keys::agent::client::AgentClient;
+#[cfg(unix)]
 use russh::keys::agent::AgentIdentity;
 use russh::keys::{load_secret_key, PrivateKeyWithHashAlg};
 use russh::{ChannelMsg, Disconnect};
@@ -196,31 +198,45 @@ async fn authenticate(
             bail!("SSH password authentication rejected");
         }
     } else {
-        log::info!("Authenticating with agent");
-        let mut agent = AgentClient::connect_env()
-            .await
-            .context("Failed to connect to SSH agent")?;
-        let identities = agent
-            .request_identities()
-            .await
-            .context("Failed to list SSH agent identities")?;
+        // SSH agent auth relies on russh's `AgentClient::connect_env`, which is
+        // Unix-only (it reads SSH_AUTH_SOCK). Windows exposes the agent over a
+        // named pipe that russh does not wire up here, so agent auth is gated to
+        // Unix; Windows callers fall back to explicit key or password auth.
+        #[cfg(unix)]
+        {
+            log::info!("Authenticating with agent");
+            let mut agent = AgentClient::connect_env()
+                .await
+                .context("Failed to connect to SSH agent")?;
+            let identities = agent
+                .request_identities()
+                .await
+                .context("Failed to list SSH agent identities")?;
 
-        let mut authenticated = false;
-        for identity in identities {
-            if let AgentIdentity::PublicKey { key, .. } = identity {
-                let result = session
-                    .authenticate_publickey_with(username, key, None, &mut agent)
-                    .await
-                    .map_err(|e| anyhow!("SSH agent auth failed: {}", e))?;
-                if result.success() {
-                    authenticated = true;
-                    break;
+            let mut authenticated = false;
+            for identity in identities {
+                if let AgentIdentity::PublicKey { key, .. } = identity {
+                    let result = session
+                        .authenticate_publickey_with(username, key, None, &mut agent)
+                        .await
+                        .map_err(|e| anyhow!("SSH agent auth failed: {}", e))?;
+                    if result.success() {
+                        authenticated = true;
+                        break;
+                    }
                 }
             }
-        }
 
-        if !authenticated {
-            bail!("SSH agent authentication rejected");
+            if !authenticated {
+                bail!("SSH agent authentication rejected");
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            bail!(
+                "SSH agent authentication is not supported on this platform; \
+                 provide a private key or password instead"
+            );
         }
     }
 
